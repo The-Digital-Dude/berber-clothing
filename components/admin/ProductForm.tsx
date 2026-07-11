@@ -182,11 +182,11 @@ export default function ProductForm({ initialData, categories }: { initialData?:
                 <div key={field.id} className="grid grid-cols-7 gap-2 items-end">
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Size</label>
-                    <input {...register(`variants.${index}.size`)} className={`w-full rounded border ${errors.variants?.[index]?.size ? "border-red-500" : ""} px-2 py-1 text-sm`} placeholder="M" />
+                    <input {...register(`variants.${index}.size`)} className={`w-full rounded border ${(errors.variants as any)?.[index]?.size ? "border-red-500" : ""} px-2 py-1 text-sm`} placeholder="M" />
                   </div>
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Color</label>
-                    <input {...register(`variants.${index}.color`)} className={`w-full rounded border ${errors.variants?.[index]?.color ? "border-red-500" : ""} px-2 py-1 text-sm`} placeholder="Red" />
+                    <input {...register(`variants.${index}.color`)} className={`w-full rounded border ${(errors.variants as any)?.[index]?.color ? "border-red-500" : ""} px-2 py-1 text-sm`} placeholder="Red" />
                   </div>
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Hex</label>
@@ -194,11 +194,11 @@ export default function ProductForm({ initialData, categories }: { initialData?:
                   </div>
                   <div className="col-span-2 space-y-1">
                     <label className="text-xs">SKU</label>
-                    <input {...register(`variants.${index}.sku`)} className={`w-full rounded border ${errors.variants?.[index]?.sku ? "border-red-500" : ""} px-2 py-1 text-sm`} />
+                    <input {...register(`variants.${index}.sku`)} className={`w-full rounded border ${(errors.variants as any)?.[index]?.sku ? "border-red-500" : ""} px-2 py-1 text-sm`} />
                   </div>
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Stock</label>
-                    <input type="number" {...register(`variants.${index}.stock`)} className={`w-full rounded border ${errors.variants?.[index]?.stock ? "border-red-500" : ""} px-2 py-1 text-sm`} />
+                    <input type="number" {...register(`variants.${index}.stock`)} className={`w-full rounded border ${(errors.variants as any)?.[index]?.stock ? "border-red-500" : ""} px-2 py-1 text-sm`} />
                   </div>
                   <div className="col-span-1">
                     <Button type="button" variant="destructive" size="sm" className="w-full h-8" onClick={() => removeVariant(index)}>

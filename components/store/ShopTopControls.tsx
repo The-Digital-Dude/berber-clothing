@@ -7,7 +7,7 @@ type Props = {
   current: {
     sort: string
     view: string
-    categoryId: string
+    category: string
     brandId: string
     size: string
     color: string
@@ -25,7 +25,7 @@ export default function ShopTopControls({ current }: Props) {
   function buildUrl(overrides: Partial<typeof current>) {
     const merged = { ...current, ...overrides }
     const p = new URLSearchParams()
-    if (merged.categoryId) p.set("categoryId", merged.categoryId)
+    if (merged.category) p.set("category", merged.category)
     if (merged.brandId) p.set("brandId", merged.brandId)
     if (merged.size) p.set("size", merged.size)
     if (merged.color) p.set("color", merged.color)

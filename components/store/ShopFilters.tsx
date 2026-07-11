@@ -4,14 +4,14 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Filter, X, ChevronDown, ChevronUp } from "lucide-react"
 
-type Category = { id: string; name: string }
+type Category = { id: string; name: string; slug: string }
 type Brand = { id: string; name: string }
 
 type Props = {
   categories: Category[]
   brands: Brand[]
   current: {
-    categoryId: string
+    category: string
     brandId: string
     size: string
     color: string
@@ -40,12 +40,12 @@ export default function ShopFilters({ categories, brands, current }: Props) {
   const [minPrice, setMinPrice] = useState(current.minPrice || "")
   const [maxPrice, setMaxPrice] = useState(current.maxPrice || "")
 
-  const hasActiveFilters = !!(current.categoryId || current.brandId || current.size || current.color || current.minPrice || current.maxPrice || current.sale)
+  const hasActiveFilters = !!(current.category || current.brandId || current.size || current.color || current.minPrice || current.maxPrice || current.sale)
 
   function buildUrl(overrides: Record<string, string>) {
     const p = new URLSearchParams()
     const base = { ...current, ...overrides }
-    if (base.categoryId) p.set("categoryId", base.categoryId)
+    if (base.category) p.set("category", base.category)
     if (base.brandId) p.set("brandId", base.brandId)
     if (base.size) p.set("size", base.size)
     if (base.color) p.set("color", base.color)
@@ -90,20 +90,20 @@ export default function ShopFilters({ categories, brands, current }: Props) {
         <ul className="space-y-2.5 text-sm">
           <li>
             <button
-              onClick={() => navigate({ categoryId: "", brandId: "" })}
-              className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${!current.categoryId ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+              onClick={() => navigate({ category: "" })}
+              className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${!current.category ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
             >
-              <div className={`w-4 h-4 rounded border shrink-0 ${!current.categoryId ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
+              <div className={`w-4 h-4 rounded border shrink-0 ${!current.category ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
               All Products
             </button>
           </li>
           {categories.map((cat) => (
             <li key={cat.id}>
               <button
-                onClick={() => navigate({ categoryId: current.categoryId === cat.id ? "" : cat.id })}
-                className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${current.categoryId === cat.id ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+                onClick={() => navigate({ category: current.category === cat.slug ? "" : cat.slug })}
+                className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${current.category === cat.slug ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
               >
-                <div className={`w-4 h-4 rounded border shrink-0 ${current.categoryId === cat.id ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
+                <div className={`w-4 h-4 rounded border shrink-0 ${current.category === cat.slug ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
                 {cat.name}
               </button>
             </li>

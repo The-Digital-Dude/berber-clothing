@@ -69,7 +69,7 @@ export default function Footer({
               <li><Link href="/shop" className="hover:text-berber-gold transition-colors">All Products</Link></li>
               {shopCategories.map((cat) => (
                 <li key={cat.id}>
-                  <Link href={`/shop?categoryId=${cat.id}`} className="hover:text-berber-gold transition-colors">{cat.name}</Link>
+                  <Link href={`/shop?category=${cat.slug}`} className="hover:text-berber-gold transition-colors">{cat.name}</Link>
                 </li>
               ))}
               <li><Link href="/shop?sort=newest" className="hover:text-berber-gold transition-colors">New Arrivals</Link></li>

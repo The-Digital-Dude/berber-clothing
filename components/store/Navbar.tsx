@@ -92,7 +92,7 @@ export default function Navbar({
             {navCategories.map((cat) => (
               <div key={cat.id} className="relative group">
                 <Link
-                  href={`/shop?categoryId=${cat.id}`}
+                  href={`/shop?category=${cat.slug}`}
                   className="text-sm font-medium hover:text-berber-gold transition-colors flex items-center gap-1"
                 >
                   {cat.name}
@@ -104,7 +104,7 @@ export default function Navbar({
                   <div className="absolute left-0 top-full pt-4 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300">
                     <div className="bg-berber-surface text-berber-text border border-berber-border shadow-lg rounded-xl py-2 min-w-[160px] flex flex-col">
                       {cat.children.map((sub) => (
-                        <Link key={sub.id} href={`/shop?categoryId=${sub.id}`} className="px-4 py-2 text-sm hover:bg-berber-muted hover:text-berber-gold transition-colors">
+                        <Link key={sub.id} href={`/shop?category=${sub.slug}`} className="px-4 py-2 text-sm hover:bg-berber-muted hover:text-berber-gold transition-colors">
                           {sub.name}
                         </Link>
                       ))}
@@ -174,9 +174,9 @@ export default function Navbar({
                         <span className="transition group-open:rotate-180 text-sm">▼</span>
                       </summary>
                       <div className="flex flex-col gap-4 mt-4 pl-4 border-l border-berber-border">
-                        <Link href={`/shop?categoryId=${cat.id}`} onClick={() => setMobileOpen(false)} className="text-base hover:text-berber-gold transition-colors">All {cat.name}</Link>
+                        <Link href={`/shop?category=${cat.slug}`} onClick={() => setMobileOpen(false)} className="text-base hover:text-berber-gold transition-colors">All {cat.name}</Link>
                         {cat.children.map((sub) => (
-                          <Link key={sub.id} href={`/shop?categoryId=${sub.id}`} onClick={() => setMobileOpen(false)} className="text-base hover:text-berber-gold transition-colors">
+                          <Link key={sub.id} href={`/shop?category=${sub.slug}`} onClick={() => setMobileOpen(false)} className="text-base hover:text-berber-gold transition-colors">
                             {sub.name}
                           </Link>
                         ))}
@@ -184,7 +184,7 @@ export default function Navbar({
                     </details>
                   ) : (
                     <Link
-                      href={`/shop?categoryId=${cat.id}`}
+                      href={`/shop?category=${cat.slug}`}
                       onClick={() => setMobileOpen(false)}
                       className="hover:text-berber-gold transition-colors text-lg font-medium"
                     >

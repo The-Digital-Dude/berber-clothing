@@ -21,7 +21,6 @@ export default function AddressModal({ isOpen, onClose, onSaved, addressToEdit }
     district: "",
     area: "",
     address: "",
-    address: "",
     isDefault: false,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})

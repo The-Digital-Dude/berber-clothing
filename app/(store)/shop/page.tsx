@@ -12,7 +12,7 @@ export default async function ShopPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    categoryId?: string
+    category?: string
     brandId?: string
     size?: string
     color?: string
@@ -26,7 +26,7 @@ export default async function ShopPage({
   }>
 }) {
   const params = await searchParams
-  const categoryId = params.categoryId || ""
+  const category = params.category || ""
   const brandId = params.brandId || ""
   const size = params.size || ""
   const color = params.color || ""
@@ -50,7 +50,14 @@ export default async function ShopPage({
       { tags: { contains: search, mode: "insensitive" } },
     ]
   }
-  if (categoryId) where.categoryId = categoryId
+  let currentCategoryId = ""
+  if (category) {
+    const catData = await prisma.category.findUnique({ where: { slug: category } }).catch(() => null)
+    if (catData) {
+      where.categoryId = catData.id
+      currentCategoryId = catData.id
+    }
+  }
   if (brandId) where.brandId = brandId
   if (saleOnly) where.comparePrice = { not: null }
   if (minPrice || maxPrice) {
@@ -82,7 +89,7 @@ export default async function ShopPage({
     products.map((p: any) => ({ id: p.id, categoryId: p.categoryId }))
   ).catch(() => new Map())
 
-  const current = { categoryId, brandId, size, color, sort, view, minPrice, maxPrice, sale: params.sale || "", search, take: params.take || "12" }
+  const current = { category, brandId, size, color, sort, view, minPrice, maxPrice, sale: params.sale || "", search, take: params.take || "12" }
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-12 animate-in fade-in duration-500">
@@ -187,7 +194,7 @@ export default async function ShopPage({
                     Showing {products.length} of {totalProducts}
                   </p>
                   <Link
-                    href={`/shop?take=${take + 12}${categoryId ? `&categoryId=${categoryId}` : ""}${size ? `&size=${size}` : ""}${color ? `&color=${color}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}${minPrice ? `&minPrice=${minPrice}` : ""}${maxPrice ? `&maxPrice=${maxPrice}` : ""}${view !== "grid" ? `&view=${view}` : ""}`}
+                    href={`/shop?take=${take + 12}${category ? `&category=${category}` : ""}${size ? `&size=${size}` : ""}${color ? `&color=${color}` : ""}${sort !== "newest" ? `&sort=${sort}` : ""}${minPrice ? `&minPrice=${minPrice}` : ""}${maxPrice ? `&maxPrice=${maxPrice}` : ""}${view !== "grid" ? `&view=${view}` : ""}`}
                     scroll={false}
                     className="inline-block px-12 py-3 bg-berber-surface border border-berber-border text-berber-black font-medium hover:border-berber-black rounded-full transition-colors"
                   >

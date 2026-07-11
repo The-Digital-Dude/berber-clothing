@@ -136,7 +136,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         <span className="mx-2">/</span>
         <a href="/shop" className="hover:text-berber-gold transition-colors">Shop</a>
         <span className="mx-2">/</span>
-        <a href={`/shop?categoryId=${product.categoryId}`} className="hover:text-berber-gold transition-colors">{product.category?.name}</a>
+        <a href={`/shop?category=${product.category?.slug}`} className="hover:text-berber-gold transition-colors">{product.category?.name}</a>
         <span className="mx-2">/</span>
         <span className="text-berber-text font-bold">{product.name}</span>
       </div>

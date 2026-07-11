@@ -65,7 +65,7 @@ export default async function StoreHomepage() {
           <FadeIn>
             <div className="flex overflow-x-auto md:grid md:grid-cols-5 gap-4 pb-4 md:pb-0 hide-scrollbar snap-x">
               {categories.map((cat: any) => (
-                <Link key={cat.id} href={`/shop?categoryId=${cat.id}`} className="min-w-[200px] md:min-w-0 group relative block aspect-square rounded-xl overflow-hidden snap-center">
+                <Link key={cat.id} href={`/shop?category=${cat.slug}`} className="min-w-[200px] md:min-w-0 group relative block aspect-square rounded-xl overflow-hidden snap-center">
                   {cat.image ? (
                     <Image src={cat.image} alt={cat.name} fill sizes="(max-width: 768px) 200px, 20vw" className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
                   ) : (

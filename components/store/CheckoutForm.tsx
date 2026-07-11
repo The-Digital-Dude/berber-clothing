@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { toast } from "sonner"
 import Image from "next/image"
 import { useCartStore } from "@/store/useCartStore"
 import { useRouter } from "next/navigation"
