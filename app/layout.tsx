@@ -3,6 +3,8 @@ import { Inter, Playfair_Display, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { Toaster } from "sonner";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import Analytics from "@/components/Analytics";
 import prisma from "@/lib/prisma";
 import NextTopLoader from "nextjs-toploader";
@@ -69,6 +71,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={cn("font-sans", inter.variable, playfair.variable, spaceGrotesk.variable)}>
       <body className="antialiased text-berber-text bg-berber-bg selection:bg-berber-gold/30">
         <NextTopLoader color="#C9A24B" showSpinner={false} />
+        <VercelAnalytics />
+        <SpeedInsights />
         <Analytics />
         {children}
         <Toaster richColors position="bottom-right" />
