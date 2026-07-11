@@ -203,6 +203,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             {/* Selectors */}
             <VariantSelector
               product={serialize(product)}
+              flashSale={flashSale ? serialize(flashSale) : null}
               attr1Label={attrConfig?.attr1Label || "Size"}
               attr2Label={attrConfig?.attr2Label || "Color"}
               categoryId={product.categoryId}

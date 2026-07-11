@@ -8,11 +8,13 @@ import SizeGuideModal from "@/components/store/SizeGuideModal"
 
 export default function VariantSelector({
   product,
+  flashSale,
   attr1Label = "Size",
   attr2Label = "Color",
   categoryId,
 }: {
   product: any
+  flashSale?: any
   attr1Label?: string
   attr2Label?: string
   categoryId?: string
@@ -37,7 +39,13 @@ export default function VariantSelector({
     if (!activeVariant) return toast.error("Please select a size and color.")
     if (isOutOfStock) return toast.error("This item is currently out of stock.")
 
-    const price = activeVariant.price ?? product.price
+    const basePrice = activeVariant.price ?? product.price
+    const finalPrice = flashSale ? (
+      flashSale.discountType === "PERCENTAGE" 
+        ? Math.max(0, basePrice - Math.round((basePrice * flashSale.discountValue) / 100))
+        : Math.max(0, basePrice - flashSale.discountValue)
+    ) : basePrice;
+
     const image = product.images?.[0]?.url || ""
 
     addItem({
@@ -46,7 +54,7 @@ export default function VariantSelector({
       productId: product.id,
       productSlug: product.slug,
       name: product.name,
-      price: Number(price),
+      price: Number(finalPrice),
       size: selectedSize!,
       color: selectedColor!,
       image,
