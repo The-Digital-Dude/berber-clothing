@@ -1,13 +1,13 @@
-import { Role, DiscountType } from '@prisma/client'
 import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
 import { createClient } from '@supabase/supabase-js'
 import { config } from 'dotenv'
 
 config({ path: '.env.local' })
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
-const prisma = new PrismaClient({ adapter })
+const prisma = new PrismaClient()
+
+const Role = { ADMIN: 'ADMIN', CUSTOMER: 'CUSTOMER' } as const
+const DiscountType = { PERCENTAGE: 'PERCENTAGE', FIXED: 'FIXED' } as const
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -107,13 +107,13 @@ async function main() {
   for (const cat of categories) {
     await prisma.sizeGuide.upsert({
       where: { categoryId: cat.id },
-      update: { columns: sizeGuideColumns, rows: sizeGuideRows },
-      create: { 
-        categoryId: cat.id, 
-        unit: "inches", 
-        columns: sizeGuideColumns, 
-        rows: sizeGuideRows, 
-        notes: "Measurements are in inches. Allow 0.5 inch tolerance." 
+      update: { columns: JSON.stringify(sizeGuideColumns), rows: JSON.stringify(sizeGuideRows) },
+      create: {
+        categoryId: cat.id,
+        unit: "inches",
+        columns: JSON.stringify(sizeGuideColumns),
+        rows: JSON.stringify(sizeGuideRows),
+        notes: "Measurements are in inches. Allow 0.5 inch tolerance."
       }
     })
   }

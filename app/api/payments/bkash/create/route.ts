@@ -45,11 +45,11 @@ export async function POST(req: Request) {
         method: "BKASH",
         status: "UNPAID",
         amount,
-        gatewayResponse: { paymentID, isDeposit }
+        gatewayResponse: JSON.stringify({ paymentID, isDeposit })
       },
       update: {
         amount,
-        gatewayResponse: { paymentID, isDeposit },
+        gatewayResponse: JSON.stringify({ paymentID, isDeposit }),
         status: "UNPAID",
       }
     })

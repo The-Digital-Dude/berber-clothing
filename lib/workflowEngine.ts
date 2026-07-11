@@ -20,13 +20,13 @@ export async function runWorkflows(trigger: TriggerName, payload: TriggerPayload
 
     for (const wf of workflows) {
       try {
-        const conditions = (wf.conditions as any[]) || []
+        const conditions = (JSON.parse(wf.conditions as string || "[]") as any[])
         if (!checkConditions(conditions, payload)) {
           await logRun(wf.id, payload, "SKIPPED", "Conditions not met")
           continue
         }
 
-        const actions = (wf.actions as any[]) || []
+        const actions = (JSON.parse(wf.actions as string || "[]") as any[])
         for (const action of actions) {
           await executeAction(action, payload)
         }
@@ -122,7 +122,7 @@ async function executeAction(action: any, payload: TriggerPayload) {
           action: "workflow.admin_notification",
           entityType: config.entityType || "Workflow",
           entityId: payload.orderId || payload.userId || null,
-          after: { message: config.message, payload },
+          after: JSON.stringify({ message: config.message, payload }),
         },
       })
       break

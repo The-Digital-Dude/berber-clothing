@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
   for (const cart of carts) {
     try {
-      const items = (cart.items as any[]) || []
+      const items = (JSON.parse(cart.items as string || "[]") as any[])
       if (!items.length || !cart.email) continue
 
       const cartTotal = items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)

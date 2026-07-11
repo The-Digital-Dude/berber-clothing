@@ -23,7 +23,7 @@ export async function logAudit({
 }) {
   try {
     await prisma.auditLog.create({
-      data: { actorId, actorEmail, actorRole, action, entityType, entityId, before: before ?? undefined, after: after ?? undefined, ip },
+      data: { actorId, actorEmail, actorRole, action, entityType, entityId, before: before ? JSON.stringify(before) : undefined, after: after ? JSON.stringify(after) : undefined, ip },
     })
   } catch {
     // non-critical — never let audit failure block the main operation

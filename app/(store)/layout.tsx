@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
 import WishlistSync from "@/components/store/WishlistSync";

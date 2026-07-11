@@ -31,8 +31,8 @@ export async function mailchimpSubscribe(email: string, name?: string, tags?: st
 
   await prisma.marketingSubscriber.upsert({
     where: { email },
-    create: { email, name, provider: "mailchimp", listId, tags: tags || [], syncedAt: new Date() },
-    update: { tags: tags || [], syncedAt: new Date() },
+    create: { email, name, provider: "mailchimp", listId, tags: JSON.stringify(tags || []), syncedAt: new Date() },
+    update: { tags: JSON.stringify(tags || []), syncedAt: new Date() },
   })
 }
 

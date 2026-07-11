@@ -43,10 +43,10 @@ export async function POST(req: Request) {
         method: "NAGAD",
         status: "UNPAID",
         amount: order.total,
-        gatewayResponse: { paymentReferenceId: initData.paymentReferenceId }
+        gatewayResponse: JSON.stringify({ paymentReferenceId: initData.paymentReferenceId })
       },
       update: {
-        gatewayResponse: { paymentReferenceId: initData.paymentReferenceId },
+        gatewayResponse: JSON.stringify({ paymentReferenceId: initData.paymentReferenceId }),
         status: "UNPAID",
       }
     })

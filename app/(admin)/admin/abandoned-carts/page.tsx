@@ -57,7 +57,7 @@ export default async function AbandonedCartsPage() {
           <tbody className="divide-y">
             {carts.length === 0 && <tr><td colSpan={6} className="text-center text-muted-foreground py-8">No abandoned carts yet</td></tr>}
             {carts.map(cart => {
-              const items = cart.items as any[]
+              const items = JSON.parse(cart.items as string || "[]") as any[]
               const emailsSent = [cart.email1SentAt, cart.email2SentAt, cart.email3SentAt].filter(Boolean).length
               return (
                 <tr key={cart.id} className="hover:bg-muted/10">
