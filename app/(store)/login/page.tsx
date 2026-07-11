@@ -5,6 +5,7 @@ import { ArrowRight } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { toast } from "sonner"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -26,7 +27,9 @@ export default function LoginPage() {
 
     if (signInError || !data.session) {
       setError("Invalid email or password.")
+      toast.error("Login failed. Please check your credentials.")
     } else {
+      toast.success("Welcome back!")
       router.refresh()
       const role = (data.user.app_metadata as { role?: string } | undefined)?.role
       router.push(role === "ADMIN" || role === "STAFF" ? "/admin" : "/account")

@@ -170,7 +170,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 <span className="font-mono text-2xl font-bold">৳{displayPrice.toLocaleString()}</span>
                 {(product.comparePrice || (flashSale && Number(product.price) !== displayPrice)) && (
                   <span className="font-mono text-lg text-berber-text-muted line-through">
-                    ৳{Number(product.price).toLocaleString()}
+                    ৳{Number(product.comparePrice || product.price).toLocaleString()}
                   </span>
                 )}
                 {flashSale && (

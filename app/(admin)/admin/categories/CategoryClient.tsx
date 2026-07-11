@@ -49,10 +49,12 @@ export function CategoryClient({ data }: { data: Category[] }) {
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [error, setError] = useState("")
 
   function openAdd() {
     setEditingId(null)
     setForm(emptyForm())
+    setError("")
     setOpen(true)
   }
 
@@ -68,6 +70,7 @@ export function CategoryClient({ data }: { data: Category[] }) {
       showOnHomepage: c.showOnHomepage,
       sortOrder: c.sortOrder,
     })
+    setError("")
     setOpen(true)
   }
 
@@ -77,6 +80,11 @@ export function CategoryClient({ data }: { data: Category[] }) {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    setError("")
+    if (!form.name.trim() || !form.slug.trim()) {
+      setError("Name and Slug are required.")
+      return
+    }
     setSaving(true)
     try {
       const url = editingId ? `/api/admin/categories/${editingId}` : "/api/admin/categories"
@@ -143,11 +151,12 @@ export function CategoryClient({ data }: { data: Category[] }) {
           <form onSubmit={handleSave} className="space-y-4 mt-2">
             <div>
               <label className="text-sm font-medium">Name *</label>
-              <Input value={form.name} onChange={(e) => onNameChange(e.target.value)} placeholder="2-Piece Suits" required />
+              <Input value={form.name} onChange={(e) => onNameChange(e.target.value)} placeholder="2-Piece Suits" required className={error && !form.name.trim() ? "border-red-500 focus-visible:ring-red-500" : ""} />
             </div>
             <div>
               <label className="text-sm font-medium">Slug *</label>
-              <Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="2-piece-suits" required />
+              <Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="2-piece-suits" required className={error && !form.slug.trim() ? "border-red-500 focus-visible:ring-red-500" : ""} />
+              {error && (!form.name.trim() || !form.slug.trim()) && <p className="text-xs text-red-500 mt-1">{error}</p>}
               <p className="text-xs text-muted-foreground mt-1">URL: /shop?category={form.slug || "slug"}</p>
             </div>
             <div>

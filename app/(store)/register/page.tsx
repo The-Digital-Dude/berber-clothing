@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<"google" | "facebook" | null>(null)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   async function handleOAuth(provider: "google" | "facebook") {
     setOauthLoading(provider)
@@ -27,10 +28,20 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters")
+    
+    const newErrors: Record<string, string> = {}
+    if (!name) newErrors.name = "Full Name is required"
+    if (!email) newErrors.email = "Email Address is required"
+    if (!phone) newErrors.phone = "Phone Number is required"
+    if (!password) newErrors.password = "Password is required"
+    else if (password.length < 8) newErrors.password = "Password must be at least 8 characters"
+
+    setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fill in all required fields correctly")
       return
     }
+
     setLoading(true)
     try {
       const supabase = createClient()
@@ -93,22 +104,22 @@ export default function RegisterPage() {
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Full Name</label>
               <input
                 type="text"
-                required
                 value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all"
+                onChange={e => { setName(e.target.value); if(errors.name) setErrors(prev => ({...prev, name: ""})) }}
+                className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.name ? "border-red-500" : ""}`}
               />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Email Address</label>
               <input
                 type="email"
-                required
                 value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all"
+                onChange={e => { setEmail(e.target.value); if(errors.email) setErrors(prev => ({...prev, email: ""})) }}
+                className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.email ? "border-red-500" : ""}`}
               />
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -116,23 +127,23 @@ export default function RegisterPage() {
               <input
                 type="tel"
                 value={phone}
-                onChange={e => setPhone(e.target.value)}
+                onChange={e => { setPhone(e.target.value); if(errors.phone) setErrors(prev => ({...prev, phone: ""})) }}
                 placeholder="01XXXXXXXXX"
-                className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all"
+                className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.phone ? "border-red-500" : ""}`}
               />
+              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Password</label>
               <input
                 type="password"
-                required
-                minLength={8}
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={e => { setPassword(e.target.value); if(errors.password) setErrors(prev => ({...prev, password: ""})) }}
                 placeholder="Minimum 8 characters"
-                className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all"
+                className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.password ? "border-red-500" : ""}`}
               />
+              {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
             </div>
 
             <button

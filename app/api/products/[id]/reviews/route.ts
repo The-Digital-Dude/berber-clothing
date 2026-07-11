@@ -8,7 +8,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const [reviews, agg] = await Promise.all([
     prisma.review.findMany({
       where: { productId, isApproved: true },
-      include: { user: { select: { name: true } } },
+      include: { 
+        user: { select: { name: true } },
+        _count: { select: { helpfulVotes: true } },
+        helpfulVotes: { select: { userId: true } }
+      },
       orderBy: { createdAt: "desc" },
     }),
     prisma.review.aggregate({

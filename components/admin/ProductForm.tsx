@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -95,11 +95,15 @@ export default function ProductForm({ initialData, categories }: { initialData?:
     name: "variants"
   })
 
-  // Auto-generate slug from name if empty
+  // Auto-generate slug from name continuously on creation unless manually edited
   const watchName = watch("name")
-  if (!initialData && watchName && !watch("slug")) {
-    setValue("slug", watchName.toLowerCase().replace(/[\s_]+/g, '-').replace(/[^\w-]+/g, ''))
-  }
+  const [slugEdited, setSlugEdited] = useState(false)
+  
+  useEffect(() => {
+    if (!initialData && !slugEdited) {
+      setValue("slug", (watchName || "").toLowerCase().replace(/[\s_]+/g, '-').replace(/[^\w-]+/g, ''), { shouldValidate: true })
+    }
+  }, [watchName, initialData, slugEdited, setValue])
 
   const onSubmit = async (data: any) => {
     setLoading(true)
@@ -154,7 +158,15 @@ export default function ProductForm({ initialData, categories }: { initialData?:
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Slug</label>
-                <input {...register("slug")} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                <input 
+                  {...register("slug")} 
+                  onChange={(e) => {
+                    setSlugEdited(true)
+                    setValue("slug", e.target.value, { shouldValidate: true })
+                  }}
+                  className={`flex h-10 w-full rounded-md border ${errors.slug ? "border-red-500" : "border-input"} bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring`} 
+                />
+                {errors.slug && <p className="text-xs text-red-500">{errors.slug.message as string}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
@@ -164,17 +176,17 @@ export default function ProductForm({ initialData, categories }: { initialData?:
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Variants (Size & Color)</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Inventory & Variants</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {variantFields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-7 gap-2 items-end">
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Size</label>
-                    <input {...register(`variants.${index}.size`)} className="w-full rounded border px-2 py-1 text-sm" placeholder="M" />
+                    <input {...register(`variants.${index}.size`)} className={`w-full rounded border ${errors.variants?.[index]?.size ? "border-red-500" : ""} px-2 py-1 text-sm`} placeholder="M" />
                   </div>
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Color</label>
-                    <input {...register(`variants.${index}.color`)} className="w-full rounded border px-2 py-1 text-sm" placeholder="Red" />
+                    <input {...register(`variants.${index}.color`)} className={`w-full rounded border ${errors.variants?.[index]?.color ? "border-red-500" : ""} px-2 py-1 text-sm`} placeholder="Red" />
                   </div>
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Hex</label>
@@ -182,11 +194,11 @@ export default function ProductForm({ initialData, categories }: { initialData?:
                   </div>
                   <div className="col-span-2 space-y-1">
                     <label className="text-xs">SKU</label>
-                    <input {...register(`variants.${index}.sku`)} className="w-full rounded border px-2 py-1 text-sm" />
+                    <input {...register(`variants.${index}.sku`)} className={`w-full rounded border ${errors.variants?.[index]?.sku ? "border-red-500" : ""} px-2 py-1 text-sm`} />
                   </div>
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Stock</label>
-                    <input type="number" {...register(`variants.${index}.stock`)} className="w-full rounded border px-2 py-1 text-sm" />
+                    <input type="number" {...register(`variants.${index}.stock`)} className={`w-full rounded border ${errors.variants?.[index]?.stock ? "border-red-500" : ""} px-2 py-1 text-sm`} />
                   </div>
                   <div className="col-span-1">
                     <Button type="button" variant="destructive" size="sm" className="w-full h-8" onClick={() => removeVariant(index)}>
@@ -195,6 +207,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
                   </div>
                 </div>
               ))}
+              {errors.variants && !Array.isArray(errors.variants) && <p className="text-xs text-red-500">{(errors.variants as any).message}</p>}
               <Button type="button" variant="outline" size="sm" onClick={() => appendVariant({ size: "", color: "", sku: "", stock: 0 })}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Variant
               </Button>
@@ -218,11 +231,13 @@ export default function ProductForm({ initialData, categories }: { initialData?:
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Price</label>
-                <input type="number" step="0.01" {...register("price")} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                <input type="number" step="0.01" {...register("comparePrice")} className={`flex h-10 w-full rounded-md border ${errors.comparePrice ? "border-red-500" : "border-input"} bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring`} />
+                {errors.comparePrice && <p className="text-xs text-red-500">{errors.comparePrice.message as string}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Compare Price</label>
-                <input type="number" step="0.01" {...register("comparePrice")} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                <label className="text-sm font-medium">Sale Price</label>
+                <input type="number" step="0.01" {...register("price")} className={`flex h-10 w-full rounded-md border ${errors.price ? "border-red-500" : "border-input"} bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring`} />
+                {errors.price && <p className="text-xs text-red-500">{errors.price.message as string}</p>}
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Tags (comma separated)</label>

@@ -17,6 +17,8 @@ export default function AccountPage() {
   const [storeCreditBalance, setStoreCreditBalance] = useState(0)
   const [affiliate, setAffiliate] = useState<any>(null)
   const [ordersLoading, setOrdersLoading] = useState(true)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileError, setProfileError] = useState("")
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -48,9 +50,16 @@ export default function AccountPage() {
 
   async function handleSaveProfile(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    setProfileError("")
     const form = e.currentTarget
     const name = (form.elements.namedItem("name") as HTMLInputElement)?.value?.trim()
-    if (!name) return
+    
+    if (!name) {
+      setProfileError("Full Name is required.")
+      return
+    }
+
+    setIsSavingProfile(true)
     try {
       const res = await fetch("/api/account/profile", {
         method: "PATCH",
@@ -65,6 +74,8 @@ export default function AccountPage() {
       }
     } catch {
       toast.error("Error updating profile")
+    } finally {
+      setIsSavingProfile(false)
     }
   }
 
@@ -216,7 +227,8 @@ export default function AccountPage() {
               <form className="max-w-md space-y-4" onSubmit={handleSaveProfile}>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Full Name</label>
-                  <input name="name" defaultValue={user?.name || ""} className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all" />
+                  <input name="name" defaultValue={user?.name || ""} className={`w-full bg-berber-muted border ${profileError ? "border-red-500 focus:border-red-500" : "border-transparent focus:border-berber-gold"} focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all`} />
+                  {profileError && <p className="text-xs text-red-600 font-medium">{profileError}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Email Address</label>
@@ -224,8 +236,8 @@ export default function AccountPage() {
                   <p className="text-xs text-berber-text-muted">Email cannot be changed.</p>
                 </div>
                 <div className="pt-4">
-                  <button type="submit" className="px-6 py-3 bg-berber-black text-white font-bold uppercase tracking-widest rounded-full hover:bg-berber-gold transition-colors text-xs">
-                    Save Changes
+                  <button type="submit" disabled={isSavingProfile} className="px-6 py-3 bg-berber-black text-white font-bold uppercase tracking-widest rounded-full hover:bg-berber-gold transition-colors text-xs disabled:opacity-50">
+                    {isSavingProfile ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </form>

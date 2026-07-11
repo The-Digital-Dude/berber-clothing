@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "@/hooks/useSession"
-import { Star, Loader2 } from "lucide-react"
+import { Star, Loader2, ThumbsUp } from "lucide-react"
 import { toast } from "sonner"
 
 type Review = {
@@ -11,6 +11,8 @@ type Review = {
   comment: string | null
   createdAt: string
   user: { name: string | null }
+  _count?: { helpfulVotes: number }
+  helpfulVotes?: { userId: string }[]
 }
 
 function StarRow({ value, size = 16 }: { value: number; size?: number }) {
@@ -48,6 +50,23 @@ export default function ReviewSection({ productId }: { productId: string }) {
         setCount(d.count || 0)
       })
       .finally(() => setLoading(false))
+  }
+
+  async function toggleHelpful(reviewId: string) {
+    if (!session?.user) {
+      toast.error("Please sign in to vote")
+      return
+    }
+    try {
+      const res = await fetch(`/api/reviews/${reviewId}/helpful`, { method: "POST" })
+      if (res.ok) {
+        load()
+      } else {
+        toast.error("Failed to register vote")
+      }
+    } catch {
+      toast.error("Something went wrong")
+    }
   }
 
   useEffect(() => {
@@ -161,6 +180,19 @@ export default function ReviewSection({ productId }: { productId: string }) {
               </div>
               <StarRow value={r.rating} />
               {r.comment && <p className="text-sm text-berber-text-muted mt-2">{r.comment}</p>}
+              <div className="mt-3 flex items-center">
+                <button
+                  onClick={() => toggleHelpful(r.id)}
+                  className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                    r.helpfulVotes?.some((v) => v.userId === session?.user?.id)
+                      ? "text-berber-gold"
+                      : "text-berber-text-muted hover:text-berber-black"
+                  }`}
+                >
+                  <ThumbsUp className="w-3.5 h-3.5" />
+                  Helpful ({r._count?.helpfulVotes || 0})
+                </button>
+              </div>
             </div>
           ))}
         </div>

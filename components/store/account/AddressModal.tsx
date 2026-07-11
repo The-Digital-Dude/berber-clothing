@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { X, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface AddressModalProps {
   isOpen: boolean
@@ -20,8 +21,10 @@ export default function AddressModal({ isOpen, onClose, onSaved, addressToEdit }
     district: "",
     area: "",
     address: "",
+    address: "",
     isDefault: false,
   })
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (isOpen) {
@@ -60,11 +63,29 @@ export default function AddressModal({ isOpen, onClose, onSaved, addressToEdit }
       setFormData(prev => ({ ...prev, [name]: checked }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
+      if (errors[name]) {
+        setErrors(prev => ({ ...prev, [name]: "" }))
+      }
     }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const newErrors: Record<string, string> = {}
+    if (!formData.label) newErrors.label = "Label is required"
+    if (!formData.fullName) newErrors.fullName = "Full Name is required"
+    if (!formData.phone) newErrors.phone = "Phone is required"
+    if (!formData.division) newErrors.division = "Division is required"
+    if (!formData.district) newErrors.district = "District is required"
+    if (!formData.area) newErrors.area = "Area is required"
+    if (!formData.address) newErrors.address = "Street Address is required"
+    setErrors(newErrors)
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
     setLoading(true)
     
     try {
@@ -78,12 +99,14 @@ export default function AddressModal({ isOpen, onClose, onSaved, addressToEdit }
       })
 
       if (res.ok) {
+        toast.success(addressToEdit ? "Address updated successfully" : "Address added successfully")
         onSaved()
       } else {
-        console.error("Failed to save address")
+        const errorData = await res.json()
+        toast.error(errorData.error || "Failed to save address")
       }
-    } catch (error) {
-      console.error(error)
+    } catch (error: any) {
+      toast.error(error.message || "An error occurred")
     } finally {
       setLoading(false)
     }
@@ -106,37 +129,44 @@ export default function AddressModal({ isOpen, onClose, onSaved, addressToEdit }
             
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Label (e.g. Home, Office)</label>
-              <input required name="label" value={formData.label} onChange={handleChange} placeholder="Home" className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all" />
+              <input name="label" value={formData.label} onChange={handleChange} placeholder="Home" className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.label ? "border-red-500" : ""}`} />
+              {errors.label && <p className="text-xs text-red-500 mt-1">{errors.label}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Full Name</label>
-              <input required name="fullName" value={formData.fullName} onChange={handleChange} className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all" />
+              <input name="fullName" value={formData.fullName} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.fullName ? "border-red-500" : ""}`} />
+              {errors.fullName && <p className="text-xs text-red-500 mt-1">{errors.fullName}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Phone Number</label>
-              <input required type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all" />
+              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.phone ? "border-red-500" : ""}`} />
+              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Division</label>
-              <input required name="division" value={formData.division} onChange={handleChange} className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all" />
+              <input name="division" value={formData.division} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.division ? "border-red-500" : ""}`} />
+              {errors.division && <p className="text-xs text-red-500 mt-1">{errors.division}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">District / City</label>
-              <input required name="district" value={formData.district} onChange={handleChange} className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all" />
+              <input name="district" value={formData.district} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.district ? "border-red-500" : ""}`} />
+              {errors.district && <p className="text-xs text-red-500 mt-1">{errors.district}</p>}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Area / Thana</label>
-              <input required name="area" value={formData.area} onChange={handleChange} className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all" />
+              <input name="area" value={formData.area} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.area ? "border-red-500" : ""}`} />
+              {errors.area && <p className="text-xs text-red-500 mt-1">{errors.area}</p>}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Street Address</label>
-              <textarea required name="address" value={formData.address} onChange={handleChange} rows={3} className="w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all resize-none" />
+              <textarea name="address" value={formData.address} onChange={handleChange} rows={3} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all resize-none ${errors.address ? "border-red-500" : ""}`} />
+              {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
             </div>
 
             <div className="md:col-span-2 flex items-center gap-3 py-2">

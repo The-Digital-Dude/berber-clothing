@@ -61,6 +61,9 @@ export default function CheckoutForm({
     enabledPaymentMethods.includes("COD") ? "COD" : enabledPaymentMethods[0] || "COD"
   )
   const [depositInfo, setDepositInfo] = useState<{ required: boolean; amount: number } | null>(null)
+  
+  // Validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Step 3 — extras
   const [orderNote, setOrderNote] = useState("")
@@ -122,6 +125,24 @@ export default function CheckoutForm({
 
   const handleSubmitStep1 = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate fields
+    const newErrors: Record<string, string> = {}
+    if (isGuest && !guestEmail) newErrors.guestEmail = "Email is required"
+    if (!address.name) newErrors.name = "Full Name is required"
+    if (!address.phone) newErrors.phone = "Phone is required"
+    if (!address.division) newErrors.division = "Division is required"
+    if (!address.district) newErrors.district = "District is required"
+    if (!address.area) newErrors.area = "Area is required"
+    if (!address.fullAddress) newErrors.fullAddress = "Full Address is required"
+    
+    setErrors(newErrors)
+    
+    if (Object.keys(newErrors).length > 0) {
+      toast.error("Please fill in all required fields")
+      return
+    }
+
     setStep(2)
     try {
       const res = await fetch("/api/store/deposit-check", {
@@ -205,7 +226,7 @@ export default function CheckoutForm({
         router.push(`/order/${orderData.orderId}?placed=1`)
       }
     } catch (error: any) {
-      alert("Failed to place order: " + error.message)
+      toast.error("Failed to place order: " + error.message)
       setLoading(false)
     }
   }
@@ -272,33 +293,40 @@ export default function CheckoutForm({
                 {isGuest && (
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Email (for order updates)</label>
-                    <input type="email" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} className={inputCls} placeholder="you@example.com" />
+                    <input type="email" value={guestEmail} onChange={e => { setGuestEmail(e.target.value); setErrors(prev => ({...prev, guestEmail: ""})) }} className={`${inputCls} ${errors.guestEmail ? "border-red-500" : ""}`} placeholder="you@example.com" />
+                    {errors.guestEmail && <p className="text-xs text-red-500">{errors.guestEmail}</p>}
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Full Name *</label>
-                    <input required value={address.name} onChange={e => setAddress({ ...address, name: e.target.value })} className={inputCls} />
+                    <input value={address.name} onChange={e => { setAddress({ ...address, name: e.target.value }); setErrors(prev => ({...prev, name: ""})) }} className={`${inputCls} ${errors.name ? "border-red-500" : ""}`} />
+                    {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Phone *</label>
-                    <input required value={address.phone} onChange={e => setAddress({ ...address, phone: e.target.value })} className={inputCls} />
+                    <input value={address.phone} onChange={e => { setAddress({ ...address, phone: e.target.value }); setErrors(prev => ({...prev, phone: ""})) }} className={`${inputCls} ${errors.phone ? "border-red-500" : ""}`} />
+                    {errors.phone && <p className="text-xs text-red-500">{errors.phone}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Division *</label>
-                    <input required value={address.division} onChange={e => setAddress({ ...address, division: e.target.value })} className={inputCls} />
+                    <input value={address.division} onChange={e => { setAddress({ ...address, division: e.target.value }); setErrors(prev => ({...prev, division: ""})) }} className={`${inputCls} ${errors.division ? "border-red-500" : ""}`} />
+                    {errors.division && <p className="text-xs text-red-500">{errors.division}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">District *</label>
-                    <input required value={address.district} onChange={e => setAddress({ ...address, district: e.target.value })} className={inputCls} />
+                    <input value={address.district} onChange={e => { setAddress({ ...address, district: e.target.value }); setErrors(prev => ({...prev, district: ""})) }} className={`${inputCls} ${errors.district ? "border-red-500" : ""}`} />
+                    {errors.district && <p className="text-xs text-red-500">{errors.district}</p>}
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Area / Thana *</label>
-                    <input required value={address.area} onChange={e => setAddress({ ...address, area: e.target.value })} className={inputCls} />
+                    <input value={address.area} onChange={e => { setAddress({ ...address, area: e.target.value }); setErrors(prev => ({...prev, area: ""})) }} className={`${inputCls} ${errors.area ? "border-red-500" : ""}`} />
+                    {errors.area && <p className="text-xs text-red-500">{errors.area}</p>}
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Full Address *</label>
-                    <textarea required rows={2} value={address.fullAddress} onChange={e => setAddress({ ...address, fullAddress: e.target.value })} className={`${inputCls} resize-none`} />
+                    <textarea rows={2} value={address.fullAddress} onChange={e => { setAddress({ ...address, fullAddress: e.target.value }); setErrors(prev => ({...prev, fullAddress: ""})) }} className={`${inputCls} resize-none ${errors.fullAddress ? "border-red-500" : ""}`} />
+                    {errors.fullAddress && <p className="text-xs text-red-500">{errors.fullAddress}</p>}
                   </div>
                 </div>
                 <div className="pt-4 flex justify-end">
