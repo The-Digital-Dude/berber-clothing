@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { PlusCircle, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import ImagePicker from "@/components/admin/ImagePicker"
 
 type Brand = {
   id: string; name: string; slug: string; logo: string | null
@@ -89,8 +90,10 @@ export default function BrandsClient({ data }: { data: Brand[] }) {
               <Input value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} placeholder="puma" />
             </div>
             <div>
-              <label className="text-sm font-medium">Logo URL</label>
-              <Input value={form.logo} onChange={e => setForm({ ...form, logo: e.target.value })} placeholder="https://..." />
+              <label className="text-sm font-medium">Logo</label>
+              <div className="mt-1">
+                <ImagePicker value={form.logo} onChange={(url) => setForm({ ...form, logo: url })} bucket="brand-images" />
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium">Description</label>

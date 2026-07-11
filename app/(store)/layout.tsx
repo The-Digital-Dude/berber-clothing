@@ -29,7 +29,7 @@ export default async function StoreLayout({
     prisma.category.findMany({
       where: { isActive: true, parentId: null },
       orderBy: { sortOrder: "asc" },
-      select: { 
+      select: {
         id: true, name: true, slug: true,
         children: {
           where: { isActive: true },

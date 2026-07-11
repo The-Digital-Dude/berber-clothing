@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { PlusCircle, Pencil, Trash2, ExternalLink, X } from "lucide-react"
 import { toast } from "sonner"
+import ImagePicker from "@/components/admin/ImagePicker"
 
 type Product = { id: string; name: string; price: number; images: { url: string }[] }
 type BundleItem = { id: string; productId: string; quantity: number; sortOrder: number; product: Product }
@@ -146,8 +147,10 @@ export default function BundlesClient({ data, products }: { data: Bundle[]; prod
                 </Select>
               </div>
               <div>
-                <label className="text-sm font-medium">Cover Image URL</label>
-                <Input value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="https://..." />
+                <label className="text-sm font-medium">Cover Image</label>
+                <div className="mt-1">
+                  <ImagePicker value={form.image} onChange={(url) => setForm({ ...form, image: url })} bucket="bundle-images" />
+                </div>
               </div>
             </div>
             {form.type === "PICK_N" && (

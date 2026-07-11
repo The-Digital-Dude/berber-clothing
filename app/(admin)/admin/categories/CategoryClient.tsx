@@ -8,90 +8,178 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Tag } from "lucide-react"
+import { Plus, Tag, Pencil, Trash2 } from "lucide-react"
+import Image from "next/image"
+import ImagePicker from "@/components/admin/ImagePicker"
 
 type Category = {
-  id: string; name: string; slug: string; isActive: boolean
-  sortOrder: number; productCount: number
-  attr1Label: string; attr2Label: string
-  attr1Hint: string; attr2Hint: string
+  id: string
+  name: string
+  slug: string
+  description: string
+  image: string
+  isActive: boolean
+  showOnNavbar: boolean
+  showOnHomepage: boolean
+  sortOrder: number
+  productCount: number
+}
+
+const emptyForm = () => ({
+  name: "",
+  slug: "",
+  description: "",
+  image: "",
+  isActive: true,
+  showOnNavbar: true,
+  showOnHomepage: true,
+  sortOrder: 0,
+})
+
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
 }
 
 export function CategoryClient({ data }: { data: Category[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState<Category | null>(null)
-  const [attr1Label, setAttr1Label] = useState("")
-  const [attr2Label, setAttr2Label] = useState("")
-  const [attr1Hint, setAttr1Hint] = useState("")
-  const [attr2Hint, setAttr2Hint] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<string | null>(null)
+
+  function openAdd() {
+    setEditingId(null)
+    setForm(emptyForm())
+    setOpen(true)
+  }
 
   function openEdit(c: Category) {
-    setEditing(c)
-    setAttr1Label(c.attr1Label); setAttr2Label(c.attr2Label)
-    setAttr1Hint(c.attr1Hint); setAttr2Hint(c.attr2Hint)
+    setEditingId(c.id)
+    setForm({
+      name: c.name,
+      slug: c.slug,
+      description: c.description || "",
+      image: c.image || "",
+      isActive: c.isActive,
+      showOnNavbar: c.showOnNavbar,
+      showOnHomepage: c.showOnHomepage,
+      sortOrder: c.sortOrder,
+    })
     setOpen(true)
+  }
+
+  function onNameChange(name: string) {
+    setForm((f) => ({ ...f, name, slug: editingId ? f.slug : slugify(name) }))
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    if (!editing) return
     setSaving(true)
     try {
-      const res = await fetch(`/api/admin/categories/${editing.id}/config`, {
-        method: "PATCH",
+      const url = editingId ? `/api/admin/categories/${editingId}` : "/api/admin/categories"
+      const res = await fetch(url, {
+        method: editingId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attr1Label, attr2Label, attr1Hint, attr2Hint }),
+        body: JSON.stringify(form),
       })
       if (res.ok) {
-        toast.success("Category attributes updated")
+        toast.success(editingId ? "Category updated" : "Category created")
         setOpen(false)
         router.refresh()
       } else {
         const d = await res.json()
         toast.error(d.error || "Failed to save")
       }
-    } finally { setSaving(false) }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Delete this category? This cannot be undone.")) return
+    setDeleting(id)
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" })
+      if (res.ok) {
+        toast.success("Category deleted")
+        router.refresh()
+      } else {
+        const d = await res.json()
+        toast.error(d.error || "Failed to delete")
+      }
+    } finally {
+      setDeleting(null)
+    }
+  }
+
+  async function toggleField(id: string, field: "isActive" | "showOnNavbar" | "showOnHomepage", value: boolean) {
+    const res = await fetch(`/api/admin/categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    })
+    if (res.ok) router.refresh()
+    else toast.error("Failed to update")
   }
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button onClick={openAdd} className="gap-2">
+          <Plus className="h-4 w-4" /> Add Category
+        </Button>
+      </div>
+
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Tag className="h-4 w-4" /> Configure "{editing?.name}" Attributes
+              <Tag className="h-4 w-4" /> {editingId ? "Edit Category" : "New Category"}
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground -mt-2">
-            Set what "Size" and "Color" columns mean for this category — e.g. for Gadgets: "Storage" and "Color".
-          </p>
           <form onSubmit={handleSave} className="space-y-4 mt-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium">Attribute 1 Label</label>
-                <Input value={attr1Label} onChange={(e) => setAttr1Label(e.target.value)} placeholder="Size" />
-                <p className="text-xs text-muted-foreground mt-1">Maps to the "size" column</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Attribute 2 Label</label>
-                <Input value={attr2Label} onChange={(e) => setAttr2Label(e.target.value)} placeholder="Color" />
-                <p className="text-xs text-muted-foreground mt-1">Maps to the "color" column</p>
+            <div>
+              <label className="text-sm font-medium">Name *</label>
+              <Input value={form.name} onChange={(e) => onNameChange(e.target.value)} placeholder="2-Piece Suits" required />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Slug *</label>
+              <Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))} placeholder="2-piece-suits" required />
+              <p className="text-xs text-muted-foreground mt-1">URL: /shop?category={form.slug || "slug"}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Description</label>
+              <Input value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} placeholder="Optional short description" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Image</label>
+              <div className="mt-1">
+                <ImagePicker value={form.image} onChange={(url) => setForm((f) => ({ ...f, image: url }))} bucket="category-images" />
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium">Attribute 1 Options hint</label>
-              <Input value={attr1Hint} onChange={(e) => setAttr1Hint(e.target.value)} placeholder="e.g. S, M, L, XL or 128GB, 256GB, 512GB" />
+              <label className="text-sm font-medium">Sort Order</label>
+              <Input type="number" value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: parseInt(e.target.value) || 0 }))} />
             </div>
-            <div>
-              <label className="text-sm font-medium">Attribute 2 Options hint</label>
-              <Input value={attr2Hint} onChange={(e) => setAttr2Hint(e.target.value)} placeholder="e.g. Red, Black, White or Midnight Black" />
+            <div className="grid grid-cols-3 gap-4 pt-1">
+              <div className="flex flex-col items-start gap-2">
+                <label className="text-xs font-medium">Active</label>
+                <Switch checked={form.isActive} onCheckedChange={(v) => setForm((f) => ({ ...f, isActive: v }))} />
+              </div>
+              <div className="flex flex-col items-start gap-2">
+                <label className="text-xs font-medium">Show on Navbar</label>
+                <Switch checked={form.showOnNavbar} onCheckedChange={(v) => setForm((f) => ({ ...f, showOnNavbar: v }))} />
+              </div>
+              <div className="flex flex-col items-start gap-2">
+                <label className="text-xs font-medium">Show on Homepage</label>
+                <Switch checked={form.showOnHomepage} onCheckedChange={(v) => setForm((f) => ({ ...f, showOnHomepage: v }))} />
+              </div>
             </div>
             <Button type="submit" className="w-full" disabled={saving}>
-              {saving ? "Saving..." : "Save Configuration"}
+              {saving ? "Saving..." : editingId ? "Save Changes" : "Create Category"}
             </Button>
           </form>
         </DialogContent>
@@ -102,33 +190,58 @@ export function CategoryClient({ data }: { data: Category[] }) {
           <TableHeader>
             <TableRow>
               <TableHead>Category</TableHead>
+              <TableHead>Image</TableHead>
               <TableHead>Products</TableHead>
-              <TableHead>Attr 1 (Size column)</TableHead>
-              <TableHead>Attr 2 (Color column)</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Active</TableHead>
+              <TableHead>Navbar</TableHead>
+              <TableHead>Homepage</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
+            {data.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  No categories yet — click "Add Category" to create one.
+                </TableCell>
+              </TableRow>
+            )}
             {data.map((c) => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.name}</TableCell>
-                <TableCell>{c.productCount}</TableCell>
-                <TableCell className="text-sm">
-                  <span className="font-medium">{c.attr1Label}</span>
-                  {c.attr1Hint && <span className="text-muted-foreground ml-1 text-xs">({c.attr1Hint.slice(0, 20)}...)</span>}
-                </TableCell>
-                <TableCell className="text-sm">
-                  <span className="font-medium">{c.attr2Label}</span>
-                  {c.attr2Hint && <span className="text-muted-foreground ml-1 text-xs">({c.attr2Hint.slice(0, 20)}...)</span>}
+                <TableCell>
+                  <div className="font-medium">{c.name}</div>
+                  <div className="text-xs text-muted-foreground">{c.slug}</div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={c.isActive ? "default" : "secondary"}>{c.isActive ? "Active" : "Hidden"}</Badge>
+                  {c.image ? (
+                    <div className="relative w-10 h-10 rounded overflow-hidden border">
+                      <Image src={c.image} alt={c.name} fill className="object-cover" unoptimized />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded border flex items-center justify-center text-muted-foreground text-xs bg-muted">
+                      {c.name.charAt(0)}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>{c.productCount}</TableCell>
+                <TableCell>
+                  <Switch checked={c.isActive} onCheckedChange={(v) => toggleField(c.id, "isActive", v)} />
+                </TableCell>
+                <TableCell>
+                  <Switch checked={c.showOnNavbar} onCheckedChange={(v) => toggleField(c.id, "showOnNavbar", v)} />
+                </TableCell>
+                <TableCell>
+                  <Switch checked={c.showOnHomepage} onCheckedChange={(v) => toggleField(c.id, "showOnHomepage", v)} />
                 </TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
-                    Configure
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button variant="destructive" size="sm" disabled={deleting === c.id} onClick={() => handleDelete(c.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -138,3 +251,5 @@ export function CategoryClient({ data }: { data: Category[] }) {
     </div>
   )
 }
+
+

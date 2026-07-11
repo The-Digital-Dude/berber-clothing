@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/adminAuth"
 import { createAdminClient } from "@/lib/supabase"
 
-const BUCKET = "product-images"
+const ALLOWED_BUCKETS = ["product-images", "category-images", "brand-images", "bundle-images", "blog-images"]
 
 export async function POST(req: NextRequest) {
   const { error } = await requireAdmin()
@@ -11,15 +11,17 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createAdminClient()
 
+    const formData = await req.formData()
+    const file = formData.get("file") as File
+    const bucketParam = (formData.get("bucket") as string | null)?.trim()
+    const BUCKET = bucketParam && ALLOWED_BUCKETS.includes(bucketParam) ? bucketParam : "product-images"
+
     // Ensure bucket exists
     const { data: buckets } = await supabase.storage.listBuckets()
     const exists = buckets?.some(b => b.name === BUCKET)
     if (!exists) {
       await supabase.storage.createBucket(BUCKET, { public: true, fileSizeLimit: 5242880 })
     }
-
-    const formData = await req.formData()
-    const file = formData.get("file") as File
     if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg"

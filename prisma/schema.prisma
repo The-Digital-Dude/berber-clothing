@@ -65,15 +65,17 @@ model Address {
 // ─────────────────────────────────────────────
 
 model Category {
-  id          String     @id @default(cuid())
-  name        String
-  slug        String     @unique
-  description String?
-  image       String?
-  parentId    String?
-  isActive    Boolean    @default(true)
-  sortOrder   Int        @default(0)
-  createdAt   DateTime   @default(now())
+  id             String     @id @default(cuid())
+  name           String
+  slug           String     @unique
+  description    String?
+  image          String?
+  parentId       String?
+  isActive       Boolean    @default(true)
+  showOnNavbar   Boolean    @default(true)
+  showOnHomepage Boolean    @default(true)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
 
   parent          Category?               @relation("CategoryTree", fields: [parentId], references: [id])
   children        Category[]              @relation("CategoryTree")

@@ -11,13 +11,13 @@ export default async function CategoriesPage() {
     id: c.id,
     name: c.name,
     slug: c.slug,
+    description: c.description || "",
+    image: c.image || "",
     isActive: c.isActive,
+    showOnNavbar: c.showOnNavbar,
+    showOnHomepage: c.showOnHomepage,
     sortOrder: c.sortOrder,
     productCount: c._count.products,
-    attr1Label: c.attributeConfig?.attr1Label || "Size",
-    attr2Label: c.attributeConfig?.attr2Label || "Color",
-    attr1Hint: c.attributeConfig?.attr1Hint || "",
-    attr2Hint: c.attributeConfig?.attr2Hint || "",
   }))
 
   return (
@@ -25,7 +25,7 @@ export default async function CategoriesPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Configure each category's variant attribute labels so they make sense for any product type — clothes, gadgets, shoes, etc.
+          Add, edit, and control where each category appears — navbar, homepage, or both.
         </p>
       </div>
       <CategoryClient data={formatted} />
