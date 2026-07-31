@@ -16,15 +16,14 @@ export default function ResetPasswordPage() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Supabase's recovery link sets a session automatically via the URL hash.
+    // The callback route exchanges the PKCE code and sets the session before
+    // redirecting here, so we just need to confirm a session exists.
     const supabase = createClient()
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true)
-    })
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setReady(true)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true)
     })
     return () => subscription.unsubscribe()
   }, [])

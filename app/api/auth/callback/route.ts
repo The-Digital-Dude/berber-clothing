@@ -3,10 +3,11 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase"
 import prisma from "@/lib/prisma"
 
-// Handles the redirect back from Supabase OAuth (Google, Facebook).
+// Handles the redirect back from Supabase (OAuth + password recovery).
 export async function GET(req: Request) {
   const { searchParams, origin } = new URL(req.url)
   const code = searchParams.get("code")
+  const next = searchParams.get("next") ?? ""
 
   if (!code) {
     return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
@@ -17,6 +18,11 @@ export async function GET(req: Request) {
 
   if (error || !data.user) {
     return NextResponse.redirect(`${origin}/login?error=oauth_failed`)
+  }
+
+  // Password recovery — redirect straight to the reset page
+  if (next === "/reset-password") {
+    return NextResponse.redirect(`${origin}/reset-password`)
   }
 
   const { id, email, user_metadata } = data.user
