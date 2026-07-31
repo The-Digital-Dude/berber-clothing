@@ -31,15 +31,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isAdminRoute = pathname.startsWith("/admin")
   const isAccountRoute = pathname.startsWith("/account")
-  const role = (user?.app_metadata as { role?: string } | undefined)?.role
 
-  if (isAdminRoute) {
-    if (!user) {
-      return NextResponse.redirect(new URL("/login", request.url))
-    }
-    if (role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/", request.url))
-    }
+  // Middleware only guards authentication (is user logged in?).
+  // Role check (is user ADMIN?) is handled by the admin layout via Prisma,
+  // so app_metadata.role mismatches don't cause false redirects here.
+  if (isAdminRoute && !user) {
+    return NextResponse.redirect(new URL("/login", request.url))
   }
 
   if (isAccountRoute && !user) {
