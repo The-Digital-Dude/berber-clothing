@@ -9,7 +9,7 @@ import FadeIn from "@/components/ui/FadeIn";
 export default async function StoreHomepage() {
   const [banners, categories, newArrivals, featuredProducts] = await Promise.all([
     prisma.banner.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }).catch(() => []),
-    prisma.category.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }).catch(() => []),
+    prisma.category.findMany({ where: { isActive: true, showOnHomepage: true }, orderBy: { sortOrder: 'asc' } }).catch(() => []),
     prisma.product.findMany({ where: { isActive: true }, include: { category: true, images: true }, take: 8, orderBy: { createdAt: 'desc' } }).catch(() => []),
     prisma.product.findMany({ where: { isActive: true, isFeatured: true }, include: { category: true, images: true }, take: 4, orderBy: { createdAt: 'desc' } }).catch(() => [])
   ]);
