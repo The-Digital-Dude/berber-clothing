@@ -36,6 +36,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/admin/orders", icon: ShoppingCart, label: "All Orders" },
       { href: "/admin/orders/new", icon: PlusCircle, label: "New Order" },
+      { href: "/admin/draft-orders", icon: FileText, label: "Draft Orders" },
       { href: "/admin/returns", icon: RotateCcw, label: "Returns & RMA" },
       { href: "/admin/abandoned-carts", icon: ShoppingBasket, label: "Abandoned Carts" },
     ],
@@ -45,6 +46,7 @@ const navGroups: NavGroup[] = [
     icon: Users,
     items: [
       { href: "/admin/customers", icon: Users, label: "All Customers" },
+      { href: "/admin/customers/import", icon: Upload, label: "Import CSV" },
       { href: "/admin/store-credit", icon: Wallet, label: "Store Credit" },
       { href: "/admin/loyalty", icon: Gift, label: "Loyalty Points" },
       { href: "/admin/memberships", icon: Crown, label: "Memberships" },
@@ -106,6 +108,7 @@ const navGroups: NavGroup[] = [
     icon: BarChart,
     items: [
       { href: "/admin/reports", icon: BarChart, label: "Reports" },
+      { href: "/admin/analytics", icon: Search, label: "Search & Funnel" },
       { href: "/admin/analytics/products", icon: LineChart, label: "Product Analytics" },
       { href: "/admin/analytics/cohorts", icon: PieChart, label: "Cohort & LTV" },
       { href: "/admin/export", icon: Download, label: "Export Data" },

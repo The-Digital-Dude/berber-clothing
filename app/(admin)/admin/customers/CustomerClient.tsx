@@ -30,6 +30,7 @@ type Customer = {
   email: string
   phone: string
   role: string
+  isLocked: boolean
   joinedDate: string
   totalOrders: number
   totalSpent: number
@@ -42,6 +43,20 @@ export function CustomerClient({ data }: { data: Customer[] }) {
   const searchParams = useSearchParams()
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
+  const [lockLoading, setLockLoading] = useState(false)
+
+  const toggleLock = async (customer: Customer) => {
+    if (!customer.id.startsWith("guest:")) {
+      setLockLoading(true)
+      await fetch(`/api/admin/customers/${customer.id}/lock`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked: !customer.isLocked }),
+      })
+      setLockLoading(false)
+      router.refresh()
+    }
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,7 +133,19 @@ export function CustomerClient({ data }: { data: Customer[] }) {
       <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Order History: {selectedCustomer?.name}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Order History: {selectedCustomer?.name}</span>
+              {selectedCustomer && !selectedCustomer.id.startsWith("guest:") && (
+                <Button
+                  size="sm"
+                  variant={selectedCustomer.isLocked ? "destructive" : "outline"}
+                  disabled={lockLoading}
+                  onClick={() => toggleLock(selectedCustomer)}
+                >
+                  {selectedCustomer.isLocked ? "Unlock Account" : "Lock Account"}
+                </Button>
+              )}
+            </DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto mt-4">
             {selectedCustomer?.orders.length === 0 ? (

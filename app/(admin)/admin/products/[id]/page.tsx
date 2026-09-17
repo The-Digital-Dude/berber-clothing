@@ -1,4 +1,5 @@
 import ProductForm from "@/components/admin/ProductForm"
+import DuplicateButton from "@/components/store/DuplicateButton"
 import prisma from "@/lib/prisma"
 import { serialize } from "@/lib/utils"
 import { notFound } from "next/navigation"
@@ -21,6 +22,9 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   return (
     <div className="mx-auto max-w-5xl w-full">
+      <div className="flex justify-end mb-2">
+        <DuplicateButton productId={product.id} />
+      </div>
       <ProductForm initialData={serialize(product)} categories={categories} />
     </div>
   )

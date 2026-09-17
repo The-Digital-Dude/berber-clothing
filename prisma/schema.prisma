@@ -21,6 +21,7 @@ model User {
   image          String?
   phone          String?
   role           String   @default("CUSTOMER")
+  isLocked       Boolean  @default(false)
   referralCode   String?  @unique
   referredByCode String?
   createdAt      DateTime @default(now())
@@ -269,6 +270,8 @@ model Order {
   depositPaid     Boolean       @default(false)
   isGuest         Boolean       @default(false)
   guestEmail      String?
+  codCallNote     String?       // admin note from COD verification call
+  tags            String?       // comma-separated admin tags on the order
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -1657,4 +1660,58 @@ model SmartCollectionProduct {
 
   @@unique([collectionId, productId])
   @@map("smart_collection_products")
+}
+
+// ─────────────────────────────────────────────
+// SEARCH & FUNNEL ANALYTICS
+// ─────────────────────────────────────────────
+
+model SearchAnalytic {
+  id            String   @id @default(cuid())
+  query         String
+  resultsCount  Int      @default(0)
+  clickedProductId String?
+  userId        String?
+  sessionId     String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([query])
+  @@map("search_analytics")
+}
+
+model FunnelEvent {
+  id         String   @id @default(cuid())
+  event      String   // page_view | add_to_cart | checkout_start | purchase | search
+  userId     String?
+  sessionId  String?
+  productId  String?
+  orderId    String?
+  metadata   String?  // JSON
+  createdAt  DateTime @default(now())
+
+  @@index([event, createdAt])
+  @@map("funnel_events")
+}
+
+// ─────────────────────────────────────────────
+// DRAFT ORDERS
+// ─────────────────────────────────────────────
+
+model DraftOrder {
+  id            String   @id @default(cuid())
+  userId        String?
+  guestEmail    String?
+  items         String   // JSON array of {productId, variantId, quantity, price, name, size, color}
+  subtotal      Decimal  @default(0)
+  discount      Decimal  @default(0)
+  total         Decimal  @default(0)
+  note          String?
+  status        String   @default("OPEN") // OPEN | COMPLETED | CANCELLED
+  expiresAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@map("draft_orders")
 }

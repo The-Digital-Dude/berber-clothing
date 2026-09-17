@@ -25,6 +25,8 @@ export default function OrderDetailsClient({
   const router = useRouter()
   const [order, setOrder] = useState(initialOrder)
   const [loading, setLoading] = useState(false)
+  const [codNote, setCodNote] = useState(order.codCallNote ?? "")
+  const [tagsInput, setTagsInput] = useState((order.tags ?? "").split(",").filter(Boolean).join(", "))
   const [deliveryData, setDeliveryData] = useState({
     courier: order.delivery?.courier || "PATHAO",
     consignmentId: order.delivery?.consignmentId || "",
@@ -264,6 +266,40 @@ export default function OrderDetailsClient({
                   <option value="REFUNDED">Refunded</option>
                 </select>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>COD Call Note</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              <textarea
+                value={codNote}
+                onChange={(e) => setCodNote(e.target.value)}
+                placeholder="e.g. Customer confirmed delivery on 3rd attempt…"
+                rows={3}
+                className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
+              />
+              <Button size="sm" variant="outline" onClick={async () => {
+                await fetch(`/api/admin/orders/${order.id}/note`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codCallNote: codNote }) })
+                toast.success("COD note saved")
+              }}>Save Note</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Order Tags</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              <input
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="vip, fragile, urgent (comma-separated)"
+                className="w-full border rounded-lg px-3 py-2 text-sm"
+              />
+              <Button size="sm" variant="outline" onClick={async () => {
+                const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean)
+                await fetch(`/api/admin/orders/${order.id}/tags`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tags }) })
+                toast.success("Tags saved")
+              }}>Save Tags</Button>
             </CardContent>
           </Card>
 

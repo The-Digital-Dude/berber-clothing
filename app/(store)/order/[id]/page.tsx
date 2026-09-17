@@ -5,6 +5,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { getBalance } from "@/lib/loyalty"
 import OrderMessages from "@/components/store/OrderMessages"
+import PostPurchaseUpsell from "@/components/store/PostPurchaseUpsell"
+import PurchaseTracker from "@/components/store/PurchaseTracker"
 
 const STATUS_STEPS = ["PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"] as const
 
@@ -265,6 +267,9 @@ export default async function OrderConfirmationPage({
           <OrderMessages orderId={order.id} />
         </div>
       )}
+
+      {payment !== "failed" && <PostPurchaseUpsell orderId={order.id} />}
+      <PurchaseTracker order={order as any} />
 
       <div className="mt-16 text-center border-t border-berber-border pt-12 flex items-center justify-center gap-8">
         <Link href={`/order/${order.id}/invoice`} className="inline-block text-xs font-bold uppercase tracking-widest border-b border-berber-black pb-1 hover:text-berber-gold hover:border-berber-gold transition-colors">
