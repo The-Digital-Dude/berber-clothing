@@ -11,7 +11,7 @@ const looks = [
   {
     title: "Evening Silk",
     subtitle: "Women's Formal",
-    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?q=80&w=800&auto=format&fit=crop",
     href: "/shop",
   },
   {
