@@ -143,7 +143,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">{initialData ? "Edit Product" : "Add Product"}</h2>
         <Button type="submit" disabled={loading}>

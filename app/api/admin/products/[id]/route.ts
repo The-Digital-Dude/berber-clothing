@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { notifyStockAlerts } from "@/lib/stockAlert"
@@ -90,6 +91,9 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
+    revalidatePath("/")
+    revalidatePath("/shop")
+    revalidatePath(`/shop/${product.slug}`)
     return NextResponse.json(product)
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })

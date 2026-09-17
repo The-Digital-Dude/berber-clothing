@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 
@@ -71,6 +72,9 @@ export async function POST(req: Request) {
       }
     })
 
+    revalidatePath("/")
+    revalidatePath("/shop")
+    revalidatePath(`/shop/${product.slug}`)
     return NextResponse.json(product, { status: 201 })
   } catch (error: any) {
     if (error.code === "P2002") {
