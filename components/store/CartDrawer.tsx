@@ -9,7 +9,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Switch } from "@/components/ui/switch"
 
-export default function CartDrawer({ itemCount: propItemCount, freeShippingThreshold = 5000 }: { itemCount?: number, freeShippingThreshold?: number }) {
+export default function CartDrawer({ itemCount: propItemCount, freeShippingThreshold = null }: { itemCount?: number, freeShippingThreshold?: number | null }) {
   const { items, removeItem, updateQuantity } = useCartStore()
   const [isOpen, setIsOpen] = useState(false)
   const [coupon, setCoupon] = useState("")
@@ -41,17 +41,19 @@ export default function CartDrawer({ itemCount: propItemCount, freeShippingThres
             <span className="text-xs uppercase tracking-widest text-berber-text-muted font-bold">{items.length} items</span>
           </div>
           {/* Free Shipping Progress */}
-          <div className="mt-4 space-y-2">
-            <p className="text-xs text-berber-text-muted">
-              {subtotal >= freeShippingThreshold ? "You've unlocked free shipping!" : `Add ৳${freeShippingThreshold - subtotal} more for free shipping`}
-            </p>
-            <div className="w-full h-1 bg-berber-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-berber-gold transition-all duration-500"
-                style={{ width: `${Math.min(100, (subtotal / freeShippingThreshold) * 100)}%` }}
-              />
+          {freeShippingThreshold && (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs text-berber-text-muted">
+                {subtotal >= freeShippingThreshold ? "You've unlocked free shipping!" : `Add ৳${freeShippingThreshold - subtotal} more for free shipping`}
+              </p>
+              <div className="w-full h-1 bg-berber-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-berber-gold transition-all duration-500"
+                  style={{ width: `${Math.min(100, (subtotal / freeShippingThreshold) * 100)}%` }}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </SheetHeader>
         
         <div className="flex-1 overflow-y-auto p-6">

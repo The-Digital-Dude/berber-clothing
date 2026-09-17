@@ -103,8 +103,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
   if (error) return error
+  const { id } = await params
   try {
-    const { id } = await params
     await prisma.product.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error: any) {

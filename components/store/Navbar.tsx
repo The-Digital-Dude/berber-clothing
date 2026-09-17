@@ -29,13 +29,13 @@ function useCountdown(endsAt: string) {
 }
 
 export default function Navbar({
-  freeShippingThreshold = 5000,
+  freeShippingThreshold = null,
   storeName = "Berber",
   storeTagline = "Wear Your Story",
   categories = [],
   activeFlashSale = null,
 }: {
-  freeShippingThreshold?: number
+  freeShippingThreshold?: number | null
   storeName?: string
   storeTagline?: string
   categories?: NavCategory[]
@@ -64,8 +64,10 @@ export default function Navbar({
             <span className="font-mono">Ends in {flashCountdown}</span>
             <Zap className="w-3 h-3 inline" />
           </p>
-        ) : (
+        ) : freeShippingThreshold ? (
           <p className="whitespace-nowrap">Free delivery on orders above ৳{freeShippingThreshold} 🚚</p>
+        ) : (
+          <p className="whitespace-nowrap">Free returns · Secure checkout · Made in Bangladesh</p>
         )}
       </div>
 

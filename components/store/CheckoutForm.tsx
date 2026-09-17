@@ -19,7 +19,7 @@ type CheckoutField = {
 }
 
 export default function CheckoutForm({
-  freeShippingThreshold = 5000,
+  freeShippingThreshold = null,
   shippingChargeAmount = 60,
   enabledPaymentMethods = ["COD", "BKASH", "NAGAD"],
   taxEnabled = false,
@@ -34,7 +34,7 @@ export default function CheckoutForm({
   userId,
   recoveredItems,
 }: {
-  freeShippingThreshold?: number
+  freeShippingThreshold?: number | null
   shippingChargeAmount?: number
   enabledPaymentMethods?: string[]
   taxEnabled?: boolean
@@ -109,7 +109,7 @@ export default function CheckoutForm({
   const [deliveryDate, setDeliveryDate] = useState("")
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
-  const shippingCharge = subtotal >= freeShippingThreshold ? 0 : shippingChargeAmount
+  const shippingCharge = (freeShippingThreshold && subtotal >= freeShippingThreshold) ? 0 : shippingChargeAmount
   const taxAmount = taxEnabled ? Math.round((subtotal * taxRate) / 100) : 0
   const giftWrapAmount = giftWrap ? giftWrapCharge : 0
   const loyaltyDiscount = redeemPoints ? Math.min(pointsToRedeem, loyaltyMaxDiscount) : 0

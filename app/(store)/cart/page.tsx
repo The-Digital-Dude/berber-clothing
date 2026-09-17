@@ -236,7 +236,7 @@ export default function CartPage() {
               )}
               <div className="flex justify-between">
                 <span className="text-berber-text-muted">Shipping</span>
-                <span className="font-mono">{subtotal >= 1000 ? "Free" : "Calculated at checkout"}</span>
+                <span className="font-mono">{(freeShippingThreshold && subtotal >= freeShippingThreshold) ? "Free" : "Calculated at checkout"}</span>
               </div>
             </div>
 
