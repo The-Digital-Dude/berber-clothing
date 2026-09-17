@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { renderContentPage } from "@/components/store/ContentPage"
 import { Mail, Phone } from "lucide-react"
+import ContactForm from "./ContactForm"
 
 export default async function ContactPage() {
   const [{ title, content }, settings] = await Promise.all([
@@ -39,10 +40,12 @@ export default async function ContactPage() {
 
       {content && (
         <div
-          className="prose prose-sm md:prose-base text-berber-text max-w-none"
+          className="prose prose-sm md:prose-base text-berber-text max-w-none mb-12"
           dangerouslySetInnerHTML={{ __html: content }}
         />
       )}
+
+      <ContactForm />
     </div>
   )
 }

@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic'
 import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
 import WishlistSync from "@/components/store/WishlistSync";
+import MetaPixelTracker from "@/components/MetaPixelTracker";
+import { Suspense } from "react";
 import prisma from "@/lib/prisma";
 import { getActiveFlashSaleBatch, applyFlashSaleDiscount } from "@/lib/flashSale";
 
@@ -16,6 +18,7 @@ const SETTING_KEYS = [
   "social_facebook",
   "social_instagram",
   "social_tiktok",
+  "meta_pixel_id",
 ]
 
 export default async function StoreLayout({
@@ -46,6 +49,7 @@ export default async function StoreLayout({
 
   const settingsMap = Object.fromEntries(settings.map((s) => [s.key, s.value]))
   const freeShippingThreshold = settingsMap.free_shipping_above ? parseInt(settingsMap.free_shipping_above, 10) : 1000
+  const metaPixelId = settingsMap.meta_pixel_id ?? process.env.NEXT_PUBLIC_META_PIXEL_ID ?? ""
 
   const branding = {
     storeName: settingsMap.store_name || "Berber",
@@ -62,6 +66,19 @@ export default async function StoreLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-berber-bg text-berber-text">
+      {metaPixelId && (
+        <>
+          {/* Meta Pixel base code */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${metaPixelId}');fbq('track','PageView');`,
+            }}
+          />
+          <Suspense fallback={null}>
+            <MetaPixelTracker />
+          </Suspense>
+        </>
+      )}
       <Navbar
         freeShippingThreshold={freeShippingThreshold}
         storeName={branding.storeName}

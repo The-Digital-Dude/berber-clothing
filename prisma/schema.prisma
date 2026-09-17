@@ -15,24 +15,28 @@ datasource db {
 // User.id mirrors the Supabase auth.users.id (UUID) — assigned explicitly at
 // signup time, not auto-generated, so it stays in sync with auth.users.
 model User {
-  id        String   @id
-  name      String?
-  email     String   @unique
-  image     String?
-  phone     String?
-  role      String     @default("CUSTOMER")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id
+  name           String?
+  email          String   @unique
+  image          String?
+  phone          String?
+  role           String   @default("CUSTOMER")
+  referralCode   String?  @unique
+  referredByCode String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  addresses         Address[]
-  orders            Order[]
-  loyaltyPoints     LoyaltyPoint[]
-  reviews           Review[]
+  addresses          Address[]
+  orders             Order[]
+  loyaltyPoints      LoyaltyPoint[]
+  reviews            Review[]
   reviewHelpfulVotes ReviewHelpfulVote[]
-  customerTags      CustomerTag[]
-  wishlists         WishlistItem[]
-  storeCredits      StoreCredit[]
-  storeCreditTxns   StoreCreditTransaction[]
+  customerTags       CustomerTag[]
+  wishlists          WishlistItem[]
+  storeCredits       StoreCredit[]
+  storeCreditTxns    StoreCreditTransaction[]
+  referralsMade      ReferralLog[] @relation("Referrer")
+  referralReceived   ReferralLog[] @relation("Referee")
 
   @@map("users")
 }
@@ -1511,4 +1515,54 @@ model ShippingLabel {
 
   @@index([orderId])
   @@map("shipping_labels")
+}
+
+// ─────────────────────────────────────────────
+// REFERRAL PROGRAM
+// ─────────────────────────────────────────────
+
+model ReferralLog {
+  id           String   @id @default(cuid())
+  referrerId   String
+  refereeId    String
+  orderId      String?
+  creditAmount Int      @default(0)
+  pointsAmount Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  referrer User @relation("Referrer", fields: [referrerId], references: [id])
+  referee  User @relation("Referee",  fields: [refereeId],  references: [id])
+
+  @@index([referrerId])
+  @@map("referral_logs")
+}
+
+// ─────────────────────────────────────────────
+// CONTACT FORM MESSAGES
+// ─────────────────────────────────────────────
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false)
+  isReplied Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("contact_messages")
+}
+
+// ─────────────────────────────────────────────
+// RATE LIMITS (DB-backed sliding window)
+// ─────────────────────────────────────────────
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(1)
+  windowEnd DateTime
+
+  @@map("rate_limits")
 }

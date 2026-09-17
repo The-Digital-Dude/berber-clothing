@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mail, Phone, MessageCircle, Share2, Music } from "lucide-react";
+import NewsletterForm from "./NewsletterForm";
 
 type Branding = {
   storeName: string
@@ -93,16 +94,7 @@ export default function Footer({
           <div className="space-y-4">
             <h4 className="font-bold uppercase tracking-wider text-sm">Join The Club</h4>
             <p className="text-sm text-berber-text-muted">Subscribe for 10% off your first order and exclusive access to new drops.</p>
-            <form className="flex gap-2">
-              <input
-                type="email"
-                placeholder="Email address"
-                className="flex-1 bg-berber-surface border border-berber-border px-4 py-2 rounded-lg text-sm focus:outline-none focus:border-berber-gold"
-              />
-              <button type="submit" className="bg-berber-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-berber-gold transition-colors">
-                Subscribe
-              </button>
-            </form>
+            <NewsletterForm />
             <div className="pt-4 space-y-2 text-sm text-berber-text-muted">
               <p className="flex items-center gap-2"><Mail className="w-4 h-4" /> {supportEmail}</p>
               <p className="flex items-center gap-2"><Phone className="w-4 h-4" /> {supportPhone}</p>
