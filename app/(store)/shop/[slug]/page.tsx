@@ -14,6 +14,7 @@ import ProductAddons from "@/components/store/ProductAddons"
 import ReviewMediaGallery from "@/components/store/ReviewMediaGallery"
 import ProductQA from "@/components/store/ProductQA"
 import SizeQuiz from "@/components/store/SizeQuiz"
+import StickyAddToCart from "@/components/store/StickyAddToCart"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Truck, RefreshCw, ShieldCheck } from "lucide-react"
 import type { Metadata } from "next"
@@ -321,6 +322,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           <RecentlyViewed currentProductId={product.id} />
         </div>
       </div>
+
+      {/* Sticky mobile add-to-cart */}
+      <StickyAddToCart
+        productName={product.name}
+        price={displayPrice}
+        image={product.images[0]?.url}
+      />
     </div>
   )
 }

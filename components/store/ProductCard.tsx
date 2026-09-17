@@ -1,7 +1,8 @@
 "use client"
 import Link from "next/link"
-import { Heart, ShoppingBag } from "lucide-react"
+import { Heart, ShoppingBag, Columns2 } from "lucide-react"
 import { useWishlistStore } from "@/store/useWishlistStore"
+import { useCompareStore } from "@/store/useCompareStore"
 import { toast } from "sonner"
 import FadeIn from "@/components/ui/FadeIn"
 
@@ -15,7 +16,9 @@ export default function ProductCard({
   flashSaleLabel?: string
 }) {
   const { toggleItem, isWishlisted } = useWishlistStore()
+  const { toggleItem: toggleCompare, hasItem: inCompare } = useCompareStore()
   const wishlisted = isWishlisted(product.id)
+  const comparing = inCompare(product.id)
 
   const images = product.images || []
   const thumbnail = images[0]?.url || "/placeholder.jpg"
@@ -72,17 +75,34 @@ export default function ProductCard({
           {isLowStock && <span className="bg-berber-error text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full">Low Stock</span>}
         </div>
 
-        {/* Wishlist */}
-        <button
-          onClick={handleWishlist}
-          className={`absolute top-3 right-3 p-1.5 rounded-full backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 ${
-            wishlisted
-              ? "bg-berber-error text-white opacity-100 translate-y-0"
-              : "bg-white/50 text-berber-text-muted hover:bg-berber-error hover:text-white"
-          }`}
-        >
-          <Heart className={`w-4 h-4 ${wishlisted ? "fill-current" : ""}`} />
-        </button>
+        {/* Wishlist & Compare */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5">
+          <button
+            onClick={handleWishlist}
+            className={`p-1.5 rounded-full backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 ${
+              wishlisted
+                ? "bg-berber-error text-white opacity-100 translate-y-0"
+                : "bg-white/50 text-berber-text-muted hover:bg-berber-error hover:text-white"
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${wishlisted ? "fill-current" : ""}`} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              toggleCompare({ id: product.id, name: product.name, slug: product.slug, price: Number(product.price), comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined, image: thumbnail, category: product.category?.name, brand: product.brand?.name })
+              toast.success(comparing ? "Removed from compare" : "Added to compare", { action: { label: "View", onClick: () => window.location.href = "/compare" } })
+            }}
+            className={`p-1.5 rounded-full backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 delay-75 ${
+              comparing
+                ? "bg-berber-gold text-white opacity-100 translate-y-0"
+                : "bg-white/50 text-berber-text-muted hover:bg-berber-gold hover:text-white"
+            }`}
+            title="Compare"
+          >
+            <Columns2 className="w-4 h-4" />
+          </button>
+        </div>
 
         {/* Quick Add (Desktop) */}
         <div className="absolute bottom-0 left-0 w-full p-4 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hidden md:block">

@@ -3,8 +3,11 @@
 import { useState, useMemo } from "react"
 import { toast } from "sonner"
 import { useCartStore } from "@/store/useCartStore"
+import { useCompareStore } from "@/store/useCompareStore"
 import NotifyMeForm from "@/components/store/NotifyMeForm"
 import SizeGuideModal from "@/components/store/SizeGuideModal"
+import { Columns2 } from "lucide-react"
+import Link from "next/link"
 
 export default function VariantSelector({
   product,
@@ -21,6 +24,8 @@ export default function VariantSelector({
 }) {
   const variants = product.variants || []
   const addItem = useCartStore((s) => s.addItem)
+  const { toggleItem: toggleCompare, hasItem: inCompare } = useCompareStore()
+  const comparing = inCompare(product.id)
 
   const sizes = Array.from(new Set(variants.map((v: any) => v.size))) as string[]
   const colors = Array.from(new Set(variants.map((v: any) => v.color))) as string[]
@@ -68,7 +73,7 @@ export default function VariantSelector({
   }
 
   return (
-    <div className="space-y-8">
+    <div id="variant-selector" className="space-y-8">
       {/* Colors / Attribute 2 */}
       {colors.length > 0 && (
         <div className="space-y-3">
@@ -164,6 +169,7 @@ export default function VariantSelector({
       <div className="pt-4 space-y-4">
         {!isOutOfStock ? (
           <button
+            id="add-to-bag-btn"
             onClick={addToCart}
             disabled={!activeVariant}
             className="w-full py-4 text-sm font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 bg-berber-black text-white hover:bg-berber-gold hover:shadow-lg hover:shadow-berber-gold/20"
@@ -180,6 +186,21 @@ export default function VariantSelector({
             Only {stock} left in stock — order soon!
           </p>
         )}
+
+        <button
+          onClick={() => {
+            toggleCompare({ id: product.id, name: product.name, slug: product.slug, price: Number(product.price), image: product.images?.[0]?.url })
+            toast.success(comparing ? "Removed from compare" : "Added to compare", { action: { label: "View compare", onClick: () => window.location.href = "/compare" } })
+          }}
+          className={`w-full py-3 text-xs font-bold uppercase tracking-widest border transition-all duration-300 flex items-center justify-center gap-2 ${
+            comparing
+              ? "border-berber-gold text-berber-gold bg-berber-gold/5"
+              : "border-berber-border text-berber-text-muted hover:border-berber-black hover:text-berber-black"
+          }`}
+        >
+          <Columns2 className="w-4 h-4" />
+          {comparing ? "In Comparison" : "Compare"}
+        </button>
       </div>
     </div>
   )
