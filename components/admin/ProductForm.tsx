@@ -23,6 +23,7 @@ const productSchema = z.object({
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),
   seoKeywords: z.string().optional(),
+  videoUrl: z.string().optional(),
   variants: z.array(z.object({
     size: z.string().min(1),
     color: z.string().min(1),
@@ -393,6 +394,10 @@ export default function ProductForm({ initialData, categories }: { initialData?:
               <div>
                 <label className="block text-xs font-medium mb-1">Meta Keywords</label>
                 <input {...register("seoKeywords")} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="shirt, fashion, bangladesh" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Product Video URL <span className="text-muted-foreground">(YouTube or direct MP4)</span></label>
+                <input {...register("videoUrl")} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="https://youtube.com/watch?v=... or https://..." />
               </div>
             </CardContent>
           </Card>

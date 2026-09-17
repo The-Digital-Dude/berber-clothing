@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useSession } from "@/hooks/useSession"
-import { Star, Loader2, ThumbsUp } from "lucide-react"
+import { Star, Loader2, ThumbsUp, Camera, X } from "lucide-react"
 import { toast } from "sonner"
 
 type Review = {
@@ -40,6 +40,8 @@ export default function ReviewSection({ productId }: { productId: string }) {
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   const load = () => {
     fetch(`/api/products/${productId}/reviews`)
@@ -73,6 +75,19 @@ export default function ReviewSection({ productId }: { productId: string }) {
     load()
   }, [productId])
 
+  async function uploadPhoto(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error("Only images allowed"); return }
+    setUploadingPhoto(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd })
+      const d = await res.json()
+      if (d.url) setPhotos((p) => [...p, d.url])
+    } catch { toast.error("Photo upload failed") }
+    finally { setUploadingPhoto(false) }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!rating) {
@@ -84,7 +99,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
       const res = await fetch(`/api/products/${productId}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rating, comment }),
+        body: JSON.stringify({ rating, comment, photos }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -94,6 +109,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
         setShowForm(false)
         setRating(0)
         setComment("")
+        setPhotos([])
         load()
       }
     } catch {
@@ -133,6 +149,37 @@ export default function ReviewSection({ productId }: { productId: string }) {
               rows={3}
               className="w-full bg-white border border-berber-border rounded-lg px-3 py-2 text-sm outline-none focus:border-berber-gold resize-none"
             />
+            {/* Photo upload */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {photos.map((url, i) => (
+                  <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-berber-border">
+                    <img src={url} alt="Review photo" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))}
+                      className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/60 rounded-full flex items-center justify-center text-white"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ))}
+                {photos.length < 4 && (
+                  <label className="w-16 h-16 border-2 border-dashed border-berber-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-berber-gold transition-colors text-berber-text-muted hover:text-berber-gold">
+                    {uploadingPhoto ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                    <span className="text-[9px] mt-0.5">Add photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && uploadPhoto(e.target.files[0])}
+                    />
+                  </label>
+                )}
+              </div>
+              <p className="text-xs text-berber-text-muted">Add up to 4 photos (optional)</p>
+            </div>
+
             <div className="flex gap-3">
               <button
                 type="submit"

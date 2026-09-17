@@ -441,3 +441,34 @@ export async function sendStoreCreditIssued(data: {
 
   await sendMail(data.to, `৳${data.amount.toLocaleString()} store credit added to your account`, baseTemplate(store, content))
 }
+
+export async function sendAdminLowStockAlert(data: {
+  productName: string
+  sku: string
+  size: string
+  color: string
+  stock: number
+  productId: string
+}) {
+  const store = await getStoreMeta()
+  const rows = await prisma.setting.findMany({ where: { key: { in: ["admin_notification_email", "support_email"] } } })
+  const s = Object.fromEntries(rows.map((r) => [r.key, r.value]))
+  const adminEmail = s.admin_notification_email || s.support_email
+  if (!adminEmail) return
+
+  const content = `
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">⚠️ Low stock alert</h1>
+    <p class="muted">A variant is running low and may need restocking.</p>
+    <hr class="divider">
+    <div class="grid-2">
+      <div><div class="label">Product</div><div class="value">${data.productName}</div></div>
+      <div><div class="label">SKU</div><div class="value">${data.sku}</div></div>
+    </div>
+    <div class="grid-2" style="margin-top:0">
+      <div><div class="label">Variant</div><div class="value">${data.size} / ${data.color}</div></div>
+      <div><div class="label">Remaining stock</div><div class="value tag-red" style="color:#b91c1c;font-weight:700;font-size:18px">${data.stock}</div></div>
+    </div>
+    <a href="${store.url}/admin/inventory" class="btn">Go to Inventory →</a>`
+
+  await sendMail(adminEmail, `Low stock: ${data.productName} (${data.size}/${data.color}) — ${data.stock} left`, baseTemplate(store, content))
+}

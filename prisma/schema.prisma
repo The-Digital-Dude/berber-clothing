@@ -137,6 +137,7 @@ model Product {
   seoTitle       String?
   seoDescription String?
   seoKeywords    String?
+  videoUrl       String?  // optional product demo video (YouTube/direct MP4 URL)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

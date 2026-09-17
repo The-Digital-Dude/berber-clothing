@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import Image from "next/image"
 import { useCartStore } from "@/store/useCartStore"
 import { useRouter } from "next/navigation"
-import { MapPin, CreditCard, ClipboardCheck, ChevronRight, Check, Gift, MessageSquare, User, Star, Wallet, Tag, Calendar } from "lucide-react"
+import { MapPin, CreditCard, ClipboardCheck, ChevronRight, Check, Gift, MessageSquare, User, Star, Wallet, Tag, Calendar, ShoppingBag, ChevronDown } from "lucide-react"
 
 type CheckoutField = {
   id: string
@@ -82,6 +82,7 @@ export default function CheckoutForm({
 
   // Loyalty points redemption
   const [redeemPoints, setRedeemPoints] = useState(false)
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false)
   const [pointsToRedeem, setPointsToRedeem] = useState(0)
 
   // Store credit redemption
@@ -281,6 +282,46 @@ export default function CheckoutForm({
   return (
     <div className="flex flex-col lg:flex-row gap-10 items-start">
       <div className="w-full lg:w-2/3 space-y-6">
+
+        {/* Mobile Order Summary Toggle */}
+        <div className="lg:hidden bg-white border border-berber-border rounded-2xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setMobileSummaryOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-5 py-4 text-sm font-bold"
+          >
+            <span className="flex items-center gap-2 text-berber-text-muted">
+              <ShoppingBag className="w-4 h-4" />
+              {mobileSummaryOpen ? "Hide" : "Show"} order summary ({items.length} item{items.length !== 1 ? "s" : ""})
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="font-mono font-bold text-berber-black">৳{total.toLocaleString()}</span>
+              <ChevronDown className={`w-4 h-4 text-berber-text-muted transition-transform ${mobileSummaryOpen ? "rotate-180" : ""}`} />
+            </span>
+          </button>
+          {mobileSummaryOpen && (
+            <div className="border-t border-berber-border px-5 py-4 space-y-3">
+              {items.map((item) => (
+                <div key={item.variantId} className="flex gap-3 text-sm">
+                  <div className="relative w-12 h-14 shrink-0 bg-berber-muted rounded overflow-hidden">
+                    <Image src={item.image || "/placeholder.jpg"} alt={item.name} fill sizes="48px" className="object-cover" />
+                  </div>
+                  <div className="flex-1 flex flex-col justify-center">
+                    <p className="font-medium line-clamp-1">{item.name}</p>
+                    <p className="text-xs text-berber-text-muted">{item.size} / {item.color} · Qty {item.quantity}</p>
+                  </div>
+                  <span className="font-mono font-bold shrink-0">৳{(item.price * item.quantity).toLocaleString()}</span>
+                </div>
+              ))}
+              <div className="border-t border-berber-border pt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between text-berber-text-muted"><span>Subtotal</span><span className="font-mono">৳{subtotal.toLocaleString()}</span></div>
+                <div className="flex justify-between text-berber-text-muted"><span>Shipping</span><span className="font-mono">{shippingCharge === 0 ? "Free" : `৳${shippingCharge}`}</span></div>
+                {couponDiscount > 0 && <div className="flex justify-between text-berber-success"><span>Coupon</span><span className="font-mono">−৳{couponDiscount.toLocaleString()}</span></div>}
+                <div className="flex justify-between font-bold"><span>Total</span><span className="font-mono">৳{total.toLocaleString()}</span></div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Step Indicator */}
         <div className="flex items-center justify-between mb-8 px-2 md:px-10 relative">

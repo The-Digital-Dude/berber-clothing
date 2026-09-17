@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   const { id: productId } = await params
-  const { rating, comment } = await req.json()
+  const { rating, comment, photos } = await req.json()
 
   const numRating = Number(rating)
   if (!numRating || numRating < 1 || numRating > 5) {
@@ -72,6 +72,23 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       comment: comment?.trim() || null,
     },
   })
+
+  // Save uploaded photos as ReviewMedia
+  if (Array.isArray(photos) && photos.length > 0) {
+    const validPhotos = photos.filter((u: any) => typeof u === "string" && u.startsWith("http")).slice(0, 4)
+    if (validPhotos.length > 0) {
+      // Delete existing media for this review first (upsert may re-use the review)
+      await prisma.reviewMedia.deleteMany({ where: { reviewId: review.id } }).catch(() => {})
+      await prisma.reviewMedia.createMany({
+        data: validPhotos.map((url: string) => ({
+          reviewId: review.id,
+          url,
+          type: "IMAGE",
+          reviewerName: session.user.name || "Customer",
+        })),
+      }).catch(() => {})
+    }
+  }
 
   return NextResponse.json({ review }, { status: 201 })
 }

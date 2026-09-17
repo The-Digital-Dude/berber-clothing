@@ -158,7 +158,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           
           {/* Image Gallery - Split layout on desktop, stacked on mobile */}
           <div className="w-full lg:w-3/5">
-            <ProductGallery images={serialize(product.images)} />
+            <ProductGallery images={serialize(product.images)} videoUrl={(product as any).videoUrl} />
           </div>
 
           {/* Product Info */}

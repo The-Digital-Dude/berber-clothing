@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { notifyStockAlerts } from "@/lib/stockAlert"
+import { sendAdminLowStockAlert } from "@/lib/email"
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
@@ -29,12 +30,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params
     const body = await req.json()
-    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, images, variants } = body
+    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, videoUrl, images, variants } = body
 
     // Update product fields
     const product = await prisma.product.update({
       where: { id },
-      data: { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle: seoTitle || null, seoDescription: seoDescription || null, seoKeywords: seoKeywords || null },
+      data: { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle: seoTitle || null, seoDescription: seoDescription || null, seoKeywords: seoKeywords || null, videoUrl: videoUrl || null },
     })
 
     // Sync images: delete old, recreate
@@ -71,6 +72,19 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           // Notify back-in-stock subscribers
           if (v.stock > 0 && (currentStockMap[v.id] ?? 0) === 0) {
             notifyStockAlerts(v.id).catch(() => {})
+          }
+
+          // Alert admin when stock drops to low threshold (1–5)
+          const prevStock = currentStockMap[v.id] ?? 0
+          if (v.stock > 0 && v.stock <= 5 && prevStock > 5) {
+            sendAdminLowStockAlert({
+              productName: product.name,
+              sku: v.sku || v.id,
+              size: v.size,
+              color: v.color,
+              stock: v.stock,
+              productId: id,
+            }).catch(() => {})
           }
         }
       }

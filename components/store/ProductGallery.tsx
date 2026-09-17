@@ -2,10 +2,17 @@
 
 import { useState } from "react"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight, ZoomIn } from "lucide-react"
+import { ChevronLeft, ChevronRight, ZoomIn, Play } from "lucide-react"
 
-export default function ProductGallery({ images }: { images: any[] }) {
+function getYouTubeId(url: string) {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?/]+)/)
+  return m ? m[1] : null
+}
+
+export default function ProductGallery({ images, videoUrl }: { images: any[]; videoUrl?: string | null }) {
+  // -1 = video slot
   const [activeIndex, setActiveIndex] = useState(0)
+  const showVideo = activeIndex === -1 && !!videoUrl
   const activeImage = images[activeIndex]?.url || "/placeholder.jpg"
 
   const nextImage = () => setActiveIndex((i) => (i + 1) % (images.length || 1))
@@ -14,17 +21,30 @@ export default function ProductGallery({ images }: { images: any[] }) {
   return (
     <div className="flex flex-col md:flex-row-reverse gap-4 md:gap-6 sticky top-20">
       
-      {/* Main Image */}
+      {/* Main Image / Video */}
       <div className="w-full flex-1 relative bg-berber-muted overflow-hidden group">
         <div className="aspect-[3/4] md:aspect-[4/5] w-full">
-          <Image
-            src={activeImage}
-            alt="Product Image"
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105 cursor-zoom-in"
-            priority
-          />
+          {showVideo && videoUrl ? (
+            getYouTubeId(videoUrl) ? (
+              <iframe
+                src={`https://www.youtube.com/embed/${getYouTubeId(videoUrl)}?autoplay=1`}
+                allow="autoplay; fullscreen"
+                className="w-full h-full"
+                title="Product video"
+              />
+            ) : (
+              <video src={videoUrl} controls autoPlay className="w-full h-full object-cover" />
+            )
+          ) : (
+            <Image
+              src={activeImage}
+              alt="Product Image"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-105 cursor-zoom-in"
+              priority
+            />
+          )}
         </div>
 
         {/* Mobile Arrows */}
@@ -47,15 +67,23 @@ export default function ProductGallery({ images }: { images: any[] }) {
       {/* Thumbnails */}
       <div className="flex md:flex-col gap-3 overflow-x-auto md:w-20 lg:w-24 shrink-0 pb-2 md:pb-0 hide-scrollbar snap-x">
         {images.map((img, idx) => (
-          <button 
-            key={img.id} 
+          <button
+            key={img.id}
             onClick={() => setActiveIndex(idx)}
             className={`relative aspect-[3/4] w-20 md:w-full overflow-hidden transition-all snap-center rounded-sm ${activeIndex === idx ? "ring-1 ring-berber-black ring-offset-2 opacity-100" : "opacity-60 hover:opacity-100"}`}
           >
             <Image src={img.url} alt={img.alt || "Thumbnail"} fill sizes="96px" className="object-cover" />
           </button>
         ))}
-        {images.length === 0 && (
+        {videoUrl && (
+          <button
+            onClick={() => setActiveIndex(-1)}
+            className={`relative aspect-[3/4] w-20 md:w-full overflow-hidden transition-all snap-center rounded-sm bg-berber-black flex items-center justify-center ${activeIndex === -1 ? "ring-1 ring-berber-gold ring-offset-2" : "opacity-70 hover:opacity-100"}`}
+          >
+            <Play className="w-6 h-6 text-white fill-white" />
+          </button>
+        )}
+        {images.length === 0 && !videoUrl && (
           <div className="aspect-[3/4] w-20 md:w-full bg-berber-muted rounded-sm" />
         )}
       </div>
