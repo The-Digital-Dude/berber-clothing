@@ -10,7 +10,7 @@ import {
   Zap, Percent, Tag, RotateCcw, Globe, Link2, MapPin, Layers, ScrollText,
   ShoppingBasket, Upload, CreditCard, Workflow, Wallet, Award, TrendingUp,
   Sliders, ChevronRight, Crown, Calendar, Warehouse, Download, LineChart, PieChart,
-  Search, ChevronDown, Star, MessageSquare, Mail, Layers2,
+  Search, ChevronDown, Star, MessageSquare, Mail, Layers2, RefreshCw, HelpCircle, Label,
 } from "lucide-react"
 
 type NavItem = { href: string; icon: any; label: string }
@@ -28,6 +28,8 @@ const navGroups: NavGroup[] = [
       { href: "/admin/inventory", icon: Package, label: "Inventory" },
       { href: "/admin/products/import", icon: Upload, label: "Import CSV" },
       { href: "/admin/reviews", icon: Star, label: "Reviews" },
+      { href: "/admin/qa", icon: HelpCircle, label: "Q&A" },
+      { href: "/admin/fbt", icon: TrendingUp, label: "Bought Together" },
     ],
   },
   {
@@ -39,6 +41,7 @@ const navGroups: NavGroup[] = [
       { href: "/admin/draft-orders", icon: FileText, label: "Draft Orders" },
       { href: "/admin/returns", icon: RotateCcw, label: "Returns & RMA" },
       { href: "/admin/abandoned-carts", icon: ShoppingBasket, label: "Abandoned Carts" },
+      { href: "/admin/subscriptions", icon: RefreshCw, label: "Subscriptions" },
     ],
   },
   {
@@ -83,6 +86,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/admin/shipping-zones", icon: MapPin, label: "Shipping Zones" },
       { href: "/admin/delivery", icon: Truck, label: "Delivery Methods" },
+      { href: "/admin/shipping-labels", icon: Label, label: "Shipping Labels" },
       { href: "/admin/locations", icon: Warehouse, label: "Locations" },
     ],
   },
