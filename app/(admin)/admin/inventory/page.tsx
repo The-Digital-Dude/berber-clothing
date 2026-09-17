@@ -13,5 +13,5 @@ export default async function InventoryPage() {
     orderBy: { product: { name: "asc" } },
   })
 
-  return <InventoryBulkClient variants={serialize(variants)} />
+  return <InventoryBulkClient variants={JSON.parse(JSON.stringify(variants))} />
 }

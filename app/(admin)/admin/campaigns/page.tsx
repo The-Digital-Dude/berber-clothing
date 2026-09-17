@@ -4,7 +4,7 @@ import CampaignComposer from "./CampaignComposer"
 export default async function CampaignsPage() {
   const [campaigns, subscriberCount] = await Promise.all([
     prisma.emailCampaign.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
-    prisma.marketingSubscriber.count({ where: { isActive: true } }),
+    prisma.marketingSubscriber.count({ where: { status: "subscribed" } }),
   ])
 
   return (

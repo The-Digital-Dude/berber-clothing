@@ -3,39 +3,39 @@ import { ArrowRight } from "lucide-react"
 
 const looks = [
   {
-    title: "The Urban Edit",
+    title: "The Formal Edit",
     subtitle: "SS26 Collection",
-    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=800&auto=format&fit=crop",
     href: "/shop?sort=newest",
   },
   {
-    title: "Minimal Black",
-    subtitle: "Essentials",
-    image: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?q=80&w=800&auto=format&fit=crop",
+    title: "Evening Silk",
+    subtitle: "Women's Formal",
+    image: "https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=800&auto=format&fit=crop",
     href: "/shop",
   },
   {
-    title: "Street Ready",
-    subtitle: "Casual Line",
-    image: "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=800&auto=format&fit=crop",
+    title: "Boardroom Ready",
+    subtitle: "Men's Suiting",
+    image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=800&auto=format&fit=crop",
     href: "/shop",
   },
   {
-    title: "After Hours",
-    subtitle: "Premium Series",
-    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop",
+    title: "Festive Heritage",
+    subtitle: "Ethnic Formal",
+    image: "https://images.unsplash.com/photo-1594938298603-c8148c4b2fc4?q=80&w=800&auto=format&fit=crop",
     href: "/shop",
   },
   {
-    title: "Clean Lines",
-    subtitle: "Structured Wear",
-    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop",
+    title: "Structured Grace",
+    subtitle: "Women's Co-ords",
+    image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?q=80&w=800&auto=format&fit=crop",
     href: "/shop",
   },
   {
-    title: "The Drop",
+    title: "Heritage Drop",
     subtitle: "Limited Edition",
-    image: "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=800&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=800&auto=format&fit=crop",
     href: "/shop",
   },
 ]
@@ -46,7 +46,7 @@ export default function LookbookPage() {
       {/* Hero */}
       <div className="relative h-[60vh] flex items-end overflow-hidden bg-berber-black">
         <img
-          src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop"
+          src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=2070&auto=format&fit=crop"
           alt="Berber Lookbook"
           className="absolute inset-0 w-full h-full object-cover opacity-60"
         />
@@ -54,7 +54,7 @@ export default function LookbookPage() {
           <p className="text-berber-gold font-bold tracking-[0.2em] text-xs uppercase mb-3">Season 2026</p>
           <h1 className="text-5xl md:text-7xl font-heading font-bold leading-none mb-4">Lookbook</h1>
           <p className="text-lg text-gray-300 max-w-md">
-            A visual story of style, texture, and attitude. Shop every look.
+            Formal elegance for every occasion. Rooted in craft, dressed for the moment.
           </p>
         </div>
       </div>

@@ -13,5 +13,5 @@ export default async function DraftOrdersPage() {
     take: 100,
   })
 
-  return <DraftOrdersClient drafts={serialize(drafts)} />
+  return <DraftOrdersClient drafts={JSON.parse(JSON.stringify(drafts))} />
 }

@@ -10,7 +10,7 @@ import {
   Zap, Percent, Tag, RotateCcw, Globe, Link2, MapPin, Layers, ScrollText,
   ShoppingBasket, Upload, CreditCard, Workflow, Wallet, Award, TrendingUp,
   Sliders, ChevronRight, Crown, Calendar, Warehouse, Download, LineChart, PieChart,
-  Search, ChevronDown, Star, MessageSquare, Mail, Layers2, RefreshCw, HelpCircle, Label, Users2,
+  Search, ChevronDown, Star, MessageSquare, Mail, Layers2, RefreshCw, HelpCircle, Users2,
 } from "lucide-react"
 
 type NavItem = { href: string; icon: any; label: string }
@@ -87,7 +87,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/admin/shipping-zones", icon: MapPin, label: "Shipping Zones" },
       { href: "/admin/delivery", icon: Truck, label: "Delivery Methods" },
-      { href: "/admin/shipping-labels", icon: Label, label: "Shipping Labels" },
+      { href: "/admin/shipping-labels", icon: Tag, label: "Shipping Labels" },
       { href: "/admin/locations", icon: Warehouse, label: "Locations" },
     ],
   },

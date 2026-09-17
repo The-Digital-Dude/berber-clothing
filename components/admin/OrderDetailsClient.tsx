@@ -333,7 +333,7 @@ export default function OrderDetailsClient({
                 className="w-full border rounded-lg px-3 py-2 text-sm"
               />
               <Button size="sm" variant="outline" onClick={async () => {
-                const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean)
+                const tags = tagsInput.split(",").map((t: string) => t.trim()).filter(Boolean)
                 await fetch(`/api/admin/orders/${order.id}/tags`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tags }) })
                 toast.success("Tags saved")
               }}>Save Tags</Button>

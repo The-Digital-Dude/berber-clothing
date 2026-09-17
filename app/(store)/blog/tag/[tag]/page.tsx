@@ -13,7 +13,7 @@ export default async function BlogTagPage({ params }: { params: { tag: string } 
 
   const posts = await prisma.blogPost.findMany({
     where: {
-      published: true,
+      isPublished: true,
       tags: { contains: tag },
     },
     orderBy: { publishedAt: "desc" },

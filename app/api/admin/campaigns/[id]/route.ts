@@ -13,7 +13,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.action === "send") {
     // Fetch all active subscribers
     const subscribers = await prisma.marketingSubscriber.findMany({
-      where: { isActive: true },
+      where: { status: "subscribed" },
       select: { email: true },
     })
 

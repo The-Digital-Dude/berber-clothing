@@ -16,7 +16,7 @@ export default async function StoreHomepage() {
 
   const heroBanner = banners[0] || {
     title: "Wear Your Story",
-    image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=2070&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=2070&auto=format&fit=crop",
     link: "/shop"
   };
 
@@ -114,18 +114,18 @@ export default async function StoreHomepage() {
         <FadeIn>
           <div className="flex flex-col md:flex-row h-full">
             <div className="w-full md:w-1/2 h-[400px] md:h-[600px] relative">
-               <Image src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop" alt="Summer Collection" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
+               <Image src="https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=2070&auto=format&fit=crop" alt="Berber Formal Collection" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
             </div>
             <div className="w-full md:w-1/2 flex items-center justify-center p-12 lg:p-24 text-center md:text-left">
               <div className="max-w-md space-y-6">
-                <p className="text-berber-gold font-bold tracking-widest text-xs uppercase">Limited Edition</p>
+                <p className="text-berber-gold font-bold tracking-widest text-xs uppercase">New Arrival</p>
                 <h2 className="text-4xl md:text-5xl font-heading font-bold text-berber-black leading-tight">
-                  Summer Collection 2024
+                  Formal Collection 2026
                 </h2>
                 <p className="text-berber-text-muted leading-relaxed">
-                  Embrace the warmth with our newest line of breathable, sustainable fabrics designed for the ultimate comfort and effortless style.
+                  Crafted for every occasion — from boardroom to banquet. Discover structured silhouettes and refined fabrics rooted in South Asian heritage.
                 </p>
-                <Link href="/shop?collection=summer-24" className="inline-block mt-4 px-8 py-3 bg-berber-black text-white rounded-full hover:bg-berber-gold transition-colors font-medium">
+                <Link href="/shop" className="inline-block mt-4 px-8 py-3 bg-berber-black text-white rounded-full hover:bg-berber-gold transition-colors font-medium">
                   Shop The Collection
                 </Link>
               </div>

@@ -33,5 +33,5 @@ export default async function BundleDetailPage({ params }: { params: { slug: str
 
   if (!bundle) notFound()
 
-  return <BundleDetail bundle={serialize(bundle)} />
+  return <BundleDetail bundle={JSON.parse(JSON.stringify(bundle))} />
 }

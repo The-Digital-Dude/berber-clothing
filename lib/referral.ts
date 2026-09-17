@@ -43,7 +43,7 @@ export async function processReferral(
         userId: refereeId,
         amount: REFEREE_CREDIT,
         type: "REFERRAL_BONUS",
-        description: "Referral sign-up credit",
+        reason: "Referral sign-up credit",
         orderId,
       },
     }),

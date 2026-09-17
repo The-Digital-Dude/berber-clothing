@@ -32,6 +32,7 @@ export default function CheckoutForm({
   loyaltyMaxDiscount = 0,
   storeCreditBalance = 0,
   userId,
+  recoveredItems,
 }: {
   freeShippingThreshold?: number
   shippingChargeAmount?: number

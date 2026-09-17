@@ -20,12 +20,12 @@ export async function POST(req: NextRequest) {
 
   const existing = await prisma.marketingSubscriber.findUnique({ where: { email } })
   if (existing) {
-    if (!existing.isActive) {
-      await prisma.marketingSubscriber.update({ where: { email }, data: { isActive: true } })
+    if (existing.status === "unsubscribed") {
+      await prisma.marketingSubscriber.update({ where: { email }, data: { status: "subscribed" } })
     }
     return NextResponse.json({ ok: true, message: "Already subscribed" })
   }
 
-  await prisma.marketingSubscriber.create({ data: { email, source: "FOOTER_FORM" } })
+  await prisma.marketingSubscriber.create({ data: { email, provider: "brevo", status: "subscribed" } })
   return NextResponse.json({ ok: true, message: "Subscribed successfully" })
 }

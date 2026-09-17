@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
 
   await prisma.marketingSubscriber.updateMany({
     where: { email },
-    data: { isActive: false },
+    data: { status: "unsubscribed" },
   })
 
   return NextResponse.json({ message: "You've been unsubscribed from our mailing list." })

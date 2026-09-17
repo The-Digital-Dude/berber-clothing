@@ -131,8 +131,8 @@ export default function LoginPage() {
       {/* Image Side */}
       <div className="hidden md:block w-1/2 relative bg-berber-muted overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1920&auto=format&fit=crop"
-          alt="Berber Fashion"
+          src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=1920&auto=format&fit=crop"
+          alt="Berber Formalwear"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-black/20" />

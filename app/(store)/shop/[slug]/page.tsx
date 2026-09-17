@@ -302,7 +302,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         {/* Frequently Bought Together */}
         {fbtPairs.length > 0 && (
           <FrequentlyBoughtTogether
-            primary={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, images: serialize(product.images), variants: serialize(product.variants) }}
+            primary={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, images: serialize(product.images).map((img: any) => ({ url: img.url, alt: img.alt ?? undefined })), variants: serialize(product.variants) }}
             suggestions={fbtPairs.map((p: any) => ({ id: p.secondary.id, name: p.secondary.name, slug: p.secondary.slug, price: Number(p.secondary.price), images: serialize(p.secondary.images), variants: serialize(p.secondary.variants) }))}
           />
         )}

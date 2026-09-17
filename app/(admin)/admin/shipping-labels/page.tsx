@@ -9,18 +9,21 @@ export default async function ShippingLabelsPage() {
   const session = await requireAdmin()
   if (!session) redirect("/login")
 
-  const labels = await prisma.shippingLabel.findMany({
-    include: {
-      order: { select: { orderNumber: true, shippingName: true, shippingPhone: true, shippingAddress: true, shippingDistrict: true, total: true, paymentMethod: true } },
-    },
+  const rawLabels = await prisma.shippingLabel.findMany({
     orderBy: { createdAt: "desc" },
     take: 200,
   })
 
+  const labelledOrderIds = rawLabels.map((l) => l.orderId)
+  const labelOrders = labelledOrderIds.length > 0
+    ? await prisma.order.findMany({ where: { id: { in: labelledOrderIds } }, select: { id: true, orderNumber: true, shippingName: true, shippingPhone: true, shippingAddress: true, shippingDistrict: true, total: true, paymentMethod: true } })
+    : []
+  const orderMap = Object.fromEntries(labelOrders.map((o) => [o.id, o]))
+  const labels = rawLabels.map((l) => ({ ...l, order: orderMap[l.orderId] ?? null }))
   const pendingOrders = await prisma.order.findMany({
     where: {
       status: { in: ["CONFIRMED", "PROCESSING", "PACKED"] },
-      shippingLabel: null,
+      ...(labelledOrderIds.length > 0 ? { id: { notIn: labelledOrderIds } } : {}),
     },
     select: { id: true, orderNumber: true, shippingName: true, shippingPhone: true, shippingAddress: true, shippingDistrict: true, total: true, paymentMethod: true },
     orderBy: { createdAt: "desc" },

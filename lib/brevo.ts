@@ -74,6 +74,6 @@ export async function brevoUnsubscribe(email: string) {
 
   await prisma.marketingSubscriber.updateMany({
     where: { email },
-    data: { unsubscribedAt: new Date() },
+    data: { status: "unsubscribed" },
   }).catch(() => {})
 }
