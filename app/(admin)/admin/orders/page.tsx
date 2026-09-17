@@ -5,6 +5,7 @@ import OrdersFilters from "./OrdersFilters"
 import OrdersBulkClient from "./OrdersBulkClient"
 import AdminPagination from "@/components/admin/AdminPagination"
 import { getCustomerRiskBatch } from "@/lib/customerRisk"
+import { serialize } from "@/lib/utils"
 import { Download } from "lucide-react"
 import Link from "next/link"
 
@@ -48,6 +49,9 @@ export default async function OrdersPage({
   ])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  const serializedOrders = serialize(orders)
+
   const riskMap = await getCustomerRiskBatch(orders.map((o: any) => o.shippingPhone)).catch(() => new Map())
   const riskByPhone = Object.fromEntries(riskMap)
 
@@ -72,7 +76,7 @@ export default async function OrdersPage({
             currentStatus={status}
             currentPayment={paymentMethod}
           />
-          <OrdersBulkClient orders={orders as any} riskByPhone={riskByPhone} />
+          <OrdersBulkClient orders={serializedOrders as any} riskByPhone={riskByPhone} />
           <AdminPagination page={page} totalPages={totalPages} basePath="/admin/orders" />
         </CardContent>
       </Card>
