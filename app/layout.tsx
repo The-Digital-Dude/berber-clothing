@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,12 @@ const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-headin
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-mono" });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+
+export const viewport: Viewport = {
+  themeColor: "#C9A84C",
+  width: "device-width",
+  initialScale: 1,
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   let siteTitle = "Berber Clothing | Modern Formalwear"
