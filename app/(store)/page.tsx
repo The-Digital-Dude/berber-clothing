@@ -114,7 +114,7 @@ export default async function StoreHomepage() {
         <FadeIn>
           <div className="flex flex-col md:flex-row h-full">
             <div className="w-full md:w-1/2 h-[400px] md:h-[600px] relative">
-               <Image src="https://images.unsplash.com/photo-1583391733956-6c78276477e2?q=80&w=2070&auto=format&fit=crop" alt="Berber Formal Collection" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
+               <Image src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070&auto=format&fit=crop" alt="Berber Formal Collection" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
             </div>
             <div className="w-full md:w-1/2 flex items-center justify-center p-12 lg:p-24 text-center md:text-left">
               <div className="max-w-md space-y-6">
