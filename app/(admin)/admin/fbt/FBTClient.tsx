@@ -17,8 +17,11 @@ export default function FBTClient({ products }: { products: any[] }) {
     p.name.toLowerCase().includes(primarySearch.toLowerCase())
   ).slice(0, 8)
 
+  const pairedIds = new Set(pairs.map((p) => p.secondaryId))
   const filteredSecondary = products.filter((p) =>
-    p.id !== primaryId && p.name.toLowerCase().includes(secondarySearch.toLowerCase())
+    p.id !== primaryId &&
+    !pairedIds.has(p.id) &&
+    p.name.toLowerCase().includes(secondarySearch.toLowerCase())
   ).slice(0, 8)
 
   const loadPairs = async (id: string) => {
@@ -118,7 +121,10 @@ export default function FBTClient({ products }: { products: any[] }) {
 
       {/* Pairs manager */}
       <div className="rounded-xl border bg-white p-5 space-y-4">
-        <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">2. Add Suggested Products</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">2. Add Suggested Products</h2>
+          {pairs.length > 0 && <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">{pairs.length} paired</span>}
+        </div>
         {!primaryId ? (
           <p className="text-sm text-muted-foreground">Select a primary product first.</p>
         ) : (
@@ -136,7 +142,13 @@ export default function FBTClient({ products }: { products: any[] }) {
               </div>
               {secondarySearch && !selectedSecondary && (
                 <div className="border rounded-lg divide-y max-h-36 overflow-y-auto">
-                  {filteredSecondary.map((p) => (
+                  {filteredSecondary.length === 0 ? (
+                    <p className="text-xs text-muted-foreground px-3 py-2">
+                      {pairedIds.size > 0 && products.filter(p => p.id !== primaryId).length <= pairedIds.size
+                        ? "All available products are already paired."
+                        : "No products found."}
+                    </p>
+                  ) : filteredSecondary.map((p) => (
                     <button key={p.id} onClick={() => { setSelectedSecondary(p.id); setSecondarySearch(p.name) }} className="w-full flex items-center gap-3 px-3 py-2 hover:bg-slate-50 text-left">
                       {p.images[0] && (
                         <div className="relative w-8 h-8 rounded overflow-hidden shrink-0">
