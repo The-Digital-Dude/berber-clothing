@@ -88,6 +88,12 @@ export default function CheckoutForm({
   const [couponError, setCouponError] = useState("")
   const [couponLoading, setCouponLoading] = useState(false)
 
+  // Gift card
+  const [gcCode, setGcCode] = useState("")
+  const [appliedGC, setAppliedGC] = useState<{ code: string; balance: number } | null>(null)
+  const [gcError, setGcError] = useState("")
+  const [gcLoading, setGcLoading] = useState(false)
+
   // Delivery date
   const [deliveryDate, setDeliveryDate] = useState("")
 
@@ -98,7 +104,23 @@ export default function CheckoutForm({
   const loyaltyDiscount = redeemPoints ? Math.min(pointsToRedeem, loyaltyMaxDiscount) : 0
   const creditDiscount = redeemCredit ? Math.min(creditToRedeem, storeCreditBalance) : 0
   const couponDiscount = appliedCoupon?.discount ?? 0
-  const total = Math.max(0, subtotal + shippingCharge + taxAmount + giftWrapAmount - loyaltyDiscount - creditDiscount - couponDiscount)
+  const gcDiscount = appliedGC ? Math.min(appliedGC.balance, subtotal + shippingCharge + taxAmount + giftWrapAmount - loyaltyDiscount - creditDiscount - couponDiscount) : 0
+  const total = Math.max(0, subtotal + shippingCharge + taxAmount + giftWrapAmount - loyaltyDiscount - creditDiscount - couponDiscount - gcDiscount)
+
+  const handleApplyGC = async () => {
+    if (!gcCode.trim()) return
+    setGcLoading(true); setGcError("")
+    const res = await fetch("/api/store/gift-card/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: gcCode.trim().toUpperCase() }),
+    })
+    const data = await res.json()
+    setGcLoading(false)
+    if (!res.ok) { setGcError(data.error ?? "Invalid gift card"); return }
+    setAppliedGC({ code: data.code, balance: data.balance })
+    setGcCode("")
+  }
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return
@@ -186,6 +208,8 @@ export default function CheckoutForm({
           customFields: Object.keys(customFields).length > 0 ? customFields : null,
           couponId: appliedCoupon?.couponId || null,
           couponDiscount,
+          giftCardCode: appliedGC?.code || null,
+          giftCardDiscount: gcDiscount,
           deliveryDate: deliveryDate || null,
         }),
       })
@@ -571,6 +595,35 @@ export default function CheckoutForm({
                 {couponError && <p className="text-xs text-red-500">{couponError}</p>}
               </div>
 
+              {/* Gift card */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-berber-text-muted">
+                  <Gift className="w-4 h-4" /> Gift Card
+                </label>
+                {appliedGC ? (
+                  <div className="flex items-center justify-between bg-berber-success/10 border border-berber-success/30 rounded-lg px-4 py-3">
+                    <div>
+                      <p className="font-bold text-sm text-berber-success font-mono">{appliedGC.code}</p>
+                      <p className="text-xs text-berber-text-muted">৳{appliedGC.balance.toLocaleString()} available · ৳{gcDiscount.toLocaleString()} applied</p>
+                    </div>
+                    <button type="button" onClick={() => { setAppliedGC(null); setGcCode("") }} className="text-xs font-bold text-red-500 hover:text-red-700 uppercase tracking-widest">Remove</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={gcCode}
+                      onChange={e => { setGcCode(e.target.value.toUpperCase()); setGcError("") }}
+                      placeholder="GC-XXXX-XXXX-XXXX"
+                      className={`${inputCls} flex-1 font-mono`}
+                      onKeyDown={e => e.key === "Enter" && handleApplyGC()}
+                    />
+                    <button type="button" onClick={handleApplyGC} disabled={gcLoading || !gcCode.trim()} className="px-5 py-3 bg-berber-black text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-berber-gold transition-colors disabled:opacity-50 whitespace-nowrap">{gcLoading ? "..." : "Apply"}</button>
+                  </div>
+                )}
+                {gcError && <p className="text-xs text-red-500">{gcError}</p>}
+              </div>
+
               {/* Order note */}
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-berber-text-muted">
@@ -685,6 +738,12 @@ export default function CheckoutForm({
               <div className="flex justify-between text-berber-text-muted">
                 <span>Coupon ({appliedCoupon?.couponCode})</span>
                 <span className="font-mono text-berber-success">−৳{couponDiscount.toLocaleString()}</span>
+              </div>
+            )}
+            {gcDiscount > 0 && (
+              <div className="flex justify-between text-berber-text-muted">
+                <span>Gift Card</span>
+                <span className="font-mono text-berber-success">−৳{gcDiscount.toLocaleString()}</span>
               </div>
             )}
             <div className="flex justify-between border-t border-berber-border pt-4 font-bold text-lg items-center">

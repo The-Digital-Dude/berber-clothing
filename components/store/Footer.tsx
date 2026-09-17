@@ -82,6 +82,7 @@ export default function Footer({
           <div className="space-y-4">
             <h4 className="font-bold uppercase tracking-wider text-sm">Help</h4>
             <ul className="space-y-2 text-sm text-berber-text-muted">
+              <li><Link href="/gift-cards" className="hover:text-berber-gold transition-colors">Gift Cards</Link></li>
               <li><Link href="/track" className="hover:text-berber-gold transition-colors">Track Order</Link></li>
               <li><Link href="/faq" className="hover:text-berber-gold transition-colors">FAQ & Shipping</Link></li>
               <li><Link href="/returns" className="hover:text-berber-gold transition-colors">Returns & Exchanges</Link></li>

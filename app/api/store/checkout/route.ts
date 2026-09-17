@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     const { items, address, paymentMethod, subtotal, shippingCharge, total, userId,
       note, giftWrap, giftMessage, giftWrapCharge, isGuest, guestEmail,
       loyaltyPointsRedeemed, loyaltyDiscount, storeCreditRedeemed, customFields,
-      couponId, couponDiscount: clientCouponDiscount, deliveryDate } = body
+      couponId, couponDiscount: clientCouponDiscount, deliveryDate,
+      giftCardCode, giftCardDiscount: clientGCDiscount } = body
 
     if (!items?.length || !address || !paymentMethod) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -208,6 +209,21 @@ export async function POST(req: Request) {
     // Increment coupon usage count
     if (validatedCouponId) {
       prisma.coupon.update({ where: { id: validatedCouponId }, data: { usedCount: { increment: 1 } } }).catch(() => {})
+    }
+
+    // Deduct gift card balance
+    if (giftCardCode && clientGCDiscount > 0) {
+      prisma.giftCard.update({
+        where: { code: giftCardCode.toUpperCase() },
+        data: { balance: { decrement: clientGCDiscount } },
+      }).then((gc) => {
+        if (Number(gc.balance) <= 0) {
+          prisma.giftCard.update({ where: { id: gc.id }, data: { isActive: false, redeemedAt: new Date() } }).catch(() => {})
+        }
+        prisma.giftCardTransaction.create({
+          data: { giftCardId: gc.id, orderId: order.id, amount: clientGCDiscount, type: "REDEEM" },
+        }).catch(() => {})
+      }).catch(() => {})
     }
 
     // Deduct loyalty points used
