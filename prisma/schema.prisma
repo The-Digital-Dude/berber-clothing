@@ -132,6 +132,10 @@ model Product {
   maxQty      Int?     // maximum per order
   stepQty     Int?     // must buy in multiples of stepQty
   weight      Decimal? // grams, for shipping rate lookup
+  // SEO meta overrides
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -151,6 +155,9 @@ model Product {
   reviewQAs           ReviewQA[]
   priceRules          PriceRule[]
   subscriptionPlans   SubscriptionPlan[]
+  fbtPrimary          FrequentlyBoughtTogether[] @relation("FBTPrimary")
+  fbtSecondary        FrequentlyBoughtTogether[] @relation("FBTSecondary")
+  smartCollectionItems SmartCollectionProduct[]
 
   @@map("products")
 }
@@ -168,17 +175,18 @@ model ProductImage {
 }
 
 model ProductVariant {
-  id        String  @id @default(cuid())
-  productId String
-  size      String
-  color     String
-  colorHex  String?
-  sku       String  @unique
-  stock     Int     @default(0)
-  price     Decimal?
-  costPrice Decimal @default(0)
-  minQty    Int?    // variant-level override
-  maxQty    Int?
+  id           String  @id @default(cuid())
+  productId    String
+  size         String
+  color        String
+  colorHex     String?
+  sku          String  @unique
+  stock        Int     @default(0)
+  price        Decimal?
+  comparePrice Decimal?
+  costPrice    Decimal @default(0)
+  minQty       Int?    // variant-level override
+  maxQty       Int?
 
   product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
   orderItems         OrderItem[]
@@ -222,6 +230,21 @@ model CartItem {
 // ─────────────────────────────────────────────
 // ORDERS
 // ─────────────────────────────────────────────
+
+model OrderMessage {
+  id        String   @id @default(cuid())
+  orderId   String
+  senderId  String   // userId or "ADMIN"
+  senderRole String  // "CUSTOMER" | "ADMIN"
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_messages")
+}
 
 model Order {
   id              String        @id @default(cuid())
@@ -267,6 +290,7 @@ model Order {
   statusLogs  OrderStatusLog[]
   returnRequests ReturnRequest[]
   affiliateConversions AffiliateConversion[]
+  messages    OrderMessage[]
 
   @@map("orders")
 }
@@ -1565,4 +1589,72 @@ model RateLimit {
   windowEnd DateTime
 
   @@map("rate_limits")
+}
+
+// ─────────────────────────────────────────────
+// FREQUENTLY BOUGHT TOGETHER
+// ─────────────────────────────────────────────
+
+model FrequentlyBoughtTogether {
+  id          String @id @default(cuid())
+  primaryId   String
+  secondaryId String
+  score       Int    @default(1) // admin-set sort weight
+
+  primary   Product @relation("FBTPrimary",   fields: [primaryId],   references: [id], onDelete: Cascade)
+  secondary Product @relation("FBTSecondary", fields: [secondaryId], references: [id], onDelete: Cascade)
+
+  @@unique([primaryId, secondaryId])
+  @@map("frequently_bought_together")
+}
+
+// ─────────────────────────────────────────────
+// EMAIL CAMPAIGNS
+// ─────────────────────────────────────────────
+
+model EmailCampaign {
+  id          String    @id @default(cuid())
+  name        String
+  subject     String
+  body        String    // HTML content
+  status      String    @default("DRAFT") // DRAFT | SCHEDULED | SENT
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  recipientCount Int    @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("email_campaigns")
+}
+
+// ─────────────────────────────────────────────
+// SMART COLLECTIONS
+// ─────────────────────────────────────────────
+
+model SmartCollection {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  rules       String   // JSON: [{field, operator, value}]
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products SmartCollectionProduct[]
+
+  @@map("smart_collections")
+}
+
+model SmartCollectionProduct {
+  id           String @id @default(cuid())
+  collectionId String
+  productId    String
+
+  collection SmartCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  product    Product         @relation(fields: [productId],    references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, productId])
+  @@map("smart_collection_products")
 }

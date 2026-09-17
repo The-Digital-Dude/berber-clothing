@@ -4,6 +4,7 @@ import { Check, X, ShoppingBag, MapPin, CreditCard, Gift, Package, Truck, Home, 
 import Link from "next/link"
 import Image from "next/image"
 import { getBalance } from "@/lib/loyalty"
+import OrderMessages from "@/components/store/OrderMessages"
 
 const STATUS_STEPS = ["PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"] as const
 
@@ -257,6 +258,14 @@ export default async function OrderConfirmationPage({
         </div>
       </div>
       
+      {/* Order Messages */}
+      {order.userId && (
+        <div className="mt-12">
+          <h2 className="text-lg font-heading font-bold mb-4">Messages</h2>
+          <OrderMessages orderId={order.id} />
+        </div>
+      )}
+
       <div className="mt-16 text-center border-t border-berber-border pt-12 flex items-center justify-center gap-8">
         <Link href={`/order/${order.id}/invoice`} className="inline-block text-xs font-bold uppercase tracking-widest border-b border-berber-black pb-1 hover:text-berber-gold hover:border-berber-gold transition-colors">
           Download Invoice

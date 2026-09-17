@@ -28,12 +28,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params
     const body = await req.json()
-    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, images, variants } = body
+    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, images, variants } = body
 
     // Update product fields
     const product = await prisma.product.update({
       where: { id },
-      data: { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured },
+      data: { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle: seoTitle || null, seoDescription: seoDescription || null, seoKeywords: seoKeywords || null },
     })
 
     // Sync images: delete old, recreate
@@ -48,6 +48,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
             sortOrder: i,
           })),
         })
+      }
+    }
+
+    // Sync variants if provided
+    if (Array.isArray(variants)) {
+      for (const v of variants) {
+        if (v.id) {
+          await prisma.productVariant.update({
+            where: { id: v.id },
+            data: { size: v.size, color: v.color, colorHex: v.colorHex || null, sku: v.sku, stock: v.stock, price: v.price || null, comparePrice: v.comparePrice || null },
+          }).catch(() => {})
+        }
       }
     }
 

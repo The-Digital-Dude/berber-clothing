@@ -10,7 +10,7 @@ import {
   Zap, Percent, Tag, RotateCcw, Globe, Link2, MapPin, Layers, ScrollText,
   ShoppingBasket, Upload, CreditCard, Workflow, Wallet, Award, TrendingUp,
   Sliders, ChevronRight, Crown, Calendar, Warehouse, Download, LineChart, PieChart,
-  Search, ChevronDown, Star, MessageSquare,
+  Search, ChevronDown, Star, MessageSquare, Mail, Layers2,
 } from "lucide-react"
 
 type NavItem = { href: string; icon: any; label: string }
@@ -62,6 +62,8 @@ const navGroups: NavGroup[] = [
       { href: "/admin/gift-cards", icon: CreditCard, label: "Gift Cards" },
       { href: "/admin/order-bumps", icon: ChevronRight, label: "Order Bumps" },
       { href: "/admin/workflows", icon: Workflow, label: "Workflows" },
+      { href: "/admin/campaigns", icon: Mail, label: "Email Campaigns" },
+      { href: "/admin/collections", icon: Layers2, label: "Smart Collections" },
     ],
   },
   {

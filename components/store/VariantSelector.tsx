@@ -34,6 +34,7 @@ export default function VariantSelector({
 
   const stock = activeVariant?.stock || 0
   const isOutOfStock = stock === 0
+  const variantComparePrice = activeVariant?.comparePrice ? Number(activeVariant.comparePrice) : null
 
   const addToCart = () => {
     if (!activeVariant) return toast.error("Please select a size and color.")
@@ -151,6 +152,15 @@ export default function VariantSelector({
       )}
 
       {/* Action */}
+      {variantComparePrice && activeVariant && (
+        <div className="flex items-center gap-2 pt-2">
+          <span className="text-sm text-muted-foreground line-through">৳{variantComparePrice.toLocaleString()}</span>
+          <span className="text-xs bg-berber-gold/10 text-berber-gold font-bold px-2 py-0.5 rounded">
+            {Math.round((1 - Number(activeVariant.price ?? product.price) / variantComparePrice) * 100)}% OFF
+          </span>
+        </div>
+      )}
+
       <div className="pt-4 space-y-4">
         {!isOutOfStock ? (
           <button

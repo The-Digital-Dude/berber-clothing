@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   if (error) return error
   try {
     const body = await req.json()
-    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, images, variants } = body
+    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, images, variants } = body
 
     const product = await prisma.product.create({
       data: {
@@ -47,6 +47,9 @@ export async function POST(req: Request) {
         tags,
         isActive,
         isFeatured,
+        seoTitle: seoTitle || null,
+        seoDescription: seoDescription || null,
+        seoKeywords: seoKeywords || null,
         images: {
           create: images.map((img: any, i: number) => ({ url: img.url, alt: img.alt || "", sortOrder: i }))
         },
@@ -57,7 +60,8 @@ export async function POST(req: Request) {
             colorHex: v.colorHex,
             sku: v.sku,
             stock: v.stock,
-            price: v.price
+            price: v.price,
+            comparePrice: v.comparePrice || null,
           }))
         }
       }

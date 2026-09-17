@@ -5,6 +5,9 @@ import ProductGallery from "@/components/store/ProductGallery"
 import VariantSelector from "@/components/store/VariantSelector"
 import ProductCard from "@/components/store/ProductCard"
 import ReviewSection from "@/components/store/ReviewSection"
+import FrequentlyBoughtTogether from "@/components/store/FrequentlyBoughtTogether"
+import RecentlyViewed from "@/components/store/RecentlyViewed"
+import RecordView from "@/components/store/RecordView"
 import FlashSaleCountdown from "@/components/store/FlashSaleCountdown"
 import SocialProof from "@/components/store/SocialProof"
 import ProductAddons from "@/components/store/ProductAddons"
@@ -29,12 +32,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const image = product.images[0]?.url
   const price = Number(product.price).toLocaleString()
-  const title = `${product.name} — ৳${price}`
-  const description = product.description || `Shop ${product.name} at Berber. Premium quality fashion from Bangladesh.`
+  const title = (product as any).seoTitle || `${product.name} — ৳${price}`
+  const description = (product as any).seoDescription || product.description || `Shop ${product.name} at Berber. Premium quality fashion from Bangladesh.`
+  const keywords = (product as any).seoKeywords || undefined
 
   return {
     title,
     description,
+    keywords,
     openGraph: {
       title,
       description,
@@ -88,16 +93,20 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const salePrice = flashSale ? applyFlashSaleDiscount(Number(product.price), flashSale) : null
   const displayPrice = salePrice ?? Number(product.price)
 
-  // Fetch related products
-  const relatedProducts = await prisma.product.findMany({
-    where: { 
-      categoryId: product.categoryId, 
-      id: { not: product.id },
-      isActive: true 
-    },
-    take: 4,
-    include: { category: true, images: true, variants: true }
-  }).catch(() => [])
+  // Fetch related products and FBT suggestions in parallel
+  const [relatedProducts, fbtPairs] = await Promise.all([
+    prisma.product.findMany({
+      where: { categoryId: product.categoryId, id: { not: product.id }, isActive: true },
+      take: 4,
+      include: { category: true, images: true, variants: true },
+    }).catch(() => []),
+    prisma.frequentlyBoughtTogether.findMany({
+      where: { primaryId: product.id },
+      orderBy: { score: "desc" },
+      take: 3,
+      include: { secondary: { include: { images: { take: 1 }, variants: true } } },
+    }).catch(() => []),
+  ])
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -129,6 +138,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="bg-berber-bg animate-in fade-in duration-500">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <RecordView product={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, image: product.images[0]?.url }} />
 
       {/* Breadcrumb - Minimal */}
       <div className="container mx-auto px-4 py-6 text-[10px] uppercase tracking-widest text-berber-text-muted">
@@ -284,6 +294,14 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
+        {/* Frequently Bought Together */}
+        {fbtPairs.length > 0 && (
+          <FrequentlyBoughtTogether
+            primary={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, images: serialize(product.images), variants: serialize(product.variants) }}
+            suggestions={fbtPairs.map((p: any) => ({ id: p.secondary.id, name: p.secondary.name, slug: p.secondary.slug, price: Number(p.secondary.price), images: serialize(p.secondary.images), variants: serialize(p.secondary.variants) }))}
+          />
+        )}
+
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-24 md:mt-32">
@@ -293,6 +311,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             </div>
           </div>
         )}
+
+        {/* Recently Viewed */}
+        <div className="mt-24 md:mt-32">
+          <RecentlyViewed currentProductId={product.id} />
+        </div>
       </div>
     </div>
   )
