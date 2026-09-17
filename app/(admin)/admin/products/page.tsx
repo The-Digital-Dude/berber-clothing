@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { PlusCircle, Edit, Download, Upload } from "lucide-react"
+import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { PlusCircle, Download, Upload } from "lucide-react"
 import Link from "next/link"
 import prisma from "@/lib/prisma"
 import ProductsFilters from "./ProductsFilters"
 import AdminPagination from "@/components/admin/AdminPagination"
+import ProductsTable from "./ProductsTable"
 
 const PAGE_SIZE = 20
 
@@ -68,41 +68,7 @@ export default async function ProductsPage({
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {products.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                    No products found.
-                  </TableCell>
-                </TableRow>
-              )}
-              {products.map((product: any) => {
-                const totalStock = product.variants.reduce((acc: number, curr: any) => acc + curr.stock, 0)
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.category?.name || "Uncategorized"}</TableCell>
-                    <TableCell>৳{Number(product.price).toLocaleString()}</TableCell>
-                    <TableCell>
-                      {totalStock}{" "}
-                      <span className="text-xs text-muted-foreground">({product.variants.length} variants)</span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.isActive ? "default" : "secondary"}>
-                        {product.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/admin/products/${product.id}`}>
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
+            <ProductsTable products={products} />
           </Table>
           <AdminPagination page={page} totalPages={totalPages} basePath="/admin/products" />
         </CardContent>

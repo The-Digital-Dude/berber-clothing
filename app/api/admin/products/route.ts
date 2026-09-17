@@ -36,10 +36,13 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, images, variants } = body
 
+    const slugBase = slug || name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+    const ts = Date.now()
+
     const product = await prisma.product.create({
       data: {
         name,
-        slug,
+        slug: slugBase,
         description,
         price,
         comparePrice,
@@ -51,16 +54,16 @@ export async function POST(req: Request) {
         seoDescription: seoDescription || null,
         seoKeywords: seoKeywords || null,
         images: {
-          create: images.map((img: any, i: number) => ({ url: img.url, alt: img.alt || "", sortOrder: i }))
+          create: (images || []).map((img: any, i: number) => ({ url: img.url, alt: img.alt || "", sortOrder: i }))
         },
         variants: {
-          create: variants.map((v: any) => ({
+          create: (variants || []).map((v: any, i: number) => ({
             size: v.size,
             color: v.color,
-            colorHex: v.colorHex,
-            sku: v.sku,
-            stock: v.stock,
-            price: v.price,
+            colorHex: v.colorHex || null,
+            sku: v.sku?.trim() || `${slugBase}-${v.size || "OS"}-${v.color || "DEF"}-${ts}-${i}`.toUpperCase().replace(/\s+/g, "-"),
+            stock: v.stock ?? 0,
+            price: v.price || null,
             comparePrice: v.comparePrice || null,
           }))
         }
@@ -69,6 +72,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json(product, { status: 201 })
   } catch (error: any) {
+    if (error.code === "P2002") {
+      const field = error.meta?.target?.join(", ") || "field"
+      return NextResponse.json({ error: `Duplicate value on ${field}. Check that the SKU or slug is unique.` }, { status: 409 })
+    }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

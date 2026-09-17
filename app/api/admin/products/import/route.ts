@@ -23,7 +23,8 @@ export async function POST(req: Request) {
       if (!row.name) throw new Error("Missing: name")
       if (!row.price || isNaN(Number(row.price))) throw new Error("Missing or invalid: price")
       if (!row.category) throw new Error("Missing: category")
-      if (!row.sku) throw new Error("Missing: sku")
+      // Auto-generate SKU if not provided
+      if (!row.sku) row.sku = `${(row.slug || row.name).toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${row.size || "OS"}-${row.color || "DEF"}`.toUpperCase()
       if (!row.size) throw new Error("Missing: size")
       if (!row.color) throw new Error("Missing: color")
 

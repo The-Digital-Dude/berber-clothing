@@ -27,7 +27,7 @@ const productSchema = z.object({
     size: z.string().min(1),
     color: z.string().min(1),
     colorHex: z.string().optional(),
-    sku: z.string().min(1),
+    sku: z.string().optional(),
     stock: z.coerce.number().min(0),
     price: z.coerce.number().optional().nullable(),
     comparePrice: z.coerce.number().optional().nullable(),
@@ -197,8 +197,8 @@ export default function ProductForm({ initialData, categories }: { initialData?:
                     <input type="color" {...register(`variants.${index}.colorHex`)} className="w-full h-7 cursor-pointer rounded border p-0" />
                   </div>
                   <div className="col-span-1 space-y-1">
-                    <label className="text-xs">SKU</label>
-                    <input {...register(`variants.${index}.sku`)} className={`w-full rounded border ${(errors.variants as any)?.[index]?.sku ? "border-red-500" : ""} px-2 py-1 text-sm`} />
+                    <label className="text-xs">SKU <span className="text-muted-foreground">(optional)</span></label>
+                    <input {...register(`variants.${index}.sku`)} placeholder="Auto-generated" className="w-full rounded border px-2 py-1 text-sm" />
                   </div>
                   <div className="col-span-1 space-y-1">
                     <label className="text-xs">Stock</label>
