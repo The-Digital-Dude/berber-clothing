@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import Image from "next/image"
 import { useCartStore } from "@/store/useCartStore"
@@ -46,10 +46,19 @@ export default function CheckoutForm({
   loyaltyMaxDiscount?: number
   storeCreditBalance?: number
   userId?: string
+  recoveredItems?: any[]
 }) {
-  const { items, clearCart } = useCartStore()
+  const { items, clearCart, addItem } = useCartStore()
   const router = useRouter()
   const [step, setStep] = useState(1)
+
+  // Restore abandoned cart items on mount
+  useEffect(() => {
+    if (recoveredItems && recoveredItems.length > 0 && items.length === 0) {
+      recoveredItems.forEach((i) => addItem(i))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [loading, setLoading] = useState(false)
 
   // Step 1 — address

@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 import { sendAbandonedCartEmail } from "@/lib/email"
 
 // Called by Vercel Cron every hour: GET /api/cron/abandoned-cart
-// Vercel cron config in vercel.json
+// Sends email 1 at 1h, email 2 at 24h (with optional coupon incentive)
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization")
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -13,55 +13,89 @@ export async function GET(req: Request) {
   const setting = await prisma.setting.findUnique({ where: { key: "abandoned_cart_email_enabled" } })
   if (setting?.value !== "true") return NextResponse.json({ skipped: true })
 
-  const delaySetting = await prisma.setting.findUnique({ where: { key: "abandoned_cart_delay_minutes" } })
-  const delayMinutes = Number(delaySetting?.value || 60)
-  const cutoff = new Date(Date.now() - delayMinutes * 60 * 1000)
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+  const now = Date.now()
 
-  const carts = await prisma.abandonedCart.findMany({
+  // ── Email 1: after 1 hour ────────────────────────────────────────────────
+  const email1Cutoff = new Date(now - 60 * 60 * 1000)
+  const email1Carts = await prisma.abandonedCart.findMany({
     where: {
-      emailSent: false,
+      email1SentAt: null,
       isRecovered: false,
-      updatedAt: { lte: cutoff },
       email: { not: null },
+      updatedAt: { lte: email1Cutoff },
     },
     take: 100,
   })
 
-  let sent = 0
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://drip.fashion"
-
-  for (const cart of carts) {
+  let sent1 = 0
+  for (const cart of email1Carts) {
     try {
-      const items = (JSON.parse(cart.items as string || "[]") as any[])
+      const items = JSON.parse(cart.items || "[]") as any[]
       if (!items.length || !cart.email) continue
-
       const cartTotal = items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
-      const recoveryUrl = `${siteUrl}/checkout?recover=${cart.sessionId}`
-
       await sendAbandonedCartEmail({
         to: cart.email,
         customerName: cart.name || "there",
-        cartItems: items.map((i: any) => ({
-          name: i.name,
-          size: i.size || "",
-          color: i.color || "",
-          quantity: i.quantity,
-          price: i.price,
-          image: i.image,
-        })),
+        cartItems: items,
         cartTotal,
-        recoveryUrl,
+        recoveryUrl: `${siteUrl}/checkout?recover=${cart.sessionId}`,
       })
-
       await prisma.abandonedCart.update({
         where: { id: cart.id },
-        data: { emailSent: true, emailSentAt: new Date() },
+        data: { email1SentAt: new Date(), emailSent: true, emailSentAt: new Date() },
       })
-      sent++
-    } catch {
-      // per-cart error — continue with others
-    }
+      sent1++
+    } catch {}
   }
 
-  return NextResponse.json({ processed: carts.length, sent })
+  // ── Email 2: after 24 hours (with discount coupon if available) ──────────
+  const email2Cutoff = new Date(now - 24 * 60 * 60 * 1000)
+  const email2Carts = await prisma.abandonedCart.findMany({
+    where: {
+      email1SentAt: { not: null },
+      email2SentAt: null,
+      isRecovered: false,
+      email: { not: null },
+      updatedAt: { lte: email2Cutoff },
+    },
+    take: 100,
+  })
+
+  // Look for an auto-coupon reserved for abandoned cart recovery
+  const recoveryCoupon = await prisma.coupon.findFirst({
+    where: { code: { startsWith: "COMEBACK" }, isActive: true },
+  }).catch(() => null)
+
+  let sent2 = 0
+  for (const cart of email2Carts) {
+    try {
+      const items = JSON.parse(cart.items || "[]") as any[]
+      if (!items.length || !cart.email) continue
+      const cartTotal = items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
+
+      // Build recovery URL — include coupon code if available
+      let recoveryUrl = `${siteUrl}/checkout?recover=${cart.sessionId}`
+      if (recoveryCoupon) recoveryUrl += `&coupon=${recoveryCoupon.code}`
+
+      // Reuse the same email template; add note about discount
+      await sendAbandonedCartEmail({
+        to: cart.email,
+        customerName: cart.name || "there",
+        cartItems: items,
+        cartTotal,
+        recoveryUrl,
+        note: recoveryCoupon
+          ? `Use code ${recoveryCoupon.code} for ${recoveryCoupon.type === "PERCENTAGE" ? `${recoveryCoupon.value}% off` : `৳${recoveryCoupon.value} off`} — today only!`
+          : "Your items won't stay reserved for long.",
+      })
+      await prisma.abandonedCart.update({
+        where: { id: cart.id },
+        data: { email2SentAt: new Date() },
+      })
+      sent2++
+    } catch {}
+  }
+
+  return NextResponse.json({ email1: { processed: email1Carts.length, sent: sent1 }, email2: { processed: email2Carts.length, sent: sent2 } })
 }

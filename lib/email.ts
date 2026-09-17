@@ -292,6 +292,7 @@ export async function sendAbandonedCartEmail(data: {
   cartItems: { name: string; size: string; color: string; quantity: number; price: number; image?: string }[]
   cartTotal: number
   recoveryUrl: string
+  note?: string
 }) {
   const store = await getStoreMeta()
   const itemRows = data.cartItems.map((i) => `
@@ -304,12 +305,17 @@ export async function sendAbandonedCartEmail(data: {
       <div style="font-weight:500">৳${(i.price * i.quantity).toLocaleString()}</div>
     </div>`).join("")
 
+  const noteHtml = data.note
+    ? `<p style="margin-top:16px;padding:12px 16px;background:#fef9ec;border-left:3px solid #c9a84c;border-radius:4px;font-size:14px;color:#92670a">${data.note}</p>`
+    : ""
+
   const content = `
     <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You left something behind</h1>
     <p class="muted">Hi ${data.customerName}, you left ${data.cartItems.length} item${data.cartItems.length > 1 ? "s" : ""} in your bag.</p>
     <hr class="divider">
     ${itemRows}
     <div class="total-final" style="margin-top:16px"><span>Total</span><span>৳${data.cartTotal.toLocaleString()}</span></div>
+    ${noteHtml}
     <a href="${data.recoveryUrl}" class="btn">Complete your order →</a>
     <p class="muted" style="margin-top:16px">This link takes you straight back to checkout. Your bag is saved.</p>`
 

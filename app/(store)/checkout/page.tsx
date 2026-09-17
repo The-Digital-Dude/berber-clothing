@@ -3,9 +3,25 @@ import { ShieldCheck } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ recover?: string }>
+}) {
   const session = await auth()
   const userId = session?.user?.id
+  const { recover } = await searchParams
+
+  // Restore abandoned cart items if ?recover=sessionId
+  let recoveredItems: any[] = []
+  if (recover) {
+    const cart = await prisma.abandonedCart.findUnique({ where: { sessionId: recover } }).catch(() => null)
+    if (cart && !cart.isRecovered) {
+      try { recoveredItems = JSON.parse(cart.items) } catch {}
+      // Mark recovered
+      prisma.abandonedCart.update({ where: { id: cart.id }, data: { isRecovered: true, recoveredAt: new Date() } }).catch(() => {})
+    }
+  }
 
   const [settings, checkoutFields, loyaltyData, creditData] = await Promise.all([
     prisma.setting.findMany({
@@ -73,6 +89,7 @@ export default async function CheckoutPage() {
           loyaltyMaxDiscount={loyaltyMaxDiscount}
           storeCreditBalance={storeCreditBalance}
           userId={userId}
+          recoveredItems={recoveredItems}
         />
       </div>
     </div>

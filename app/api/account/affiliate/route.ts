@@ -8,7 +8,7 @@ export async function GET() {
 
   const affiliate = await prisma.affiliate.findFirst({
     where: { userId: session.user.id },
-    include: { _count: { select: { conversions: true } } },
+    include: { _count: { select: { conversions: true, clicks: true } } },
   }).catch(() => null)
 
   if (!affiliate) return NextResponse.json({ affiliate: null })
