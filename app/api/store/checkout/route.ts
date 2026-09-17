@@ -7,8 +7,7 @@ import { logAudit } from "@/lib/auditLog"
 import { refreshCustomerSegments } from "@/lib/customerSegments"
 import { cookies } from "next/headers"
 import { sendOrderConfirmation, sendAdminNewOrder } from "@/lib/email"
-import { mailchimpAddTags } from "@/lib/mailchimp"
-import { klaviyoOrderPlaced } from "@/lib/klaviyo"
+import { brevoOrderPlaced, brevoAddTags } from "@/lib/brevo"
 
 export async function POST(req: Request) {
   try {
@@ -333,9 +332,9 @@ export async function POST(req: Request) {
       shippingDivision: address.division,
     }).catch(() => {})
 
-    // Wire Klaviyo + Mailchimp (fire-and-forget)
+    // Wire Brevo (fire-and-forget)
     if (toEmail) {
-      klaviyoOrderPlaced(toEmail, {
+      brevoOrderPlaced(toEmail, {
         orderNumber: order.orderNumber,
         total: serverTotal,
         items: items.map((item: any) => ({
@@ -345,7 +344,7 @@ export async function POST(req: Request) {
         })),
       }).catch(() => {})
       if (!isGuest) {
-        mailchimpAddTags(toEmail, ["has_ordered"]).catch(() => {})
+        brevoAddTags(toEmail, ["has_ordered"]).catch(() => {})
       }
     }
 

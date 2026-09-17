@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
+import BottomNav from "@/components/store/BottomNav";
 import WishlistSync from "@/components/store/WishlistSync";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
 import { Suspense } from "react";
@@ -92,10 +93,11 @@ export default async function StoreLayout({
         } : null}
       />
       <WishlistSync />
-      <main className="flex-1">
+      <main className="flex-1 pb-16 md:pb-0">
         {children}
       </main>
       <Footer branding={branding} categories={categories} />
+      <BottomNav />
     </div>
   );
 }

@@ -70,6 +70,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en" className={cn("font-sans", inter.variable, playfair.variable, spaceGrotesk.variable)}>
       <body className="antialiased text-berber-text bg-berber-bg selection:bg-berber-gold/30">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "Berber Clothing",
+            url: SITE_URL,
+            logo: `${SITE_URL}/logo.png`,
+            contactPoint: { "@type": "ContactPoint", contactType: "customer service", email: "support@berber.clothing", availableLanguage: ["English", "Bengali"] },
+            sameAs: [],
+          }) }}
+        />
         <NextTopLoader color="#C9A24B" showSpinner={false} />
         <VercelAnalytics />
         <SpeedInsights />
