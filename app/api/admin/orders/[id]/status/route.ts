@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { sendOrderStatusUpdate, sendShippingDispatched } from "@/lib/email"
-import { buildWhatsAppMessage, sendWhatsAppMessage } from "@/lib/whatsapp"
+import { buildWhatsAppMessage, buildWaLink, sendWhatsAppMessage } from "@/lib/whatsapp"
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
@@ -27,7 +27,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       include: { user: { select: { email: true, name: true } } },
     })
 
-    // WhatsApp notification (fire-and-forget via Cloud API if configured)
+    // WhatsApp notification — Cloud API if configured, otherwise return wa.me link for manual send
+    let waLink: string | null = null
     if (status && order.shippingPhone) {
       const waMsg = buildWhatsAppMessage({
         customerName: order.user?.name || order.shippingName,
@@ -36,7 +37,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         trackingNumber: body.trackingNumber,
         note: body.note,
       })
-      sendWhatsAppMessage(order.shippingPhone, waMsg).catch(() => {})
+      const sent = await sendWhatsAppMessage(order.shippingPhone, waMsg).catch(() => false)
+      if (!sent) waLink = buildWaLink(order.shippingPhone, waMsg)
     }
 
     if (status) {
@@ -69,7 +71,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }
     }
 
-    return NextResponse.json(order)
+    return NextResponse.json({ ...order, waLink })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

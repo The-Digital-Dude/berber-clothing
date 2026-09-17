@@ -25,6 +25,7 @@ export default function OrderDetailsClient({
   const router = useRouter()
   const [order, setOrder] = useState(initialOrder)
   const [loading, setLoading] = useState(false)
+  const [pendingWaLink, setPendingWaLink] = useState<string | null>(null)
   const [codNote, setCodNote] = useState(order.codCallNote ?? "")
   const [tagsInput, setTagsInput] = useState((order.tags ?? "").split(",").filter(Boolean).join(", "))
   const [deliveryData, setDeliveryData] = useState({
@@ -44,6 +45,7 @@ export default function OrderDetailsClient({
       if (res.ok) {
         const updated = await res.json()
         setOrder({ ...order, status: updated.status })
+        if (updated.waLink) setPendingWaLink(updated.waLink)
         router.refresh()
       }
     } finally {
@@ -185,6 +187,29 @@ export default function OrderDetailsClient({
         </div>
 
         <div className="space-y-6">
+          {pendingWaLink && (
+            <div className="flex items-center justify-between gap-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+              <span className="text-green-800 font-medium flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" /> WhatsApp not configured — send manually
+              </span>
+              <div className="flex gap-2">
+                <a
+                  href={pendingWaLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors"
+                >
+                  Open WhatsApp
+                </a>
+                <button
+                  onClick={() => setPendingWaLink(null)}
+                  className="px-2 py-1 text-green-700 text-xs hover:underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
           <Card>
             <CardHeader><CardTitle>Customer & Shipping</CardTitle></CardHeader>
             <CardContent className="space-y-4 text-sm">
