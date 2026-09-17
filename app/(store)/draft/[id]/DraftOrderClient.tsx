@@ -1,5 +1,5 @@
 "use client"
-import { useCart } from "@/context/CartContext"
+import { useCartStore } from "@/store/useCartStore"
 import { useRouter } from "next/navigation"
 
 interface DraftItem {
@@ -25,7 +25,7 @@ interface Draft {
 }
 
 export default function DraftOrderClient({ draft }: { draft: Draft }) {
-  const { addItem, clearCart } = useCart()
+  const { addItem, clearCart } = useCartStore()
   const router = useRouter()
 
   const expired = draft.expiresAt && new Date(draft.expiresAt) < new Date()
@@ -33,7 +33,7 @@ export default function DraftOrderClient({ draft }: { draft: Draft }) {
   const acceptDraft = () => {
     clearCart()
     draft.items.forEach((item) =>
-      addItem({ productId: item.productId, variantId: item.variantId, name: item.name, price: item.price, image: "", quantity: item.quantity, size: item.size, color: item.color })
+      addItem({ id: item.variantId, productId: item.productId, productSlug: "", variantId: item.variantId, name: item.name, price: item.price, image: "", quantity: item.quantity, size: item.size, color: item.color })
     )
     router.push("/checkout")
   }

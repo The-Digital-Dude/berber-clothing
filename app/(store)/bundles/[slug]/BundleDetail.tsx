@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import Image from "next/image"
-import { useCart } from "@/context/CartContext"
+import { useCartStore } from "@/store/useCartStore"
 import { toast } from "sonner"
 import { ShoppingBag, Plus } from "lucide-react"
 import Link from "next/link"
@@ -17,7 +17,7 @@ interface Bundle {
 }
 
 export default function BundleDetail({ bundle }: { bundle: Bundle }) {
-  const { addItem } = useCart()
+  const { addItem } = useCartStore()
   // For PICK_N: track which items are selected
   const isPickN = bundle.type === "PICK_N"
   const [selected, setSelected] = useState<Set<string>>(
@@ -53,10 +53,12 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
         : item.product.variants.find((v) => v.stock > 0)
       if (!variant) { allOk = false; continue }
       addItem({
+        id: variant.id,
         productId: item.product.id,
+        productSlug: item.product.slug,
         variantId: variant.id,
         name: item.product.name,
-        price: item.product.price,
+        price: Number(item.product.price),
         image: item.product.images[0]?.url ?? "",
         quantity: item.quantity,
         size: variant.size ?? "",

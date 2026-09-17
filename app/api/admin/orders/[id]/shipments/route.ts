@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/auth"
 import { logAudit } from "@/lib/auditLog"
+import { sendShippingDispatched } from "@/lib/email"
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -19,7 +20,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params
   const { courier, note, items } = await req.json()
 
-  const count = await prisma.orderShipment.count({ where: { orderId: id } })
+  const [count, order] = await Promise.all([
+    prisma.orderShipment.count({ where: { orderId: id } }),
+    prisma.order.findUnique({
+      where: { id },
+      include: { user: { select: { email: true, name: true } } },
+    }),
+  ])
 
   const shipment = await prisma.orderShipment.create({
     data: {
@@ -39,6 +46,21 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   })
 
   await logAudit({ actorId: session.user.id, actorEmail: session.user.email, actorRole: session.user.role, action: "order.shipment_created", entityType: "Order", entityId: id, after: { shipmentNumber: shipment.shipmentNumber, courier } })
+
+  if (order) {
+    const toEmail = order.user?.email || order.guestEmail
+    const customerName = order.user?.name || order.shippingName
+    if (toEmail) {
+      sendShippingDispatched({
+        to: toEmail,
+        customerName: customerName || "Customer",
+        orderNumber: order.orderNumber,
+        courierName: courier || "Our courier",
+        trackingNumber: "",
+        trackingUrl: undefined,
+      }).catch(() => {})
+    }
+  }
 
   return NextResponse.json(shipment)
 }

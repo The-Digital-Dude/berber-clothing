@@ -54,7 +54,7 @@ export async function createPayment(amount: number, orderId: string) {
     body: JSON.stringify({
       mode: "0011", // checkout
       payerReference: orderId,
-      callbackURL: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/payments/bkash/callback?orderId=${orderId}`,
+      callbackURL: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/payments/bkash/callback?orderId=${orderId}`,
       amount: amount.toString(),
       currency: "BDT",
       intent: "sale",

@@ -120,7 +120,7 @@ export async function completePayment(paymentReferenceId: string, orderId: strin
   const payload = {
     sensitiveData: encryptedSensitiveData,
     signature,
-    merchantCallbackURL: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/payments/nagad/callback?orderId=${orderId}`
+    merchantCallbackURL: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/payments/nagad/callback?orderId=${orderId}`
   };
 
   const res = await fetch(`${baseUrl}/api/dfs/check-out/complete/${paymentReferenceId}`, {

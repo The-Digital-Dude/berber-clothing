@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { useCart } from "@/context/CartContext"
+import { useCartStore } from "@/store/useCartStore"
 
 interface Product {
   id: string
@@ -15,7 +15,7 @@ export default function PostPurchaseUpsell({ orderId }: { orderId: string }) {
   const [products, setProducts] = useState<Product[]>([])
   const [dismissed, setDismissed] = useState(false)
   const [added, setAdded] = useState<string | null>(null)
-  const { addItem } = useCart()
+  const { addItem } = useCartStore()
 
   useEffect(() => {
     const key = `upsell_shown_${orderId}`
@@ -34,7 +34,9 @@ export default function PostPurchaseUpsell({ orderId }: { orderId: string }) {
     const variant = product.variants.find((v) => v.stock > 0)
     if (!variant) return
     addItem({
+      id: variant.id,
       productId: product.id,
+      productSlug: product.slug,
       variantId: variant.id,
       name: product.name,
       price: variant.price,
