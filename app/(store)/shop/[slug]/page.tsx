@@ -95,8 +95,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const salePrice = flashSale ? applyFlashSaleDiscount(Number(product.price), flashSale) : null
   const displayPrice = salePrice ?? Number(product.price)
 
-  // Fetch related products and FBT suggestions in parallel
-  const [relatedProducts, fbtPairs] = await Promise.all([
+  // Fetch related products, FBT suggestions, and settings in parallel
+  const [relatedProducts, fbtPairs, shippingSettings] = await Promise.all([
     prisma.product.findMany({
       where: { categoryId: product.categoryId, id: { not: product.id }, isActive: true },
       take: 4,
@@ -108,7 +108,13 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       take: 3,
       include: { secondary: { include: { images: { take: 1 }, variants: true } } },
     }).catch(() => []),
+    prisma.setting.findMany({
+      where: { key: { in: ["free_shipping_above"] } },
+    }).catch(() => []),
   ])
+
+  const settingsMap = Object.fromEntries(shippingSettings.map((s: any) => [s.key, s.value]))
+  const freeShippingThreshold = settingsMap.free_shipping_above ? Number(settingsMap.free_shipping_above) : null
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -254,7 +260,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                       <Truck className="w-5 h-5 text-berber-gold shrink-0 mt-0.5" />
                       <div>
                         <p className="font-bold text-berber-text">Standard Delivery</p>
-                        <p>Delivered within 3-5 working days. Free on orders above ৳1000.</p>
+                        <p>Delivered within 3–5 working days.{freeShippingThreshold ? ` Free on orders above ৳${freeShippingThreshold.toLocaleString()}.` : ""}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">

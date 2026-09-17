@@ -6,7 +6,7 @@ import { useCartStore } from "@/store/useCartStore"
 import { useCompareStore } from "@/store/useCompareStore"
 import NotifyMeForm from "@/components/store/NotifyMeForm"
 import SizeGuideModal from "@/components/store/SizeGuideModal"
-import { Columns2 } from "lucide-react"
+import { Columns2, Truck, Clock } from "lucide-react"
 import Link from "next/link"
 
 export default function VariantSelector({
@@ -39,7 +39,15 @@ export default function VariantSelector({
 
   const stock = activeVariant?.stock || 0
   const isOutOfStock = stock === 0
+  const isLowStock = stock > 0 && stock <= 5
   const variantComparePrice = activeVariant?.comparePrice ? Number(activeVariant.comparePrice) : null
+
+  // Delivery estimate: order before 3pm → ships today, else tomorrow
+  const now = new Date()
+  const cutoffHour = 15
+  const shipsToday = now.getHours() < cutoffHour
+  const dispatchDay = shipsToday ? "today" : "tomorrow"
+  const arrivalDays = "3–5 business days"
 
   const addToCart = () => {
     if (!activeVariant) return toast.error("Please select a size and color.")
@@ -166,27 +174,52 @@ export default function VariantSelector({
         </div>
       )}
 
-      <div className="pt-4 space-y-4">
+      <div className="pt-4 space-y-3">
+        {/* Low stock warning */}
+        {isLowStock && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-berber-error/5 border border-berber-error/20 rounded">
+            <span className="w-2 h-2 rounded-full bg-berber-error shrink-0 animate-pulse" />
+            <p className="text-xs font-medium text-berber-error">
+              Only {stock} left in stock — order soon!
+            </p>
+          </div>
+        )}
+
+        {/* Add to bag */}
         {!isOutOfStock ? (
           <button
             id="add-to-bag-btn"
             onClick={addToCart}
             disabled={!activeVariant}
-            className="w-full py-4 text-sm font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 bg-berber-black text-white hover:bg-berber-gold hover:shadow-lg hover:shadow-berber-gold/20"
+            className="w-full py-4 text-sm font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 bg-berber-black text-white hover:bg-berber-gold hover:shadow-lg hover:shadow-berber-gold/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Add to Bag
+            {!activeVariant ? "Select a size" : "Add to Bag"}
           </button>
         ) : (
           <NotifyMeForm variantId={activeVariant?.id || ""} />
         )}
 
-        {stock > 0 && stock <= 5 && (
-          <p className="text-xs font-medium text-berber-error flex items-center justify-center gap-2 animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-berber-error block" />
-            Only {stock} left in stock — order soon!
-          </p>
+        {/* Delivery estimate */}
+        {!isOutOfStock && (
+          <div className="flex items-center gap-4 pt-1 pb-1">
+            <div className="flex items-center gap-2 text-xs text-berber-text-muted">
+              <Truck className="w-3.5 h-3.5 text-berber-gold shrink-0" />
+              <span>
+                Order {shipsToday ? (
+                  <span className="font-medium text-berber-text">now</span>
+                ) : (
+                  <span>by <span className="font-medium text-berber-text">3 PM</span> tomorrow</span>
+                )} — ships {dispatchDay}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-berber-text-muted">
+              <Clock className="w-3.5 h-3.5 text-berber-gold shrink-0" />
+              <span>Arrives in <span className="font-medium text-berber-text">{arrivalDays}</span></span>
+            </div>
+          </div>
         )}
 
+        {/* Compare */}
         <button
           onClick={() => {
             toggleCompare({ id: product.id, name: product.name, slug: product.slug, price: Number(product.price), image: product.images?.[0]?.url })
