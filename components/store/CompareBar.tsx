@@ -11,7 +11,7 @@ export function CompareBar() {
   if (items.length === 0) return null
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50 px-4 py-3">
+    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white border-t shadow-lg z-40 px-4 py-3">
       <div className="max-w-6xl mx-auto flex items-center gap-3">
         <BarChart2 className="w-5 h-5 shrink-0 text-primary" />
         <span className="text-sm font-medium shrink-0">Compare ({items.length}/4):</span>

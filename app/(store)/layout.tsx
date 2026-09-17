@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
 import BottomNav from "@/components/store/BottomNav";
+import { CompareBar } from "@/components/store/CompareBar";
 import WishlistSync from "@/components/store/WishlistSync";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
 import { Suspense } from "react";
@@ -97,6 +98,7 @@ export default async function StoreLayout({
         {children}
       </main>
       <Footer branding={branding} categories={categories} />
+      <CompareBar />
       <BottomNav />
     </div>
   );
