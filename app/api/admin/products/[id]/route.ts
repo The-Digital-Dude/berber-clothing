@@ -104,6 +104,12 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     await prisma.product.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error: any) {
+    // P2003 = foreign key constraint (product has orders)
+    if (error.code === "P2003") {
+      // Soft-delete: deactivate instead of deleting
+      await prisma.product.update({ where: { id }, data: { isActive: false } })
+      return NextResponse.json({ success: true, softDeleted: true, message: "Product has orders — it has been deactivated instead of deleted." })
+    }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

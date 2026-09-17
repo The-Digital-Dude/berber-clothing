@@ -18,8 +18,13 @@ export default function ProductsTable({ products }: { products: any[] }) {
     setDeleting(id)
     try {
       const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error((await res.json()).error || "Delete failed")
-      toast.success(`"${name}" deleted`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Delete failed")
+      if (data.softDeleted) {
+        toast.warning(`"${name}" has existing orders — deactivated instead of deleted.`)
+      } else {
+        toast.success(`"${name}" deleted`)
+      }
       router.refresh()
     } catch (e: any) {
       toast.error(e.message)
