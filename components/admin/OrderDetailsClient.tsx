@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Printer, AlertTriangle, ShieldCheck } from "lucide-react"
+import { Printer, AlertTriangle, ShieldCheck, MessageCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { CustomerRisk } from "@/lib/customerRisk"
@@ -190,7 +190,19 @@ export default function OrderDetailsClient({
             <CardContent className="space-y-4 text-sm">
               <div>
                 <p className="font-semibold">{order.shippingName}</p>
-                <p>{order.shippingPhone}</p>
+                <div className="flex items-center gap-2">
+                  <p>{order.shippingPhone}</p>
+                  {order.shippingPhone && (
+                    <a
+                      href={`https://wa.me/${order.shippingPhone.replace(/\D/g,"").replace(/^0/,"880")}?text=${encodeURIComponent(`Hi ${order.shippingName}, this is Berber regarding your order #${order.orderNumber}.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium hover:bg-green-200 transition-colors"
+                    >
+                      <MessageCircle className="w-3 h-3" /> WhatsApp
+                    </a>
+                  )}
+                </div>
                 <p className="mt-2">{order.shippingAddress}</p>
                 <p>{order.shippingArea}, {order.shippingDistrict}</p>
                 <p>{order.shippingDivision}</p>

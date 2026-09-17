@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { sendOrderStatusUpdate, sendShippingDispatched } from "@/lib/email"
+import { buildWhatsAppMessage, sendWhatsAppMessage } from "@/lib/whatsapp"
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
@@ -25,6 +26,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data: updateData,
       include: { user: { select: { email: true, name: true } } },
     })
+
+    // WhatsApp notification (fire-and-forget via Cloud API if configured)
+    if (status && order.shippingPhone) {
+      const waMsg = buildWhatsAppMessage({
+        customerName: order.user?.name || order.shippingName,
+        orderNumber: order.orderNumber,
+        status,
+        trackingNumber: body.trackingNumber,
+        note: body.note,
+      })
+      sendWhatsAppMessage(order.shippingPhone, waMsg).catch(() => {})
+    }
 
     if (status) {
       await prisma.orderStatusLog.create({

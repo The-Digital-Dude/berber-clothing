@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
+import { notifyStockAlerts } from "@/lib/stockAlert"
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
@@ -53,12 +54,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
     // Sync variants if provided
     if (Array.isArray(variants)) {
+      // Fetch current stock to detect 0→positive transitions
+      const variantIds = variants.filter((v: any) => v.id).map((v: any) => v.id)
+      const currentVariants = variantIds.length > 0
+        ? await prisma.productVariant.findMany({ where: { id: { in: variantIds } }, select: { id: true, stock: true } })
+        : []
+      const currentStockMap = Object.fromEntries(currentVariants.map((v) => [v.id, v.stock]))
+
       for (const v of variants) {
         if (v.id) {
           await prisma.productVariant.update({
             where: { id: v.id },
             data: { size: v.size, color: v.color, colorHex: v.colorHex || null, sku: v.sku, stock: v.stock, price: v.price || null, comparePrice: v.comparePrice || null },
           }).catch(() => {})
+
+          // Notify back-in-stock subscribers
+          if (v.stock > 0 && (currentStockMap[v.id] ?? 0) === 0) {
+            notifyStockAlerts(v.id).catch(() => {})
+          }
         }
       }
     }
