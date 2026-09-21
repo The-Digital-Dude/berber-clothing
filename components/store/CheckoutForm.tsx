@@ -278,7 +278,7 @@ export default function CheckoutForm({
     )
   }
 
-  const inputCls = "w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all"
+  const inputCls = "w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-base md:text-sm outline-none transition-all"
 
   return (
     <div className="flex flex-col lg:flex-row gap-10 items-start">
@@ -405,8 +405,8 @@ export default function CheckoutForm({
                     {errors.fullAddress && <p className="text-xs text-red-500">{errors.fullAddress}</p>}
                   </div>
                 </div>
-                <div className="pt-4 flex justify-end">
-                  <button type="submit" className="px-8 py-4 bg-berber-black text-white font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-berber-gold transition-colors rounded-full text-xs">
+                <div className="pt-4">
+                  <button type="submit" className="w-full md:w-auto md:float-right px-8 py-4 bg-berber-black text-white font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-berber-gold transition-colors rounded-full text-xs">
                     Continue to Payment <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -482,8 +482,8 @@ export default function CheckoutForm({
                   <p className="text-xs text-berber-text-muted">We will try our best to deliver by your preferred date.</p>
                 </div>
 
-                <div className="pt-4 flex justify-end">
-                  <button type="submit" className="px-8 py-4 bg-berber-black text-white font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-berber-gold transition-colors rounded-full text-xs">
+                <div className="pt-4">
+                  <button type="submit" className="w-full md:w-auto md:float-right px-8 py-4 bg-berber-black text-white font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-berber-gold transition-colors rounded-full text-xs">
                     Continue <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>

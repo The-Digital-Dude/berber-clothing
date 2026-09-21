@@ -38,7 +38,7 @@ function CartItemList({ items, removeItem, updateQuantity }: {
             <Link href={`/shop/${item.productSlug}`} className="font-medium text-sm line-clamp-2 hover:text-berber-gold transition-colors">
               {item.name}
             </Link>
-            <button onClick={() => removeItem(item.variantId)} className="text-berber-text-muted hover:text-berber-error transition-colors mt-0.5">
+            <button onClick={() => removeItem(item.variantId)} className="p-2 -mr-2 text-berber-text-muted hover:text-berber-error transition-colors" aria-label="Remove item">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -46,11 +46,11 @@ function CartItemList({ items, removeItem, updateQuantity }: {
         </div>
         <div className="flex justify-between items-end mt-2">
           <div className="flex items-center border border-berber-border rounded-full overflow-hidden">
-            <button className="px-3 py-1.5 text-berber-text-muted hover:text-berber-black transition-colors" onClick={() => updateQuantity(item.variantId, Math.max(1, item.quantity - 1))}>
+            <button className="px-3 py-2.5 text-berber-text-muted hover:text-berber-black transition-colors" onClick={() => updateQuantity(item.variantId, Math.max(1, item.quantity - 1))} aria-label="Decrease quantity">
               <Minus className="h-3 w-3" />
             </button>
-            <span className="w-6 text-center text-xs font-medium">{item.quantity}</span>
-            <button className="px-3 py-1.5 text-berber-text-muted hover:text-berber-black transition-colors" onClick={() => updateQuantity(item.variantId, item.quantity + 1)}>
+            <span className="w-7 text-center text-xs font-medium">{item.quantity}</span>
+            <button className="px-3 py-2.5 text-berber-text-muted hover:text-berber-black transition-colors" onClick={() => updateQuantity(item.variantId, item.quantity + 1)} aria-label="Increase quantity">
               <Plus className="h-3 w-3" />
             </button>
           </div>
@@ -83,7 +83,7 @@ function CartItemList({ items, removeItem, updateQuantity }: {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-1">
                     <Link href={`/shop/${item.productSlug}`} className="text-xs font-medium line-clamp-1 hover:text-berber-gold transition-colors">{item.name}</Link>
-                    <button onClick={() => removeItem(item.variantId)} className="text-berber-text-muted hover:text-berber-error transition-colors shrink-0">
+                    <button onClick={() => removeItem(item.variantId)} className="p-1.5 -mr-1 text-berber-text-muted hover:text-berber-error transition-colors shrink-0" aria-label="Remove item">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -167,7 +167,7 @@ export default function CartDrawer({ itemCount: propItemCount, freeShippingThres
         </div>
 
         {items.length > 0 && (
-          <div className="border-t border-berber-border bg-berber-muted/30 p-6 space-y-6">
+          <div className="border-t border-berber-border bg-berber-muted/30 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] space-y-6">
             
             {/* Promo & Loyalty */}
             <div className="space-y-3">

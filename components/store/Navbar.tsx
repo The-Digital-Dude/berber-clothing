@@ -58,16 +58,16 @@ export default function Navbar({
       {/* Announcement Bar */}
       <div className={`text-berber-surface text-center py-2 text-xs md:text-sm font-medium tracking-wide overflow-hidden transition-colors ${activeFlashSale && flashCountdown ? "bg-berber-error" : "bg-berber-black"}`}>
         {activeFlashSale && flashCountdown ? (
-          <p className="whitespace-nowrap flex items-center justify-center gap-2">
-            <Zap className="w-3 h-3 inline" />
+          <p className="flex items-center justify-center gap-2 flex-wrap">
+            <Zap className="w-3 h-3 inline shrink-0" />
             <span>{activeFlashSale.name} — {flashLabel} sitewide!</span>
             <span className="font-mono">Ends in {flashCountdown}</span>
-            <Zap className="w-3 h-3 inline" />
+            <Zap className="w-3 h-3 inline shrink-0" />
           </p>
         ) : freeShippingThreshold ? (
-          <p className="whitespace-nowrap">Free delivery on orders above ৳{freeShippingThreshold} 🚚</p>
+          <p>Free delivery on orders above ৳{freeShippingThreshold} 🚚</p>
         ) : (
-          <p className="whitespace-nowrap">Free returns · Secure checkout · Made in Bangladesh</p>
+          <p>Free returns · Secure checkout · Made in Bangladesh</p>
         )}
       </div>
 
@@ -77,13 +77,14 @@ export default function Navbar({
           {/* Mobile Menu & Logo */}
           <div className="flex items-center gap-4 md:w-1/3">
             <button
-              className="md:hidden p-2 -ml-2 text-berber-text"
+              className="md:hidden p-3 -ml-3 text-berber-text"
               onClick={() => setMobileOpen(true)}
+              aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
             </button>
             <Link href="/">
-              <img src="/logo.webp" alt={storeName} className="h-24 w-24 md:h-28 md:w-28 object-contain scale-125 origin-left" />
+              <img src="/logo.webp" alt={storeName} className="h-16 w-16 md:h-24 md:w-24 object-contain scale-125 origin-left" />
             </Link>
           </div>
 
@@ -160,7 +161,7 @@ export default function Navbar({
           >
             <div className="flex items-center justify-between mb-4">
               <img src="/logo.webp" alt={storeName} className="h-10 w-10 object-contain" />
-              <button onClick={() => setMobileOpen(false)}>
+              <button onClick={() => setMobileOpen(false)} className="p-2 -mr-2 hover:text-berber-gold transition-colors" aria-label="Close menu">
                 <X className="w-6 h-6" />
               </button>
             </div>
