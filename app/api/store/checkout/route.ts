@@ -16,7 +16,10 @@ export async function POST(req: Request) {
       note, giftWrap, giftMessage, giftWrapCharge, isGuest, guestEmail,
       loyaltyPointsRedeemed, loyaltyDiscount, storeCreditRedeemed, customFields,
       couponId, couponDiscount: clientCouponDiscount, deliveryDate,
-      giftCardCode, giftCardDiscount: clientGCDiscount } = body
+      giftCardCode, giftCardDiscount: clientGCDiscount,
+      manualTrxId, manualScreenshotUrl } = body
+
+    const isManualPayment = !!(manualTrxId || manualScreenshotUrl)
 
     if (!items?.length || !address || !paymentMethod) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -168,7 +171,7 @@ export async function POST(req: Request) {
           isGuest: isGuest || false,
           guestEmail: isGuest ? (guestEmail || null) : null,
           status: "PENDING",
-          paymentStatus: "UNPAID",
+          paymentStatus: isManualPayment ? "PENDING_VERIFICATION" : "UNPAID",
           paymentMethod,
           depositAmount,
           total: serverTotal,
@@ -204,6 +207,20 @@ export async function POST(req: Request) {
     })
 
     await logAudit({ action: "order.created", entityType: "Order", entityId: order.id, after: { orderNumber: order.orderNumber, total: serverTotal, paymentMethod } })
+
+    // Save manual payment evidence (bKash / Nagad screenshot upload)
+    if (isManualPayment) {
+      prisma.payment.create({
+        data: {
+          orderId: order.id,
+          method: paymentMethod,
+          status: "PENDING_VERIFICATION",
+          amount: serverTotal,
+          transactionId: manualTrxId || null,
+          screenshotUrl: manualScreenshotUrl || null,
+        },
+      }).catch(() => {})
+    }
 
     // Increment coupon usage count
     if (validatedCouponId) {

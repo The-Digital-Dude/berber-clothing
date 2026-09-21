@@ -26,7 +26,7 @@ export default async function CheckoutPage({
 
   const [settings, checkoutFields, loyaltyData, creditData] = await Promise.all([
     prisma.setting.findMany({
-      where: { key: { in: ["free_shipping_above", "shipping_charge", "enabled_payment_methods", "tax_enabled", "tax_rate", "tax_label", "gift_wrap_enabled", "gift_wrap_charge", "loyalty_points_per_taka", "loyalty_redemption_rate"] } },
+      where: { key: { in: ["free_shipping_above", "shipping_charge", "enabled_payment_methods", "tax_enabled", "tax_rate", "tax_label", "gift_wrap_enabled", "gift_wrap_charge", "loyalty_points_per_taka", "loyalty_redemption_rate", "bkash_merchant_number", "nagad_merchant_number"] } },
     }).catch(() => []),
     prisma.checkoutField.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }).catch(() => []),
     userId ? prisma.loyaltyPoint.aggregate({ where: { userId }, _sum: { points: true } }).catch(() => null) : null,
@@ -40,15 +40,15 @@ export default async function CheckoutPage({
     ? map.enabled_payment_methods.split(",").map((s) => s.trim())
     : ["COD", "BKASH", "NAGAD"]
 
-  if (!process.env.BKASH_APP_KEY || process.env.BKASH_APP_KEY.includes("your_bkash")) {
-    enabledMethods = enabledMethods.filter(m => m !== "BKASH")
-  }
-  if (!process.env.NAGAD_MERCHANT_ID || process.env.NAGAD_MERCHANT_ID.includes("your_nagad")) {
-    enabledMethods = enabledMethods.filter(m => m !== "NAGAD")
-  }
-  if (enabledMethods.length === 0) {
-    enabledMethods = ["COD"]
-  }
+  const bkashMerchantNumber = map.bkash_merchant_number || ""
+  const nagadMerchantNumber = map.nagad_merchant_number || ""
+
+  // Allow BKASH/NAGAD if either the API gateway creds OR a manual merchant number is set
+  const hasBkashGateway = !!(process.env.BKASH_APP_KEY && !process.env.BKASH_APP_KEY.includes("your_bkash"))
+  const hasNagadGateway = !!(process.env.NAGAD_MERCHANT_ID && !process.env.NAGAD_MERCHANT_ID.includes("your_nagad"))
+  if (!hasBkashGateway && !bkashMerchantNumber) enabledMethods = enabledMethods.filter(m => m !== "BKASH")
+  if (!hasNagadGateway && !nagadMerchantNumber) enabledMethods = enabledMethods.filter(m => m !== "NAGAD")
+  if (enabledMethods.length === 0) enabledMethods = ["COD"]
 
   const taxEnabled = map.tax_enabled === "true"
   const taxRate = Number(map.tax_rate || 0)
@@ -81,6 +81,10 @@ export default async function CheckoutPage({
           freeShippingThreshold={freeShippingThreshold}
           shippingChargeAmount={shippingChargeAmount}
           enabledPaymentMethods={enabledMethods}
+          bkashMerchantNumber={bkashMerchantNumber}
+          nagadMerchantNumber={nagadMerchantNumber}
+          hasBkashGateway={hasBkashGateway}
+          hasNagadGateway={hasNagadGateway}
           taxEnabled={taxEnabled}
           taxRate={taxRate}
           taxLabel={taxLabel}

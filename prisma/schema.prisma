@@ -353,6 +353,7 @@ model Payment {
   status          String @default("UNPAID")
   amount          Decimal       
   transactionId   String?       // bKash/Nagad trxID
+  screenshotUrl   String?       // manual payment screenshot
   gatewayResponse String?         // raw response from gateway
   paidAt          DateTime?
   createdAt       DateTime      @default(now())

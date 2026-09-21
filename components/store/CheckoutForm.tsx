@@ -22,6 +22,10 @@ export default function CheckoutForm({
   freeShippingThreshold = null,
   shippingChargeAmount = 60,
   enabledPaymentMethods = ["COD", "BKASH", "NAGAD"],
+  bkashMerchantNumber = "",
+  nagadMerchantNumber = "",
+  hasBkashGateway = false,
+  hasNagadGateway = false,
   taxEnabled = false,
   taxRate = 0,
   taxLabel = "VAT",
@@ -37,6 +41,10 @@ export default function CheckoutForm({
   freeShippingThreshold?: number | null
   shippingChargeAmount?: number
   enabledPaymentMethods?: string[]
+  bkashMerchantNumber?: string
+  nagadMerchantNumber?: string
+  hasBkashGateway?: boolean
+  hasNagadGateway?: boolean
   taxEnabled?: boolean
   taxRate?: number
   taxLabel?: string
@@ -72,7 +80,27 @@ export default function CheckoutForm({
     enabledPaymentMethods.includes("COD") ? "COD" : enabledPaymentMethods[0] || "COD"
   )
   const [depositInfo, setDepositInfo] = useState<{ required: boolean; amount: number } | null>(null)
-  
+  // Manual payment (bKash/Nagad without gateway)
+  const [manualTrxId, setManualTrxId] = useState("")
+  const [manualScreenshot, setManualScreenshot] = useState<File | null>(null)
+  const [manualScreenshotUrl, setManualScreenshotUrl] = useState("")
+  const [uploadingScreenshot, setUploadingScreenshot] = useState(false)
+
+  // Whether selected method uses the manual (no-gateway) flow
+  const isManualBkash = paymentMethod === "BKASH" && !hasBkashGateway && !!bkashMerchantNumber
+  const isManualNagad = paymentMethod === "NAGAD" && !hasNagadGateway && !!nagadMerchantNumber
+  const isManualPayment = isManualBkash || isManualNagad
+  const manualMerchantNumber = isManualBkash ? bkashMerchantNumber : nagadMerchantNumber
+
+  async function uploadScreenshot(file: File): Promise<string> {
+    const fd = new FormData()
+    fd.append("file", file)
+    const res = await fetch("/api/store/upload-payment-screenshot", { method: "POST", body: fd })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || "Upload failed")
+    return data.url
+  }
+
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -194,8 +222,26 @@ export default function CheckoutForm({
   }
 
   const handlePlaceOrder = async () => {
+    // Manual payment: validate transaction ID required
+    if (isManualPayment && !manualTrxId.trim()) {
+      toast.error("Please enter your transaction ID")
+      return
+    }
+
     setLoading(true)
     try {
+      // Upload screenshot if provided and not yet uploaded
+      let screenshotUrl = manualScreenshotUrl
+      if (isManualPayment && manualScreenshot && !screenshotUrl) {
+        setUploadingScreenshot(true)
+        try {
+          screenshotUrl = await uploadScreenshot(manualScreenshot)
+          setManualScreenshotUrl(screenshotUrl)
+        } finally {
+          setUploadingScreenshot(false)
+        }
+      }
+
       const orderRes = await fetch("/api/store/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -222,12 +268,18 @@ export default function CheckoutForm({
           giftCardCode: appliedGC?.code || null,
           giftCardDiscount: gcDiscount,
           deliveryDate: deliveryDate || null,
+          manualTrxId: isManualPayment ? manualTrxId.trim() : null,
+          manualScreenshotUrl: isManualPayment ? screenshotUrl : null,
         }),
       })
       const orderData = await orderRes.json()
       if (!orderRes.ok) throw new Error(orderData.error)
 
-      if (paymentMethod === "COD" && orderData.depositAmount > 0) {
+      if (isManualPayment) {
+        // Manual payment — order placed, awaiting admin verification
+        clearCart()
+        router.push(`/order/${orderData.orderId}?placed=1`)
+      } else if (paymentMethod === "COD" && orderData.depositAmount > 0) {
         const bkashRes = await fetch("/api/payments/bkash/create", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -450,21 +502,54 @@ export default function CheckoutForm({
                   </label>
                 )}
                 {enabledPaymentMethods.includes("BKASH") && (
-                  <label className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all duration-300 ${paymentMethod === "BKASH" ? "border-berber-black bg-berber-muted/20 shadow-sm" : "border-berber-border hover:border-berber-black/30"}`}>
-                    <input type="radio" name="payment" value="BKASH" checked={paymentMethod === "BKASH"} onChange={() => setPaymentMethod("BKASH")} className="w-4 h-4 accent-berber-black" />
-                    <div className="ml-4 flex items-center gap-2">
-                      <span className="font-bold block text-sm">bKash</span>
-                      <span className="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded font-bold uppercase tracking-widest">Fast</span>
-                    </div>
-                  </label>
+                  <div className={`border rounded-xl transition-all duration-300 ${paymentMethod === "BKASH" ? "border-berber-black shadow-sm" : "border-berber-border"}`}>
+                    <label className={`flex items-center p-4 cursor-pointer ${paymentMethod === "BKASH" ? "bg-berber-muted/20" : "hover:bg-berber-muted/10"} rounded-xl`}>
+                      <input type="radio" name="payment" value="BKASH" checked={paymentMethod === "BKASH"} onChange={() => setPaymentMethod("BKASH")} className="w-4 h-4 accent-berber-black" />
+                      <div className="ml-4 flex items-center gap-2">
+                        <span className="font-bold block text-sm">bKash</span>
+                        {isManualBkash
+                          ? <span className="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded font-bold uppercase tracking-widest">Manual</span>
+                          : <span className="text-[10px] bg-pink-100 text-pink-700 px-2 py-0.5 rounded font-bold uppercase tracking-widest">Fast</span>}
+                      </div>
+                    </label>
+                    {paymentMethod === "BKASH" && isManualBkash && (
+                      <ManualPaymentForm
+                        method="bKash"
+                        merchantNumber={bkashMerchantNumber}
+                        amount={total}
+                        trxId={manualTrxId}
+                        setTrxId={setManualTrxId}
+                        screenshot={manualScreenshot}
+                        setScreenshot={setManualScreenshot}
+                        uploading={uploadingScreenshot}
+                        uploadedUrl={manualScreenshotUrl}
+                      />
+                    )}
+                  </div>
                 )}
                 {enabledPaymentMethods.includes("NAGAD") && (
-                  <label className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all duration-300 ${paymentMethod === "NAGAD" ? "border-berber-black bg-berber-muted/20 shadow-sm" : "border-berber-border hover:border-berber-black/30"}`}>
-                    <input type="radio" name="payment" value="NAGAD" checked={paymentMethod === "NAGAD"} onChange={() => setPaymentMethod("NAGAD")} className="w-4 h-4 accent-berber-black" />
-                    <div className="ml-4">
-                      <span className="font-bold block text-sm">Nagad</span>
-                    </div>
-                  </label>
+                  <div className={`border rounded-xl transition-all duration-300 ${paymentMethod === "NAGAD" ? "border-berber-black shadow-sm" : "border-berber-border"}`}>
+                    <label className={`flex items-center p-4 cursor-pointer ${paymentMethod === "NAGAD" ? "bg-berber-muted/20" : "hover:bg-berber-muted/10"} rounded-xl`}>
+                      <input type="radio" name="payment" value="NAGAD" checked={paymentMethod === "NAGAD"} onChange={() => setPaymentMethod("NAGAD")} className="w-4 h-4 accent-berber-black" />
+                      <div className="ml-4 flex items-center gap-2">
+                        <span className="font-bold block text-sm">Nagad</span>
+                        {isManualNagad && <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold uppercase tracking-widest">Manual</span>}
+                      </div>
+                    </label>
+                    {paymentMethod === "NAGAD" && isManualNagad && (
+                      <ManualPaymentForm
+                        method="Nagad"
+                        merchantNumber={nagadMerchantNumber}
+                        amount={total}
+                        trxId={manualTrxId}
+                        setTrxId={setManualTrxId}
+                        screenshot={manualScreenshot}
+                        setScreenshot={setManualScreenshot}
+                        uploading={uploadingScreenshot}
+                        uploadedUrl={manualScreenshotUrl}
+                      />
+                    )}
+                  </div>
                 )}
                 {/* Preferred delivery date */}
                 <div className="border border-berber-border rounded-xl p-4 space-y-3">
@@ -803,6 +888,95 @@ export default function CheckoutForm({
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function ManualPaymentForm({
+  method,
+  merchantNumber,
+  amount,
+  trxId,
+  setTrxId,
+  screenshot,
+  setScreenshot,
+  uploading,
+  uploadedUrl,
+}: {
+  method: string
+  merchantNumber: string
+  amount: number
+  trxId: string
+  setTrxId: (v: string) => void
+  screenshot: File | null
+  setScreenshot: (f: File | null) => void
+  uploading: boolean
+  uploadedUrl: string
+}) {
+  return (
+    <div className="px-4 pb-4 space-y-4 border-t border-berber-border/50 pt-3">
+      {/* Instructions */}
+      <div className="bg-pink-50 border border-pink-200 rounded-lg p-3 space-y-1.5 text-sm">
+        <p className="font-bold text-pink-800">How to pay via {method}:</p>
+        <ol className="list-decimal list-inside space-y-1 text-pink-700 text-xs">
+          <li>Open your {method} app and go to <strong>Send Money</strong></li>
+          <li>Send <strong>৳{amount.toLocaleString()}</strong> to <strong>{merchantNumber}</strong></li>
+          <li>Copy the Transaction ID from the confirmation screen</li>
+          <li>Paste it below and attach a screenshot</li>
+        </ol>
+      </div>
+
+      {/* Merchant number */}
+      <div className="flex items-center justify-between bg-berber-muted rounded-lg px-4 py-3">
+        <span className="text-xs text-berber-text-muted uppercase tracking-widest font-bold">{method} Number</span>
+        <span className="font-mono font-bold text-berber-black text-base">{merchantNumber}</span>
+      </div>
+
+      {/* Transaction ID */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">
+          Transaction ID <span className="text-berber-error">*</span>
+        </label>
+        <input
+          type="text"
+          value={trxId}
+          onChange={e => setTrxId(e.target.value)}
+          placeholder="e.g. 8N7A3K2X1M"
+          required
+          className="w-full bg-white border border-berber-border focus:border-berber-gold rounded-lg px-4 py-3 text-base md:text-sm outline-none transition-all font-mono"
+        />
+      </div>
+
+      {/* Screenshot upload */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">
+          Payment Screenshot <span className="text-berber-text-muted text-[10px] font-normal normal-case">(optional but recommended)</span>
+        </label>
+        {uploadedUrl ? (
+          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <span>✓ Screenshot uploaded</span>
+            <button type="button" onClick={() => setScreenshot(null)} className="text-green-600 underline">change</button>
+          </div>
+        ) : (
+          <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg py-5 cursor-pointer transition-colors ${screenshot ? "border-berber-gold bg-berber-gold/5" : "border-berber-border hover:border-berber-gold"}`}>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => setScreenshot(e.target.files?.[0] || null)}
+            />
+            {screenshot ? (
+              <p className="text-xs font-medium text-berber-black">{screenshot.name}</p>
+            ) : (
+              <>
+                <span className="text-2xl">📎</span>
+                <p className="text-xs text-berber-text-muted">Tap to attach screenshot</p>
+              </>
+            )}
+          </label>
+        )}
+        {uploading && <p className="text-xs text-berber-text-muted animate-pulse">Uploading screenshot…</p>}
       </div>
     </div>
   )

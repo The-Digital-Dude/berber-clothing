@@ -305,11 +305,54 @@ export default function OrderDetailsClient({
                   className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="UNPAID">Unpaid</option>
+                  <option value="PENDING_VERIFICATION">Pending Verification</option>
                   <option value="PARTIAL">Partial (deposit only)</option>
                   <option value="PAID">Paid</option>
                   <option value="REFUNDED">Refunded</option>
                 </select>
               </div>
+
+              {/* Manual payment evidence */}
+              {order.payment && (order.payment.transactionId || order.payment.screenshotUrl) && (
+                <div className="space-y-2 pt-2 border-t">
+                  <label className="text-sm font-medium">Payment Evidence</label>
+                  {order.payment.transactionId && (
+                    <div className="text-sm bg-muted rounded px-3 py-2 font-mono break-all">
+                      Trx ID: {order.payment.transactionId}
+                    </div>
+                  )}
+                  {order.payment.screenshotUrl && (
+                    <a href={order.payment.screenshotUrl} target="_blank" rel="noopener noreferrer">
+                      <img
+                        src={order.payment.screenshotUrl}
+                        alt="Payment screenshot"
+                        className="rounded border max-h-48 w-full object-contain cursor-zoom-in"
+                      />
+                    </a>
+                  )}
+                  {order.paymentStatus === "PENDING_VERIFICATION" && (
+                    <div className="flex gap-2 pt-1">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        disabled={loading}
+                        onClick={() => updatePaymentStatus("PAID")}
+                      >
+                        Confirm Payment
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={loading}
+                        onClick={() => updatePaymentStatus("UNPAID")}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
