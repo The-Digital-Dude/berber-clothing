@@ -13,59 +13,64 @@ async function getSmtpConfig() {
   return s
 }
 
-async function createTransport() {
-  const s = await getSmtpConfig()
-
-  if (s.smtp_host && s.smtp_user && s.smtp_pass) {
-    return nodemailer.createTransport({
-      host: s.smtp_host,
-      port: Number(s.smtp_port || 587),
-      secure: s.smtp_secure === "true",
-      auth: { user: s.smtp_user, pass: s.smtp_pass },
-    })
-  }
-
-  // Brevo SMTP relay
-  if (process.env.BREVO_API_KEY) {
-    return nodemailer.createTransport({
-      host: "smtp-relay.brevo.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.BREVO_FROM_EMAIL || "noreply@mail.berber.clothing",
-        pass: process.env.BREVO_API_KEY,
-      },
-    })
-  }
-
-  // Resend SMTP relay fallback
-  if (process.env.RESEND_API_KEY) {
-    return nodemailer.createTransport({
-      host: "smtp.resend.com",
-      port: 465,
-      secure: true,
-      auth: { user: "resend", pass: process.env.RESEND_API_KEY },
-    })
-  }
-
-  // No email configured — return null transport that logs instead of sending
-  return nodemailer.createTransport({ jsonTransport: true })
-}
-
-async function getSenderAddress() {
+async function getSenderMeta() {
   const rows = await prisma.setting.findMany({
     where: { key: { in: ["smtp_from_name", "smtp_from_email", "store_name", "support_email"] } },
   })
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]))
-  const name = s.smtp_from_name || s.store_name || "Berber"
-  const email = s.smtp_from_email || s.support_email || process.env.FROM_EMAIL || "noreply@drip.fashion"
-  return `${name} <${email}>`
+  return {
+    name: s.smtp_from_name || s.store_name || "Berber",
+    email: s.smtp_from_email || s.support_email || process.env.BREVO_FROM_EMAIL || process.env.FROM_EMAIL || "noreply@mail.berber.clothing",
+  }
 }
 
 async function sendMail(to: string, subject: string, html: string) {
-  const transport = await createTransport()
-  const from = await getSenderAddress()
-  await transport.sendMail({ from, to, subject, html })
+  const sender = await getSenderMeta()
+  const smtpCfg = await getSmtpConfig()
+
+  // 1. Custom SMTP
+  if (smtpCfg.smtp_host && smtpCfg.smtp_user && smtpCfg.smtp_pass) {
+    const transport = nodemailer.createTransport({
+      host: smtpCfg.smtp_host,
+      port: Number(smtpCfg.smtp_port || 587),
+      secure: smtpCfg.smtp_secure === "true",
+      auth: { user: smtpCfg.smtp_user, pass: smtpCfg.smtp_pass },
+    })
+    await transport.sendMail({ from: `${sender.name} <${sender.email}>`, to, subject, html })
+    return
+  }
+
+  // 2. Brevo Transactional Email API
+  if (process.env.BREVO_API_KEY) {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "api-key": process.env.BREVO_API_KEY },
+      body: JSON.stringify({
+        sender: { name: sender.name, email: sender.email },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error((err as any).message || `Brevo API error ${res.status}`)
+    }
+    return
+  }
+
+  // 3. Resend SMTP relay
+  if (process.env.RESEND_API_KEY) {
+    const transport = nodemailer.createTransport({
+      host: "smtp.resend.com", port: 465, secure: true,
+      auth: { user: "resend", pass: process.env.RESEND_API_KEY },
+    })
+    await transport.sendMail({ from: `${sender.name} <${sender.email}>`, to, subject, html })
+    return
+  }
+
+  // 4. No provider — log only
+  console.warn("[email] No provider configured. Would have sent:", { to, subject })
 }
 
 // ---------------------------------------------------------------------------
