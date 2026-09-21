@@ -23,10 +23,12 @@ export default function CompleteTheSet({
   bundle,
   primaryName,
   primaryPrice,
+  primaryColors = [],
 }: {
   bundle: Bundle
   primaryName: string
   primaryPrice: number
+  primaryColors?: string[]
 }) {
   const addItem = useCartStore((s) => s.addItem)
 
@@ -116,6 +118,8 @@ export default function CompleteTheSet({
           const isOn = !!selected[product.id]
           const inStockVariants = product.variants.filter((v) => v.stock > 0)
           const outOfStock = inStockVariants.length === 0
+          const companionColors = Array.from(new Set(inStockVariants.map((v) => v.color)))
+          const matchingColors = primaryColors.filter((c) => companionColors.includes(c))
           const currentVariant = product.variants.find((v) => v.id === chosenVariant[product.id])
 
           // Build unique sizes + colors for selects
@@ -166,9 +170,16 @@ export default function CompleteTheSet({
                   {outOfStock ? (
                     <p className="text-xs text-berber-error mt-0.5">Out of stock</p>
                   ) : (
-                    <p className="text-xs text-berber-text-muted mt-0.5">
-                      +৳{(currentVariant?.price != null ? Number(currentVariant.price) : product.price).toLocaleString()}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <p className="text-xs text-berber-text-muted">
+                        +৳{(currentVariant?.price != null ? Number(currentVariant.price) : product.price).toLocaleString()}
+                      </p>
+                      {matchingColors.length > 0 && (
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-berber-gold bg-berber-gold/10 px-1.5 py-0.5 rounded">
+                          Matches · {matchingColors.join(", ")}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>

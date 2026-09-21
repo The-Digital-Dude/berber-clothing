@@ -29,6 +29,7 @@ export default function ProductCard({
   const hasFlashSale = !!flashSalePrice
   const displayPrice = flashSalePrice ?? Number(product.price)
   const isLowStock = product.variants?.reduce((acc: number, v: any) => acc + v.stock, 0) < 5
+  const hasSet = !!product.bundleId
   const discountPercent = product.comparePrice
     ? Math.round(((Number(product.comparePrice) - Number(product.price)) / Number(product.comparePrice)) * 100)
     : flashSalePrice
@@ -75,6 +76,7 @@ export default function ProductCard({
           {hasFlashSale && <span className="bg-berber-error text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full flex items-center gap-1">⚡ {flashSaleLabel}</span>}
           {!hasFlashSale && hasSale && <span className="bg-berber-gold text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full">Sale</span>}
           {isLowStock && <span className="bg-berber-error text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full">Low Stock</span>}
+          {hasSet && <span className="bg-berber-gold/90 text-white text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full">Set</span>}
         </div>
 
         {/* Wishlist & Compare */}

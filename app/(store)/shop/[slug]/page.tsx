@@ -256,6 +256,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                 bundle={setBundle}
                 primaryName={product.name}
                 primaryPrice={displayPrice}
+                primaryColors={Array.from(new Set(product.variants.map((v: any) => v.color).filter(Boolean)))}
               />
             )}
 
