@@ -5,6 +5,7 @@ import Footer from "@/components/store/Footer";
 import BottomNav from "@/components/store/BottomNav";
 import { CompareBar } from "@/components/store/CompareBar";
 import WishlistSync from "@/components/store/WishlistSync";
+import AbandonedCartTracker from "@/components/store/AbandonedCartTracker";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
@@ -94,6 +95,7 @@ export default async function StoreLayout({
         } : null}
       />
       <WishlistSync />
+      <AbandonedCartTracker />
       <main className="flex-1 pb-16 md:pb-0">
         {children}
       </main>
