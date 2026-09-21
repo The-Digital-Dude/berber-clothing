@@ -24,6 +24,7 @@ const productSchema = z.object({
   seoDescription: z.string().optional(),
   seoKeywords: z.string().optional(),
   videoUrl: z.string().optional(),
+  sizeChartImage: z.string().optional(),
   variants: z.array(z.object({
     size: z.string().min(1),
     color: z.string().min(1),
@@ -183,6 +184,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
   )
   const [newImageUrl, setNewImageUrl] = useState("")
   const [uploading, setUploading] = useState(false)
+  const [uploadingChartImage, setUploadingChartImage] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [dragImageIdx, setDragImageIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
@@ -538,6 +540,43 @@ export default function ProductForm({ initialData, categories }: { initialData?:
               <div>
                 <label className="block text-xs font-medium mb-1">Product Video URL <span className="text-muted-foreground">(YouTube or direct MP4)</span></label>
                 <input {...register("videoUrl")} className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring" placeholder="https://youtube.com/watch?v=... or https://..." />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1">Size Chart Image <span className="text-muted-foreground">(optional — overrides category size guide)</span></label>
+                {watch("sizeChartImage") && (
+                  <div className="mb-2 relative w-32 h-20 rounded overflow-hidden border">
+                    <img src={watch("sizeChartImage")} alt="Size chart" className="object-contain w-full h-full" />
+                    <button type="button" onClick={() => setValue("sizeChartImage", "")}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors">
+                      <span className="text-[10px] px-1">✕</span>
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploadingChartImage}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    setUploadingChartImage(true)
+                    try {
+                      const fd = new FormData()
+                      fd.append("file", file)
+                      const res = await fetch("/api/admin/upload", { method: "POST", body: fd })
+                      const data = await res.json()
+                      if (!res.ok) throw new Error(data.error)
+                      setValue("sizeChartImage", data.url)
+                    } catch (err: any) {
+                      toast.error(err.message || "Upload failed")
+                    } finally {
+                      setUploadingChartImage(false)
+                      e.target.value = ""
+                    }
+                  }}
+                  className="block text-sm text-muted-foreground file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-muted file:text-foreground hover:file:bg-muted/80 cursor-pointer"
+                />
+                {uploadingChartImage && <p className="text-xs text-muted-foreground mt-1">Uploading…</p>}
               </div>
             </CardContent>
           </Card>

@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/adminAuth"
 import { createAdminClient } from "@/lib/supabase"
+import sharp from "sharp"
 
 const ALLOWED_BUCKETS = ["product-images", "category-images", "brand-images", "bundle-images", "blog-images"]
+const MAX_WIDTH = 1200
+const WEBP_QUALITY = 82
+
+async function compressToWebP(buffer: ArrayBuffer): Promise<Buffer> {
+  return sharp(Buffer.from(buffer))
+    .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer()
+}
 
 export async function POST(req: NextRequest) {
   const { error } = await requireAdmin()
@@ -30,12 +40,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Only JPG, PNG, WEBP, AVIF allowed" }, { status: 400 })
     }
 
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     const arrayBuffer = await file.arrayBuffer()
+    const compressed = await compressToWebP(arrayBuffer)
+
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(filename, arrayBuffer, { contentType: file.type, upsert: false })
+      .upload(filename, compressed, { contentType: "image/webp", upsert: false })
 
     if (uploadError) throw uploadError
 

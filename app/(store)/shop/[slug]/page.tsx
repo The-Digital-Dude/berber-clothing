@@ -248,6 +248,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               attr1Label={attrConfig?.attr1Label || "Size"}
               attr2Label={attrConfig?.attr2Label || "Color"}
               categoryId={product.categoryId}
+              sizeChartImage={product.sizeChartImage || null}
             />
 
             {/* Complete the Set */}

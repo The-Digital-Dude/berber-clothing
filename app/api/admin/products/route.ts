@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   if (error) return error
   try {
     const body = await req.json()
-    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, videoUrl, images, variants } = body
+    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, videoUrl, sizeChartImage, images, variants } = body
 
     const slugBase = slug || name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
     const ts = Date.now()
@@ -55,6 +55,7 @@ export async function POST(req: Request) {
         seoDescription: seoDescription || null,
         seoKeywords: seoKeywords || null,
         videoUrl: videoUrl || null,
+        sizeChartImage: sizeChartImage || null,
         images: {
           create: (images || []).map((img: any, i: number) => ({ url: img.url, alt: img.alt || "", sortOrder: i }))
         },

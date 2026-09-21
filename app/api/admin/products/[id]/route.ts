@@ -31,12 +31,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   try {
     const { id } = await params
     const body = await req.json()
-    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, videoUrl, images, variants } = body
+    const { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle, seoDescription, seoKeywords, videoUrl, sizeChartImage, images, variants } = body
 
     // Update product fields
     const product = await prisma.product.update({
       where: { id },
-      data: { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle: seoTitle || null, seoDescription: seoDescription || null, seoKeywords: seoKeywords || null, videoUrl: videoUrl || null },
+      data: { name, slug, description, price, comparePrice, categoryId, tags, isActive, isFeatured, seoTitle: seoTitle || null, seoDescription: seoDescription || null, seoKeywords: seoKeywords || null, videoUrl: videoUrl || null, sizeChartImage: sizeChartImage || null },
     })
 
     // Sync images: delete old, recreate

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Plus, Tag, Pencil, Trash2 } from "lucide-react"
+import { Plus, Tag, Pencil, Trash2, Ruler, X } from "lucide-react"
 import Image from "next/image"
 import ImagePicker from "@/components/admin/ImagePicker"
 
@@ -42,6 +42,135 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
 }
 
+const DEFAULT_COLUMNS = ["Size", "Chest", "Shoulder", "Waist", "Length", "Sleeve"]
+
+function emptySizeGuide() {
+  return {
+    unit: "cm",
+    columns: DEFAULT_COLUMNS,
+    rows: [["S", "", "", "", "", ""], ["M", "", "", "", "", ""], ["L", "", "", "", "", ""], ["XL", "", "", "", "", ""]],
+    notes: "",
+  }
+}
+
+function SizeGuideEditor({ categoryId, onClose }: { categoryId: string; onClose: () => void }) {
+  const [guide, setGuide] = useState(emptySizeGuide())
+  const [loaded, setLoaded] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  // Load existing guide
+  useEffect(() => {
+    fetch(`/api/admin/size-guide?categoryId=${categoryId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d && d.columns) {
+          setGuide({
+            unit: d.unit || "cm",
+            columns: JSON.parse(d.columns),
+            rows: JSON.parse(d.rows),
+            notes: d.notes || "",
+          })
+        }
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
+  }, [categoryId])
+
+  const updateCell = (ri: number, ci: number, val: string) => {
+    setGuide(g => {
+      const rows = g.rows.map((r, i) => i === ri ? r.map((c, j) => j === ci ? val : c) : r)
+      return { ...g, rows }
+    })
+  }
+
+  const addRow = () => setGuide(g => ({ ...g, rows: [...g.rows, g.columns.map(() => "")] }))
+  const removeRow = (i: number) => setGuide(g => ({ ...g, rows: g.rows.filter((_, ri) => ri !== i) }))
+
+  async function save() {
+    setSaving(true)
+    try {
+      const res = await fetch("/api/admin/size-guide", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categoryId,
+          unit: guide.unit,
+          columns: JSON.stringify(guide.columns),
+          rows: JSON.stringify(guide.rows),
+          notes: guide.notes || null,
+        }),
+      })
+      if (res.ok) { toast.success("Size guide saved"); onClose() }
+      else toast.error("Failed to save size guide")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <label className="text-sm font-medium">Unit</label>
+        <select value={guide.unit} onChange={e => setGuide(g => ({ ...g, unit: e.target.value }))}
+          className="border border-input rounded px-2 py-1 text-sm">
+          <option value="cm">cm</option>
+          <option value="inches">inches</option>
+        </select>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr>
+              {guide.columns.map((col, ci) => (
+                <th key={ci} className="border border-border px-2 py-1.5 text-left text-xs font-bold bg-muted">
+                  {col}{ci > 0 ? ` (${guide.unit})` : ""}
+                </th>
+              ))}
+              <th className="border border-border px-2 py-1.5 w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {guide.rows.map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td key={ci} className="border border-border p-0">
+                    <input
+                      value={cell}
+                      onChange={e => updateCell(ri, ci, e.target.value)}
+                      placeholder={ci === 0 ? "e.g. S" : "e.g. 86-90"}
+                      className="w-full px-2 py-1.5 text-sm focus:outline-none focus:bg-blue-50 min-w-[70px]"
+                    />
+                  </td>
+                ))}
+                <td className="border border-border px-1 text-center">
+                  <button onClick={() => removeRow(ri)} className="text-muted-foreground hover:text-destructive transition-colors">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Button variant="outline" size="sm" onClick={addRow} className="gap-1">
+        <Plus className="w-3.5 h-3.5" /> Add Row
+      </Button>
+
+      <div>
+        <label className="text-sm font-medium">Notes (optional)</label>
+        <Input value={guide.notes} onChange={e => setGuide(g => ({ ...g, notes: e.target.value }))}
+          placeholder="e.g. All measurements are in cm. Size up if between sizes." className="mt-1" />
+      </div>
+
+      <Button onClick={save} disabled={saving} className="w-full">
+        {saving ? "Saving..." : "Save Size Guide"}
+      </Button>
+    </div>
+  )
+}
+
 export function CategoryClient({ data }: { data: Category[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -50,6 +179,7 @@ export function CategoryClient({ data }: { data: Category[] }) {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [error, setError] = useState("")
+  const [sizeGuideId, setSizeGuideId] = useState<string | null>(null)
 
   function openAdd() {
     setEditingId(null)
@@ -140,6 +270,18 @@ export function CategoryClient({ data }: { data: Category[] }) {
           <Plus className="h-4 w-4" /> Add Category
         </Button>
       </div>
+
+      {/* Size Guide Dialog */}
+      <Dialog open={!!sizeGuideId} onOpenChange={(v) => !v && setSizeGuideId(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ruler className="h-4 w-4" /> Size Guide Editor
+            </DialogTitle>
+          </DialogHeader>
+          {sizeGuideId && <SizeGuideEditor categoryId={sizeGuideId} onClose={() => setSizeGuideId(null)} />}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg">
@@ -244,6 +386,9 @@ export function CategoryClient({ data }: { data: Category[] }) {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setSizeGuideId(c.id)} title="Edit Size Guide">
+                      <Ruler className="h-3 w-3" />
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
                       <Pencil className="h-3 w-3" />
                     </Button>

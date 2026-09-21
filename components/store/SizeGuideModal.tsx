@@ -10,7 +10,7 @@ type SizeGuide = {
   notes: string | null
 }
 
-export default function SizeGuideModal({ categoryId }: { categoryId: string }) {
+export default function SizeGuideModal({ categoryId, sizeChartImage }: { categoryId: string; sizeChartImage?: string | null }) {
   const [open, setOpen] = useState(false)
   const [guide, setGuide] = useState<SizeGuide | null>(null)
   const [myMeasure, setMyMeasure] = useState("")
@@ -61,6 +61,12 @@ export default function SizeGuideModal({ categoryId }: { categoryId: string }) {
 
             <div className="p-6 space-y-6">
               {!guide && <p className="text-berber-text-muted text-sm">Loading size guide...</p>}
+
+              {sizeChartImage && (
+                <div className="rounded-xl overflow-hidden border border-berber-border">
+                  <img src={sizeChartImage} alt="Size chart" className="w-full object-contain max-h-64" />
+                </div>
+              )}
 
               {guide && (
                 <>

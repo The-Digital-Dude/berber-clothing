@@ -15,12 +15,14 @@ export default function VariantSelector({
   attr1Label = "Size",
   attr2Label = "Color",
   categoryId,
+  sizeChartImage,
 }: {
   product: any
   flashSale?: any
   attr1Label?: string
   attr2Label?: string
   categoryId?: string
+  sizeChartImage?: string | null
 }) {
   const variants = product.variants || []
   const addItem = useCartStore((s) => s.addItem)
@@ -126,7 +128,7 @@ export default function VariantSelector({
         <div className="space-y-3">
           <div className="flex items-baseline justify-between">
             <h3 className="text-xs font-bold uppercase tracking-widest text-berber-black">{attr1Label}</h3>
-            {categoryId && <SizeGuideModal categoryId={categoryId} />}
+            {categoryId && <SizeGuideModal categoryId={categoryId} sizeChartImage={sizeChartImage} />}
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
             {sizes.map(size => {

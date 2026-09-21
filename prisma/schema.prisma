@@ -138,6 +138,7 @@ model Product {
   seoDescription String?
   seoKeywords    String?
   videoUrl       String?  // optional product demo video (YouTube/direct MP4 URL)
+  sizeChartImage String? // optional per-product size chart image override
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
