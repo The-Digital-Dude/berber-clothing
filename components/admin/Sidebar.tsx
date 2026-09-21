@@ -6,7 +6,7 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard, ShoppingBag, ShoppingCart, Users, Package,
-  BarChart2, Settings, Tag, RotateCcw, Ticket, Zap, CreditCard,
+  BarChart2, Settings, Tag, RotateCcw, Ticket, Zap, CreditCard, Bell,
   Globe, MessageSquare, Building2, Truck, Warehouse, Mail,
   ChevronRight, Star, Users2, Wallet, Award, ScrollText,
   Receipt, Download, Layers, Search, PlusCircle,
