@@ -32,7 +32,7 @@ async function createTransport() {
       port: 587,
       secure: false,
       auth: {
-        user: process.env.BREVO_FROM_EMAIL || "noreply@berber.clothing",
+        user: process.env.BREVO_FROM_EMAIL || "noreply@mail.berber.clothing",
         pass: process.env.BREVO_API_KEY,
       },
     })

@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       port: 587,
       secure: false,
       auth: {
-        user: process.env.BREVO_FROM_EMAIL || s.smtp_from_email || "noreply@berber.clothing",
+        user: process.env.BREVO_FROM_EMAIL || s.smtp_from_email || "noreply@mail.berber.clothing",
         pass: process.env.BREVO_API_KEY,
       },
     })
