@@ -7,11 +7,17 @@ const ALLOWED_BUCKETS = ["product-images", "category-images", "brand-images", "b
 const MAX_WIDTH = 1200
 const WEBP_QUALITY = 82
 
-async function compressToWebP(buffer: ArrayBuffer): Promise<Buffer> {
-  return sharp(Buffer.from(buffer))
-    .resize({ width: MAX_WIDTH, withoutEnlargement: true })
-    .webp({ quality: WEBP_QUALITY })
-    .toBuffer()
+async function compressToWebP(buffer: ArrayBuffer): Promise<{ data: Buffer; contentType: string; ext: string }> {
+  try {
+    const data = await sharp(Buffer.from(buffer))
+      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer()
+    return { data, contentType: "image/webp", ext: "webp" }
+  } catch {
+    // Fall back to original if sharp fails
+    return { data: Buffer.from(buffer), contentType: "application/octet-stream", ext: "jpg" }
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -41,13 +47,13 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const compressed = await compressToWebP(arrayBuffer)
+    const { data: compressed, contentType: compressedType, ext: compressedExt } = await compressToWebP(arrayBuffer)
 
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.webp`
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${compressedExt}`
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(filename, compressed, { contentType: "image/webp", upsert: false })
+      .upload(filename, compressed, { contentType: compressedType, upsert: false })
 
     if (uploadError) throw uploadError
 

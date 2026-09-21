@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ["sharp"],
   images: {
     remotePatterns: [
       // Supabase Storage (any project)
