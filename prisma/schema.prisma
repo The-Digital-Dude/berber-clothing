@@ -160,6 +160,9 @@ model Product {
   fbtPrimary          FrequentlyBoughtTogether[] @relation("FBTPrimary")
   fbtSecondary        FrequentlyBoughtTogether[] @relation("FBTSecondary")
   smartCollectionItems SmartCollectionProduct[]
+  // "Complete the Set" bundle this product is the primary piece of
+  bundleId            String?  @unique
+  setBundle           Bundle?  @relation("ProductSetBundle", fields: [bundleId], references: [id])
 
   @@map("products")
 }
@@ -676,7 +679,8 @@ model Bundle {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  items BundleItem[]
+  items          BundleItem[]
+  primaryProduct Product?     @relation("ProductSetBundle")
 
   @@map("bundles")
 }

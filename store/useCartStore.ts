@@ -12,6 +12,7 @@ export interface CartItem {
   color: string;
   image: string;
   quantity: number;
+  setGroupId?: string;  // shared UUID for items added together as a set
 }
 
 interface CartState {

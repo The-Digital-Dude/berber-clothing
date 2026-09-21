@@ -15,6 +15,7 @@ import ReviewMediaGallery from "@/components/store/ReviewMediaGallery"
 import ProductQA from "@/components/store/ProductQA"
 import SizeQuiz from "@/components/store/SizeQuiz"
 import StickyAddToCart from "@/components/store/StickyAddToCart"
+import CompleteTheSet from "@/components/store/CompleteTheSet"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Truck, RefreshCw, ShieldCheck } from "lucide-react"
 import type { Metadata } from "next"
@@ -95,8 +96,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const salePrice = flashSale ? applyFlashSaleDiscount(Number(product.price), flashSale) : null
   const displayPrice = salePrice ?? Number(product.price)
 
-  // Fetch related products, FBT suggestions, and settings in parallel
-  const [relatedProducts, fbtPairs, shippingSettings] = await Promise.all([
+  // Fetch related products, FBT suggestions, settings, and set bundle in parallel
+  const [relatedProducts, fbtPairs, shippingSettings, bundle] = await Promise.all([
     prisma.product.findMany({
       where: { categoryId: product.categoryId, id: { not: product.id }, isActive: true },
       take: 4,
@@ -111,10 +112,29 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     prisma.setting.findMany({
       where: { key: { in: ["free_shipping_above"] } },
     }).catch(() => []),
+    // "Complete the Set" bundle
+    product.bundleId ? prisma.bundle.findUnique({
+      where: { id: product.bundleId },
+      include: {
+        items: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            product: {
+              select: {
+                id: true, name: true, slug: true, price: true,
+                images: { take: 1, orderBy: { sortOrder: "asc" } },
+                variants: true,
+              },
+            },
+          },
+        },
+      },
+    }).catch(() => null) : Promise.resolve(null),
   ])
 
   const settingsMap = Object.fromEntries(shippingSettings.map((s: any) => [s.key, s.value]))
   const freeShippingThreshold = settingsMap.free_shipping_above ? Number(settingsMap.free_shipping_above) : null
+  const setBundle = JSON.parse(JSON.stringify(bundle))
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -229,6 +249,15 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               attr2Label={attrConfig?.attr2Label || "Color"}
               categoryId={product.categoryId}
             />
+
+            {/* Complete the Set */}
+            {setBundle && setBundle.items?.length > 0 && (
+              <CompleteTheSet
+                bundle={setBundle}
+                primaryName={product.name}
+                primaryPrice={displayPrice}
+              />
+            )}
 
             {/* Product Add-ons */}
             {product.addons.length > 0 && (

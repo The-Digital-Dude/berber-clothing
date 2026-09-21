@@ -2,12 +2,102 @@
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { ShoppingBag, Minus, Plus, Trash2, Tag, ChevronRight } from "lucide-react"
-import { useCartStore } from "@/store/useCartStore"
+import { ShoppingBag, Minus, Plus, Trash2, Tag, ChevronRight, Layers } from "lucide-react"
+import { useCartStore, CartItem } from "@/store/useCartStore"
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
 import { Switch } from "@/components/ui/switch"
+
+// Renders cart items, grouping items that share a setGroupId
+function CartItemList({ items, removeItem, updateQuantity }: {
+  items: CartItem[]
+  removeItem: (variantId: string) => void
+  updateQuantity: (variantId: string, qty: number) => void
+}) {
+  // Split into set groups and standalone items
+  const setGroups: Record<string, CartItem[]> = {}
+  const standalone: CartItem[] = []
+
+  for (const item of items) {
+    if (item.setGroupId) {
+      setGroups[item.setGroupId] = [...(setGroups[item.setGroupId] || []), item]
+    } else {
+      standalone.push(item)
+    }
+  }
+
+  const renderItem = (item: CartItem) => (
+    <div key={item.variantId} className="flex gap-4">
+      <Link href={`/shop/${item.productSlug}`} className="relative h-32 w-24 shrink-0 overflow-hidden bg-berber-muted rounded-sm block">
+        <Image src={item.image || "/placeholder.jpg"} alt={item.name} fill sizes="96px" className="object-cover" />
+      </Link>
+      <div className="flex-1 flex flex-col justify-between py-1">
+        <div>
+          <div className="flex justify-between items-start gap-2">
+            <Link href={`/shop/${item.productSlug}`} className="font-medium text-sm line-clamp-2 hover:text-berber-gold transition-colors">
+              {item.name}
+            </Link>
+            <button onClick={() => removeItem(item.variantId)} className="text-berber-text-muted hover:text-berber-error transition-colors mt-0.5">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+          <p className="text-xs text-berber-text-muted mt-1 uppercase tracking-wider">{item.size} / {item.color}</p>
+        </div>
+        <div className="flex justify-between items-end mt-2">
+          <div className="flex items-center border border-berber-border rounded-full overflow-hidden">
+            <button className="px-3 py-1.5 text-berber-text-muted hover:text-berber-black transition-colors" onClick={() => updateQuantity(item.variantId, Math.max(1, item.quantity - 1))}>
+              <Minus className="h-3 w-3" />
+            </button>
+            <span className="w-6 text-center text-xs font-medium">{item.quantity}</span>
+            <button className="px-3 py-1.5 text-berber-text-muted hover:text-berber-black transition-colors" onClick={() => updateQuantity(item.variantId, item.quantity + 1)}>
+              <Plus className="h-3 w-3" />
+            </button>
+          </div>
+          <span className="font-mono font-medium">৳{(item.price * item.quantity).toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* Standalone items */}
+      {standalone.map(renderItem)}
+
+      {/* Set groups */}
+      {Object.entries(setGroups).map(([groupId, groupItems]) => (
+        <div key={groupId} className="border border-berber-border rounded-xl overflow-hidden">
+          <div className="flex items-center gap-2 px-3 py-2 bg-berber-gold/10 border-b border-berber-border">
+            <Layers className="w-3.5 h-3.5 text-berber-gold" />
+            <span className="text-xs font-bold uppercase tracking-widest text-berber-gold">
+              Set — {groupItems.length} pieces
+            </span>
+          </div>
+          <div className="divide-y divide-berber-border/50 px-3">
+            {groupItems.map((item) => (
+              <div key={item.variantId} className="py-3 flex gap-3">
+                <div className="relative h-14 w-10 shrink-0 overflow-hidden bg-berber-muted rounded-sm">
+                  <Image src={item.image || "/placeholder.jpg"} alt={item.name} fill sizes="40px" className="object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start gap-1">
+                    <Link href={`/shop/${item.productSlug}`} className="text-xs font-medium line-clamp-1 hover:text-berber-gold transition-colors">{item.name}</Link>
+                    <button onClick={() => removeItem(item.variantId)} className="text-berber-text-muted hover:text-berber-error transition-colors shrink-0">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-berber-text-muted uppercase tracking-wide mt-0.5">{item.size} / {item.color}</p>
+                  <p className="text-xs font-mono font-medium mt-1">৳{(item.price * item.quantity).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function CartDrawer({ itemCount: propItemCount, freeShippingThreshold = null }: { itemCount?: number, freeShippingThreshold?: number | null }) {
   const { items, removeItem, updateQuantity } = useCartStore()
@@ -64,7 +154,7 @@ export default function CartDrawer({ itemCount: propItemCount, freeShippingThres
               </div>
               <p className="font-heading text-xl">Your bag is empty.</p>
               <p className="text-sm text-berber-text-muted">Looks like you haven't added anything yet.</p>
-              <button 
+              <button
                 onClick={() => setIsOpen(false)}
                 className="mt-4 border-b border-berber-black font-medium uppercase tracking-widest text-xs pb-1 hover:text-berber-gold hover:border-berber-gold transition-colors"
               >
@@ -72,47 +162,7 @@ export default function CartDrawer({ itemCount: propItemCount, freeShippingThres
               </button>
             </div>
           ) : (
-            <div className="space-y-6">
-              {items.map((item) => (
-                <div key={item.variantId} className="flex gap-4">
-                  <Link href={`/shop/${item.productSlug}`} className="relative h-32 w-24 shrink-0 overflow-hidden bg-berber-muted rounded-sm block">
-                    <Image src={item.image || "/placeholder.jpg"} alt={item.name} fill sizes="96px" className="object-cover" />
-                  </Link>
-                  <div className="flex-1 flex flex-col justify-between py-1">
-                    <div>
-                      <div className="flex justify-between items-start gap-2">
-                        <Link href={`/shop/${item.productSlug}`} className="font-medium text-sm line-clamp-2 hover:text-berber-gold transition-colors">
-                          {item.name}
-                        </Link>
-                        <button onClick={() => removeItem(item.variantId)} className="text-berber-text-muted hover:text-berber-error transition-colors mt-0.5">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <p className="text-xs text-berber-text-muted mt-1 uppercase tracking-wider">{item.size} / {item.color}</p>
-                    </div>
-                    
-                    <div className="flex justify-between items-end mt-2">
-                      <div className="flex items-center border border-berber-border rounded-full overflow-hidden">
-                        <button 
-                          className="px-3 py-1.5 text-berber-text-muted hover:text-berber-black transition-colors"
-                          onClick={() => updateQuantity(item.variantId, Math.max(1, item.quantity - 1))}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="w-6 text-center text-xs font-medium">{item.quantity}</span>
-                        <button 
-                          className="px-3 py-1.5 text-berber-text-muted hover:text-berber-black transition-colors"
-                          onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
-                      </div>
-                      <span className="font-mono font-medium">৳{(item.price * item.quantity).toLocaleString()}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <CartItemList items={items} removeItem={removeItem} updateQuantity={updateQuantity} />
           )}
         </div>
 

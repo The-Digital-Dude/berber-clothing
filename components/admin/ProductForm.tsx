@@ -35,6 +35,146 @@ const productSchema = z.object({
   }))
 })
 
+// ─── Set Builder (inner component) ───────────────────────────────────────────
+function SetBuilder({ productId }: { productId: string }) {
+  const [companions, setCompanions] = useState<{ id: string; name: string; price: number; image?: string }[]>([])
+  const [discountPct, setDiscountPct] = useState<string>("")
+  const [search, setSearch] = useState("")
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; price: number; image?: string }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/admin/products/bundle/${productId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.bundle) {
+          setDiscountPct(d.bundle.discountPct ? String(d.bundle.discountPct) : "")
+          setCompanions(d.bundle.items.map((item: any) => ({
+            id: item.product.id,
+            name: item.product.name,
+            price: Number(item.product.price),
+            image: item.product.images?.[0]?.url,
+          })))
+        }
+        setLoaded(true)
+      })
+      .catch(() => setLoaded(true))
+  }, [productId])
+
+  useEffect(() => {
+    if (!search.trim()) { setSuggestions([]); return }
+    const t = setTimeout(() => {
+      fetch(`/api/admin/products?search=${encodeURIComponent(search)}`)
+        .then((r) => r.json())
+        .then((d: any[]) => {
+          const companionIds = new Set([productId, ...companions.map((c) => c.id)])
+          setSuggestions(
+            d.filter((p) => !companionIds.has(p.id)).slice(0, 6).map((p) => ({
+              id: p.id, name: p.name, price: Number(p.price), image: p.images?.[0]?.url,
+            }))
+          )
+        })
+        .catch(() => {})
+    }, 300)
+    return () => clearTimeout(t)
+  }, [search, companions, productId])
+
+  const addCompanion = (p: { id: string; name: string; price: number; image?: string }) => {
+    setCompanions((prev) => [...prev, p])
+    setSearch("")
+    setSuggestions([])
+  }
+
+  const removeCompanion = (id: string) => setCompanions((prev) => prev.filter((c) => c.id !== id))
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/admin/products/bundle/${productId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discountPct: discountPct ? Number(discountPct) : null, companionProductIds: companions.map((c) => c.id) }),
+      })
+      if (!res.ok) throw new Error("Failed")
+      toast.success("Set builder saved")
+    } catch {
+      toast.error("Failed to save set")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!loaded) return <p className="text-xs text-muted-foreground">Loading…</p>
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        Add companion pieces (e.g. Pant, Koti) that customers can optionally add when buying this product. Each piece keeps its own price and stock.
+      </p>
+
+      {/* Companion list */}
+      <div className="space-y-2">
+        {companions.map((c) => (
+          <div key={c.id} className="flex items-center gap-3 border border-input rounded-md px-3 py-2 bg-muted/30">
+            {c.image && <img src={c.image} alt={c.name} className="w-8 h-8 object-cover rounded shrink-0" />}
+            <span className="text-sm flex-1">{c.name}</span>
+            <span className="text-xs text-muted-foreground font-mono">৳{c.price.toLocaleString()}</span>
+            <button type="button" onClick={() => removeCompanion(c.id)} className="text-muted-foreground hover:text-destructive transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+        {companions.length === 0 && (
+          <p className="text-xs text-muted-foreground py-2">No companion pieces yet.</p>
+        )}
+      </div>
+
+      {/* Search to add */}
+      <div className="relative">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search product to add as a piece…"
+          className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        {suggestions.length > 0 && (
+          <div className="absolute z-10 top-full mt-1 w-full bg-background border border-input rounded-md shadow-md divide-y max-h-48 overflow-y-auto">
+            {suggestions.map((s) => (
+              <button type="button" key={s.id} onClick={() => addCompanion(s)} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted text-left text-sm">
+                {s.image && <img src={s.image} alt={s.name} className="w-7 h-7 object-cover rounded shrink-0" />}
+                <span className="flex-1">{s.name}</span>
+                <span className="text-xs text-muted-foreground font-mono">৳{s.price.toLocaleString()}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Discount */}
+      <div className="flex items-center gap-3">
+        <label className="text-xs font-medium whitespace-nowrap">Bundle discount %</label>
+        <input
+          type="number" min="0" max="100" step="0.5"
+          value={discountPct}
+          onChange={(e) => setDiscountPct(e.target.value)}
+          placeholder="0"
+          className="w-24 flex h-9 rounded-md border border-input bg-transparent px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <span className="text-xs text-muted-foreground">Applied to the total when customer adds pieces</span>
+      </div>
+
+      <Button type="button" onClick={save} disabled={saving} size="sm">
+        {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+        Save Set Builder
+      </Button>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function ProductForm({ initialData, categories }: { initialData?: any, categories: any[] }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -401,6 +541,19 @@ export default function ProductForm({ initialData, categories }: { initialData?:
               </div>
             </CardContent>
           </Card>
+
+          {/* Set Builder — only for existing products */}
+          {initialData?.id && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-semibold">Set Builder</CardTitle>
+                <p className="text-xs text-muted-foreground -mt-1">Let customers add companion pieces (Pant, Koti, etc.) when buying this product.</p>
+              </CardHeader>
+              <CardContent>
+                <SetBuilder productId={initialData.id} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </form>
