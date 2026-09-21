@@ -47,10 +47,12 @@ export async function POST(req: Request) {
           htmlContent: html,
         }),
       })
+      const body = await res.json().catch(() => ({}))
+      console.log("[test-email] Brevo status:", res.status, "body:", JSON.stringify(body))
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error((err as any).message || `Brevo error ${res.status}`)
+        throw new Error((body as any).message || `Brevo error ${res.status}: ${JSON.stringify(body)}`)
       }
+      return NextResponse.json({ ok: true, messageId: (body as any).messageId, provider: "brevo", from: fromEmail })
     } else if (process.env.RESEND_API_KEY) {
       const transport = nodemailer.createTransport({
         host: "smtp.resend.com", port: 465, secure: true,
