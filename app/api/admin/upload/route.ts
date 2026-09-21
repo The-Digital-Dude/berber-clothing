@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/adminAuth"
 import { createAdminClient } from "@/lib/supabase"
-import sharp from "sharp"
 
 const ALLOWED_BUCKETS = ["product-images", "category-images", "brand-images", "bundle-images", "blog-images"]
 const MAX_WIDTH = 1200
@@ -9,14 +8,14 @@ const WEBP_QUALITY = 82
 
 async function compressToWebP(buffer: ArrayBuffer): Promise<{ data: Buffer; contentType: string; ext: string }> {
   try {
+    const sharp = (await import("sharp")).default
     const data = await sharp(Buffer.from(buffer))
       .resize({ width: MAX_WIDTH, withoutEnlargement: true })
       .webp({ quality: WEBP_QUALITY })
       .toBuffer()
     return { data, contentType: "image/webp", ext: "webp" }
   } catch {
-    // Fall back to original if sharp fails
-    return { data: Buffer.from(buffer), contentType: "application/octet-stream", ext: "jpg" }
+    return { data: Buffer.from(buffer), contentType: "image/jpeg", ext: "jpg" }
   }
 }
 
