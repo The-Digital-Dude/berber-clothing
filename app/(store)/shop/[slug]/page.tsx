@@ -16,6 +16,7 @@ import ProductQA from "@/components/store/ProductQA"
 import SizeQuiz from "@/components/store/SizeQuiz"
 import StickyAddToCart from "@/components/store/StickyAddToCart"
 import CompleteTheSet from "@/components/store/CompleteTheSet"
+import TrackPageView from "@/components/store/TrackPageView"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Truck, RefreshCw, ShieldCheck } from "lucide-react"
 import type { Metadata } from "next"
@@ -167,6 +168,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     <div className="bg-berber-bg animate-in fade-in duration-500">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <RecordView product={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, image: product.images[0]?.url }} />
+      <TrackPageView productId={product.id} />
 
       {/* Breadcrumb - Minimal */}
       <div className="container mx-auto px-4 py-6 text-[10px] uppercase tracking-widest text-berber-text-muted">

@@ -41,7 +41,13 @@ export default function SearchModal({ onClose }: { onClose: () => void }) {
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
       const data = await res.json()
-      setResults(data.products || [])
+      const products = data.products || []
+      setResults(products)
+      fetch("/api/analytics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "search", query: q, resultsCount: products.length }),
+      }).catch(() => {})
     } catch {
       setResults([])
     } finally {

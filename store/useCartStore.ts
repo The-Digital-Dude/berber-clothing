@@ -27,8 +27,13 @@ export const useCartStore = create<CartState>()(
   persist(
     (set) => ({
       items: [],
-      addItem: (item) =>
-        set((state) => {
+      addItem: (item) => {
+        fetch("/api/analytics", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "add_to_cart", productId: item.productId }),
+        }).catch(() => {})
+        return set((state) => {
           const existing = state.items.find((i) => i.variantId === item.variantId)
           if (existing) {
             return {
@@ -40,7 +45,8 @@ export const useCartStore = create<CartState>()(
             }
           }
           return { items: [...state.items, item] }
-        }),
+        })
+      },
       removeItem: (variantId) =>
         set((state) => ({
           items: state.items.filter((i) => i.variantId !== variantId),

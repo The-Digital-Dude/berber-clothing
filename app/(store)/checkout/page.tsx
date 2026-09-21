@@ -1,4 +1,5 @@
 import CheckoutForm from "@/components/store/CheckoutForm"
+import TrackCheckoutStart from "@/components/store/TrackCheckoutStart"
 import { ShieldCheck } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
@@ -66,6 +67,7 @@ export default async function CheckoutPage({
 
   return (
     <div className="bg-berber-bg min-h-screen pt-8 pb-24 animate-in fade-in duration-500">
+      <TrackCheckoutStart />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="flex flex-col items-center justify-center mb-10 text-center">

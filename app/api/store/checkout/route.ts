@@ -348,6 +348,11 @@ export async function POST(req: Request) {
       }
     }
 
+    // Track purchase funnel event (fire-and-forget)
+    prisma.funnelEvent.create({
+      data: { event: "purchase", orderId: order.id, metadata: JSON.stringify({ total: serverTotal, items: items.length }) },
+    }).catch(() => {})
+
     return NextResponse.json({ orderId: order.id, depositAmount })
   } catch (error: any) {
     console.error("Checkout error", error)
