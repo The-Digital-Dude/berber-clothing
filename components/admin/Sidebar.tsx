@@ -20,6 +20,7 @@ const primaryItems = [
   { href: "/admin/products", label: "Products", icon: ShoppingBag },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/inventory", label: "Inventory", icon: Package },
+  { href: "/admin/stock-alerts", label: "Stock Alerts", icon: Bell },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart2 },
 ]
 

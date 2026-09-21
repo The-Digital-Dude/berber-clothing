@@ -100,7 +100,7 @@ export function PageClient({ data }: { data: Page[] }) {
                   placeholder="faq"
                   disabled={!!editing}
                 />
-                <p className="text-xs text-muted-foreground mt-1">/{slug || "your-slug"}</p>
+                <p className="text-xs text-muted-foreground mt-1">/pages/{slug || "your-slug"}</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-neutral-700">Title</label>
@@ -147,8 +147,8 @@ export function PageClient({ data }: { data: Page[] }) {
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.title}</TableCell>
                   <TableCell>
-                    <Link href={`/${p.slug}`} target="_blank" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-                      /{p.slug} <ExternalLink className="h-3 w-3" />
+                    <Link href={`/pages/${p.slug}`} target="_blank" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                      /pages/{p.slug} <ExternalLink className="h-3 w-3" />
                     </Link>
                   </TableCell>
                   <TableCell>
