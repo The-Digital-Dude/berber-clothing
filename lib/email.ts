@@ -20,7 +20,7 @@ async function getSenderMeta() {
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]))
   return {
     name: s.smtp_from_name || s.store_name || "Berber",
-    email: s.smtp_from_email || s.support_email || process.env.BREVO_FROM_EMAIL || process.env.FROM_EMAIL || "noreply@mail.berber.clothing",
+    email: s.smtp_from_email || s.support_email || process.env.BREVO_FROM_EMAIL || process.env.FROM_EMAIL || "noreply@berber.clothing",
   }
 }
 

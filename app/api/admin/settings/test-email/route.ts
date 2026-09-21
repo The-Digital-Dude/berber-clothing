@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]))
 
   const fromName = s.smtp_from_name || s.store_name || "Berber"
-  const fromEmail = s.smtp_from_email || process.env.BREVO_FROM_EMAIL || "noreply@mail.berber.clothing"
+  const fromEmail = s.smtp_from_email || process.env.BREVO_FROM_EMAIL || "noreply@berber.clothing"
   const provider = s.smtp_host ? s.smtp_host : process.env.BREVO_API_KEY ? "Brevo" : process.env.RESEND_API_KEY ? "Resend" : null
 
   if (!provider) {
