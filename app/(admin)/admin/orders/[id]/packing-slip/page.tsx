@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
+import PrintButton from "./PrintButton"
 
 export default async function PackingSlipPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -91,12 +92,7 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
           Thank you for your order!
         </div>
 
-        <button
-          onClick={() => window.print()}
-          style={{ position: "fixed", bottom: 20, right: 20, padding: "10px 20px", background: "#000", color: "#fff", border: "none", cursor: "pointer", fontSize: 13, fontWeight: "bold" }}
-        >
-          Print
-        </button>
+        <PrintButton />
       </body>
     </html>
   )

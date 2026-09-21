@@ -82,11 +82,8 @@ export default function Navbar({
             >
               <Menu className="w-6 h-6" />
             </button>
-            <Link href="/" className="flex items-center gap-2.5">
-              <img src="/logo.webp" alt={storeName} className="h-10 w-10 md:h-12 md:w-12 object-contain shrink-0" />
-              <span className="hidden sm:block font-heading font-bold text-base md:text-lg tracking-widest uppercase text-berber-black leading-tight">
-                Berber<br className="hidden md:block" /><span className="hidden md:inline text-xs font-medium tracking-[0.3em] text-berber-text-muted">Clothing</span>
-              </span>
+            <Link href="/">
+              <img src="/logo.webp" alt={storeName} className="h-24 w-24 md:h-28 md:w-28 object-contain scale-125 origin-left" />
             </Link>
           </div>
 
