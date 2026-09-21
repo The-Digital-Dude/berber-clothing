@@ -22,7 +22,7 @@ export default function ProductCard({
 
   const images = product.images || []
   const thumbnail = images[0]?.url || "/placeholder.jpg"
-  const hoverImage = images[1]?.url || thumbnail
+  const hoverImage = images[1]?.url || null
 
   const isNew = (Date.now() - new Date(product.createdAt).getTime()) < 1000 * 60 * 60 * 24 * 7
   const hasSale = !!product.comparePrice || !!flashSalePrice
@@ -58,13 +58,15 @@ export default function ProductCard({
           <img
             src={thumbnail}
             alt={product.name}
-            className="absolute inset-0 object-cover w-full h-full transition-opacity duration-500 group-hover:opacity-0"
+            className={`absolute inset-0 object-cover w-full h-full transition-opacity duration-500 ${hoverImage ? "group-hover:opacity-0" : ""}`}
           />
-          <img
-            src={hoverImage}
-            alt={product.name}
-            className="absolute inset-0 object-cover w-full h-full opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-          />
+          {hoverImage && (
+            <img
+              src={hoverImage}
+              alt={product.name}
+              className="absolute inset-0 object-cover w-full h-full opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+            />
+          )}
         </Link>
 
         {/* Badges */}
