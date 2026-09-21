@@ -1,52 +1,28 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Grid3X3, List as ListIcon } from "lucide-react"
 
-type Props = {
-  current: {
-    sort: string
-    view: string
-    category: string
-    brandId: string
-    size: string
-    color: string
-    minPrice: string
-    maxPrice: string
-    sale: string
-    search: string
-    take: string
-  }
-}
-
-export default function ShopTopControls({ current }: Props) {
+export default function ShopTopControls() {
   const router = useRouter()
+  const sp = useSearchParams()
 
-  function buildUrl(overrides: Partial<typeof current>) {
-    const merged = { ...current, ...overrides }
-    const p = new URLSearchParams()
-    if (merged.category) p.set("category", merged.category)
-    if (merged.brandId) p.set("brandId", merged.brandId)
-    if (merged.size) p.set("size", merged.size)
-    if (merged.color) p.set("color", merged.color)
-    if (merged.sort && merged.sort !== "newest") p.set("sort", merged.sort)
-    if (merged.minPrice) p.set("minPrice", merged.minPrice)
-    if (merged.maxPrice) p.set("maxPrice", merged.maxPrice)
-    if (merged.sale) p.set("sale", merged.sale)
-    if (merged.search) p.set("search", merged.search)
-    if (merged.take && merged.take !== "12") p.set("take", merged.take)
-    if (merged.view && merged.view !== "grid") p.set("view", merged.view)
+  function buildUrl(overrides: Record<string, string>) {
+    const p = new URLSearchParams(sp.toString())
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v) p.set(k, v); else p.delete(k)
+    }
     return `/shop?${p.toString()}`
   }
 
-  const isGrid = current.view !== "list"
+  const sort = sp.get("sort") || "newest"
+  const isGrid = sp.get("view") !== "list"
 
   return (
     <div className="flex items-center gap-4">
-      {/* Sort select */}
       <select
-        value={current.sort}
-        onChange={(e) => router.push(buildUrl({ sort: e.target.value }))}
+        value={sort}
+        onChange={(e) => router.replace(buildUrl({ sort: e.target.value }), { scroll: false })}
         className="border-none bg-berber-muted text-berber-text text-sm px-4 py-2 rounded-full focus:ring-1 focus:ring-berber-gold outline-none cursor-pointer"
       >
         <option value="newest">Newest</option>
@@ -54,17 +30,16 @@ export default function ShopTopControls({ current }: Props) {
         <option value="price-desc">Price: High to Low</option>
       </select>
 
-      {/* Grid / List toggle */}
       <div className="hidden md:flex items-center gap-1 bg-berber-muted p-1 rounded-full text-berber-text-muted">
         <button
-          onClick={() => router.push(buildUrl({ view: "grid" }))}
+          onClick={() => router.replace(buildUrl({ view: "grid" }), { scroll: false })}
           className={`p-1.5 rounded-full transition-colors ${isGrid ? "bg-white shadow-sm text-berber-black" : "hover:text-berber-black"}`}
           title="Grid view"
         >
           <Grid3X3 className="w-4 h-4" />
         </button>
         <button
-          onClick={() => router.push(buildUrl({ view: "list" }))}
+          onClick={() => router.replace(buildUrl({ view: "list" }), { scroll: false })}
           className={`p-1.5 rounded-full transition-colors ${!isGrid ? "bg-white shadow-sm text-berber-black" : "hover:text-berber-black"}`}
           title="List view"
         >

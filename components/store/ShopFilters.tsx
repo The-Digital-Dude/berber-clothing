@@ -1,27 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Filter, X, ChevronDown, ChevronUp } from "lucide-react"
+import { useState, useTransition } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Filter, X } from "lucide-react"
 
 type Category = { id: string; name: string; slug: string }
 type Brand = { id: string; name: string }
-
-type Props = {
-  categories: Category[]
-  brands: Brand[]
-  current: {
-    category: string
-    brandId: string
-    size: string
-    color: string
-    sort: string
-    minPrice: string
-    maxPrice: string
-    sale: string
-    search?: string
-  }
-}
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"]
 const COLORS = [
@@ -34,50 +18,59 @@ const COLORS = [
   { name: "Grey", hex: "#6b7280" },
 ]
 
-export default function ShopFilters({ categories, brands, current }: Props) {
+export default function ShopFilters({ categories, brands }: { categories: Category[]; brands: Brand[] }) {
   const router = useRouter()
+  const sp = useSearchParams()
+  const [isPending, startTransition] = useTransition()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [minPrice, setMinPrice] = useState(current.minPrice || "")
-  const [maxPrice, setMaxPrice] = useState(current.maxPrice || "")
 
-  const hasActiveFilters = !!(current.category || current.brandId || current.size || current.color || current.minPrice || current.maxPrice || current.sale)
+  const category = sp.get("category") || ""
+  const brandId  = sp.get("brandId")  || ""
+  const size     = sp.get("size")     || ""
+  const color    = sp.get("color")    || ""
+  const minPriceParam = sp.get("minPrice") || ""
+  const maxPriceParam = sp.get("maxPrice") || ""
+  const sale     = sp.get("sale")     || ""
+  const search   = sp.get("search")   || ""
+
+  const [minPrice, setMinPrice] = useState(minPriceParam)
+  const [maxPrice, setMaxPrice] = useState(maxPriceParam)
+
+  const hasActiveFilters = !!(category || brandId || size || color || minPriceParam || maxPriceParam || sale)
 
   function buildUrl(overrides: Record<string, string>) {
-    const p = new URLSearchParams()
-    const base = { ...current, ...overrides }
-    if (base.category) p.set("category", base.category)
-    if (base.brandId) p.set("brandId", base.brandId)
-    if (base.size) p.set("size", base.size)
-    if (base.color) p.set("color", base.color)
-    if (base.sort && base.sort !== "newest") p.set("sort", base.sort)
-    if (base.minPrice) p.set("minPrice", base.minPrice)
-    if (base.maxPrice) p.set("maxPrice", base.maxPrice)
-    if (base.sale) p.set("sale", base.sale)
-    if (base.search) p.set("search", base.search)
+    const p = new URLSearchParams(sp.toString())
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v) p.set(k, v); else p.delete(k)
+    }
     return `/shop?${p.toString()}`
   }
 
   function navigate(overrides: Record<string, string>) {
-    router.push(buildUrl(overrides))
+    startTransition(() => {
+      router.replace(buildUrl(overrides), { scroll: false })
+    })
     setMobileOpen(false)
   }
 
-  function applyPrice() {
-    navigate({ minPrice, maxPrice })
+  function clearAll() {
+    setMinPrice(""); setMaxPrice("")
+    startTransition(() => {
+      const p = new URLSearchParams()
+      if (search) p.set("search", search)
+      router.replace(`/shop?${p.toString()}`, { scroll: false })
+    })
+    setMobileOpen(false)
   }
 
-  function clearPrice() {
-    setMinPrice("")
-    setMaxPrice("")
-    navigate({ minPrice: "", maxPrice: "" })
-  }
+  function applyPrice() { navigate({ minPrice, maxPrice }) }
+  function clearPrice() { setMinPrice(""); setMaxPrice(""); navigate({ minPrice: "", maxPrice: "" }) }
 
   const filterContent = (
     <div className="space-y-8">
-      {/* Clear all */}
       {hasActiveFilters && (
         <button
-          onClick={() => { setMinPrice(""); setMaxPrice(""); router.push("/shop"); setMobileOpen(false) }}
+          onClick={clearAll}
           className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors"
         >
           <X className="w-3 h-3" /> Clear All Filters
@@ -91,19 +84,19 @@ export default function ShopFilters({ categories, brands, current }: Props) {
           <li>
             <button
               onClick={() => navigate({ category: "" })}
-              className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${!current.category ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+              className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${!category ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
             >
-              <div className={`w-4 h-4 rounded border shrink-0 ${!current.category ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
+              <div className={`w-4 h-4 rounded border shrink-0 ${!category ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
               All Products
             </button>
           </li>
           {categories.map((cat) => (
             <li key={cat.id}>
               <button
-                onClick={() => navigate({ category: current.category === cat.slug ? "" : cat.slug })}
-                className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${current.category === cat.slug ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+                onClick={() => navigate({ category: category === cat.slug ? "" : cat.slug })}
+                className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${category === cat.slug ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
               >
-                <div className={`w-4 h-4 rounded border shrink-0 ${current.category === cat.slug ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
+                <div className={`w-4 h-4 rounded border shrink-0 ${category === cat.slug ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
                 {cat.name}
               </button>
             </li>
@@ -119,19 +112,19 @@ export default function ShopFilters({ categories, brands, current }: Props) {
             <li>
               <button
                 onClick={() => navigate({ brandId: "" })}
-                className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${!current.brandId ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+                className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${!brandId ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
               >
-                <div className={`w-4 h-4 rounded border shrink-0 ${!current.brandId ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
+                <div className={`w-4 h-4 rounded border shrink-0 ${!brandId ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
                 All Brands
               </button>
             </li>
             {brands.map((b) => (
               <li key={b.id}>
                 <button
-                  onClick={() => navigate({ brandId: current.brandId === b.id ? "" : b.id })}
-                  className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${current.brandId === b.id ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+                  onClick={() => navigate({ brandId: brandId === b.id ? "" : b.id })}
+                  className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${brandId === b.id ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
                 >
-                  <div className={`w-4 h-4 rounded border shrink-0 ${current.brandId === b.id ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
+                  <div className={`w-4 h-4 rounded border shrink-0 ${brandId === b.id ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
                   {b.name}
                 </button>
               </li>
@@ -145,7 +138,7 @@ export default function ShopFilters({ categories, brands, current }: Props) {
         <h4 className="font-bold text-xs uppercase tracking-widest text-berber-text-muted">Size</h4>
         <div className="flex flex-wrap gap-2">
           {SIZES.map((s) => {
-            const isActive = current.size === s
+            const isActive = size === s
             return (
               <button
                 key={s}
@@ -164,7 +157,7 @@ export default function ShopFilters({ categories, brands, current }: Props) {
         <h4 className="font-bold text-xs uppercase tracking-widest text-berber-text-muted">Color</h4>
         <div className="flex flex-wrap gap-2.5">
           {COLORS.map((c) => {
-            const isActive = current.color === c.name
+            const isActive = color === c.name
             return (
               <button
                 key={c.name}
@@ -211,7 +204,7 @@ export default function ShopFilters({ categories, brands, current }: Props) {
           >
             Apply
           </button>
-          {(current.minPrice || current.maxPrice) && (
+          {(minPriceParam || maxPriceParam) && (
             <button
               onClick={clearPrice}
               className="px-3 py-2 border border-berber-border text-xs rounded-lg hover:border-berber-black transition-colors text-berber-text-muted"
@@ -226,10 +219,10 @@ export default function ShopFilters({ categories, brands, current }: Props) {
       <div className="space-y-3">
         <h4 className="font-bold text-xs uppercase tracking-widest text-berber-text-muted">Offers</h4>
         <button
-          onClick={() => navigate({ sale: current.sale === "true" ? "" : "true" })}
-          className={`flex items-center gap-3 w-full text-left text-sm hover:text-berber-gold transition-colors ${current.sale === "true" ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+          onClick={() => navigate({ sale: sale === "true" ? "" : "true" })}
+          className={`flex items-center gap-3 w-full text-left text-sm hover:text-berber-gold transition-colors ${sale === "true" ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
         >
-          <div className={`w-4 h-4 rounded border shrink-0 ${current.sale === "true" ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
+          <div className={`w-4 h-4 rounded border shrink-0 ${sale === "true" ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
           Sale Items Only
         </button>
       </div>
@@ -243,10 +236,11 @@ export default function ShopFilters({ categories, brands, current }: Props) {
         onClick={() => setMobileOpen(true)}
         className="lg:hidden flex items-center gap-2 text-sm font-medium border border-berber-border px-4 py-2 rounded-full"
       >
-        <Filter className="w-4 h-4" /> Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-berber-gold inline-block" />}
+        <Filter className={`w-4 h-4 ${isPending ? "animate-spin" : ""}`} />
+        Filters {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-berber-gold inline-block" />}
       </button>
 
-      {/* Mobile drawer overlay */}
+      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
@@ -265,10 +259,12 @@ export default function ShopFilters({ categories, brands, current }: Props) {
       {/* Desktop sidebar */}
       <div className="hidden lg:block w-64 shrink-0">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="font-bold text-sm uppercase tracking-widest">Filters</h3>
+          <h3 className={`font-bold text-sm uppercase tracking-widest ${isPending ? "opacity-50" : ""}`}>
+            Filters {isPending && <span className="ml-1 text-xs font-normal text-berber-text-muted">(loading…)</span>}
+          </h3>
           {hasActiveFilters && (
             <button
-              onClick={() => { setMinPrice(""); setMaxPrice(""); router.push("/shop") }}
+              onClick={clearAll}
               className="text-xs text-berber-text-muted hover:text-red-500 transition-colors flex items-center gap-1"
             >
               <X className="w-3 h-3" /> Clear
