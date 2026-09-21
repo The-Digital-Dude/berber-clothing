@@ -25,6 +25,19 @@ async function createTransport() {
     })
   }
 
+  // Brevo SMTP relay
+  if (process.env.BREVO_API_KEY) {
+    return nodemailer.createTransport({
+      host: "smtp-relay.brevo.com",
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.BREVO_FROM_EMAIL || "noreply@berber.clothing",
+        pass: process.env.BREVO_API_KEY,
+      },
+    })
+  }
+
   // Resend SMTP relay fallback
   if (process.env.RESEND_API_KEY) {
     return nodemailer.createTransport({
