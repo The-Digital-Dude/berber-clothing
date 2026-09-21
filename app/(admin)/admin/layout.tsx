@@ -18,13 +18,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <aside className="hidden md:flex w-[220px] lg:w-[240px] shrink-0 flex-col bg-[#0f1117] text-white overflow-hidden border-r border-white/5">
         {/* Logo */}
         <div className="flex h-14 shrink-0 items-center gap-3 px-4 border-b border-white/8">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500 text-[#0f1117] text-xs font-black tracking-tight">
-            B
-          </div>
-          <div className="leading-tight">
-            <div className="text-[13px] font-bold tracking-wider text-white">BERBER</div>
-            <div className="text-[9px] text-slate-500 font-semibold tracking-widest uppercase">Admin</div>
-          </div>
+          <img src="/logo.webp" alt="Berber Clothing" className="h-8 w-auto object-contain brightness-0 invert" />
+          <span className="text-[9px] text-slate-500 font-semibold tracking-widest uppercase ml-auto">Admin</span>
         </div>
 
         {/* Nav */}

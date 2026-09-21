@@ -83,7 +83,7 @@ export default function Navbar({
               <Menu className="w-6 h-6" />
             </button>
             <Link href="/" className="flex flex-col">
-              <img src="/logo.png" alt={storeName} className="h-16 md:h-20 w-auto object-contain" />
+              <img src="/logo.webp" alt={storeName} className="h-16 md:h-20 w-auto object-contain" />
             </Link>
           </div>
 
@@ -159,7 +159,7 @@ export default function Navbar({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <img src="/logo.png" alt={storeName} className="h-14 w-auto object-contain" />
+              <img src="/logo.webp" alt={storeName} className="h-14 w-auto object-contain" />
               <button onClick={() => setMobileOpen(false)}>
                 <X className="w-6 h-6" />
               </button>
