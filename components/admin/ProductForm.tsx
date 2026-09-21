@@ -246,9 +246,19 @@ export default function ProductForm({ initialData, categories }: { initialData?:
   const isFeatured = watch("isFeatured")
 
   const onInvalid = (errs: any) => {
+    const fieldLabels: Record<string, string> = {
+      name: "Product Name", slug: "Slug", categoryId: "Category",
+      price: "Price", variants: "Variants",
+    }
+    const missing = Object.keys(errs)
+      .filter(k => fieldLabels[k])
+      .map(k => fieldLabels[k])
     const hasGeneral = errs.name || errs.slug || errs.variants
-    if (hasGeneral) { setActiveTab("general"); toast.error("Please fix errors on the General tab") }
-    else toast.error("Please fill in all required fields")
+    const hasSidebar = errs.categoryId || errs.price
+    if (hasGeneral) setActiveTab("general")
+    else if (hasSidebar) {} // errors visible in sidebar
+    const msg = missing.length ? `Required: ${missing.join(", ")}` : "Please fix validation errors"
+    toast.error(msg)
   }
 
   const onSubmit = async (data: any) => {
@@ -540,7 +550,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
               <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Pricing</h3>
               <Field label="Regular Price (৳)" error={errors.price?.message as string}>
-                <input type="number" step="0.01" {...register("price")} className={`${inputCls} font-mono`} placeholder="0" />
+                <input type="number" step="0.01" {...register("price")} className={`${inputCls} font-mono ${errors.price ? "border-red-400 ring-1 ring-red-400" : ""}`} placeholder="0" />
               </Field>
               <Field label="Compare-at Price (৳)" hint="Strike-through price shown before sale">
                 <input type="number" step="0.01" {...register("comparePrice")} className={`${inputCls} font-mono`} placeholder="0" />
@@ -552,7 +562,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
               <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Organisation</h3>
               <Field label="Category" error={errors.categoryId?.message as string}>
                 <div className="relative">
-                  <select {...register("categoryId")} className={`${inputCls} appearance-none pr-8`}>
+                  <select {...register("categoryId")} className={`${inputCls} appearance-none pr-8 ${errors.categoryId ? "border-red-400 ring-1 ring-red-400" : ""}`}>
                     <option value="">Select category…</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
