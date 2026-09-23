@@ -11,9 +11,8 @@ interface Product { id: string; name: string; slug: string; price: number; image
 interface BundleItem { id: string; quantity: number; product: Product }
 interface Bundle {
   id: string; name: string; slug: string; description: string | null
-  price: number; comparePrice: number | null; image: string | null
-  type: string; minItems: number | null; maxItems: number | null
-  discountPct: number | null; items: BundleItem[]
+  image: string | null; type: string; minItems: number | null; maxItems: number | null
+  items: BundleItem[]
 }
 
 export default function BundleDetail({ bundle }: { bundle: Bundle }) {
@@ -26,7 +25,12 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
   // Per-item variant selection
   const [variantMap, setVariantMap] = useState<Record<string, string>>({})
 
-  const savings = bundle.comparePrice ? Number(bundle.comparePrice) - Number(bundle.price) : null
+  const setTotal = bundle.items.reduce((s, i) => s + Number(i.product.price) * i.quantity, 0)
+  const wasTotal = bundle.items.reduce((s, i) => {
+    const was = (i.product as any).comparePrice ? Number((i.product as any).comparePrice) : Number(i.product.price)
+    return s + was * i.quantity
+  }, 0)
+  const savings = wasTotal > setTotal ? wasTotal - setTotal : null
   const minPick = bundle.minItems ?? bundle.items.length
   const maxPick = bundle.maxItems ?? bundle.items.length
   const canAdd = isPickN
@@ -58,7 +62,7 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
         productSlug: item.product.slug,
         variantId: variant.id,
         name: item.product.name,
-        price: Number(item.product.price),
+        price: Number(item.product.price), // individual product price is source of truth
         image: item.product.images[0]?.url ?? "",
         quantity: item.quantity,
         size: variant.size ?? "",
@@ -101,14 +105,14 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-3xl font-bold">৳{Number(bundle.price).toLocaleString()}</span>
-            {bundle.comparePrice && (
-              <span className="text-xl text-gray-400 line-through">৳{Number(bundle.comparePrice).toLocaleString()}</span>
-            )}
+            <span className="text-3xl font-bold">৳{setTotal.toLocaleString()}</span>
             {savings && savings > 0 && (
-              <span className="text-sm bg-[#c9a84c]/10 text-[#c9a84c] font-bold px-2 py-0.5 rounded-full">
-                Save ৳{savings.toLocaleString()}
-              </span>
+              <>
+                <span className="text-xl text-gray-400 line-through">৳{wasTotal.toLocaleString()}</span>
+                <span className="text-sm bg-[#c9a84c]/10 text-[#c9a84c] font-bold px-2 py-0.5 rounded-full">
+                  Save ৳{savings.toLocaleString()}
+                </span>
+              </>
             )}
           </div>
 

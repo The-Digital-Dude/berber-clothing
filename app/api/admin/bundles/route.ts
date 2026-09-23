@@ -21,8 +21,8 @@ export async function POST(req: Request) {
       name: data.name,
       slug: data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       description: data.description || null,
-      price: Number(data.price),
-      comparePrice: data.comparePrice ? Number(data.comparePrice) : null,
+      price: 0, // display price is computed from individual product prices
+      comparePrice: null,
       image: data.image || null,
       type: data.type || "FIXED",
       minItems: data.minItems ? Number(data.minItems) : null,

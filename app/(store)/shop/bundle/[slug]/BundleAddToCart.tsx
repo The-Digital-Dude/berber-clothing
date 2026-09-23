@@ -55,7 +55,7 @@ export default function BundleAddToCart({ bundle }: { bundle: Bundle }) {
         productId: item.product.id,
         productSlug: item.product.slug,
         name: item.product.name,
-        price: Number(bundle.price) / bundle.items.length,
+        price: Number(item.product.price),
         size: variant.size,
         color: variant.color,
         image: item.product.images[0]?.url || "",

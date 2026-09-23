@@ -17,14 +17,13 @@ type Product = { id: string; name: string; price: number; images: { url: string 
 type BundleItem = { id: string; productId: string; quantity: number; sortOrder: number; product: Product }
 type Bundle = {
   id: string; name: string; slug: string; description: string | null
-  price: number; comparePrice: number | null; image: string | null
-  type: string; minItems: number | null; maxItems: number | null
-  discountPct: number | null; isActive: boolean; items: BundleItem[]
+  image: string | null; type: string; minItems: number | null; maxItems: number | null
+  isActive: boolean; items: BundleItem[]
 }
 
 const empty = () => ({
-  name: "", slug: "", description: "", price: "", comparePrice: "", image: "",
-  type: "FIXED", minItems: "", maxItems: "", discountPct: "", isActive: true,
+  name: "", slug: "", description: "", image: "",
+  type: "FIXED", minItems: "", maxItems: "", isActive: true,
   items: [] as { productId: string; quantity: number }[],
 })
 
@@ -45,11 +44,9 @@ export default function BundlesClient({ data, products }: { data: Bundle[]; prod
     setEditing(b)
     setForm({
       name: b.name, slug: b.slug, description: b.description || "",
-      price: String(b.price), comparePrice: b.comparePrice ? String(b.comparePrice) : "",
       image: b.image || "", type: b.type,
       minItems: b.minItems ? String(b.minItems) : "",
       maxItems: b.maxItems ? String(b.maxItems) : "",
-      discountPct: b.discountPct ? String(b.discountPct) : "",
       isActive: b.isActive,
       items: b.items.map(i => ({ productId: i.productId, quantity: i.quantity })),
     })
@@ -74,7 +71,7 @@ export default function BundlesClient({ data, products }: { data: Bundle[]; prod
   }
 
   async function handleSave() {
-    if (!form.name || !form.price) { toast.error("Name and price are required"); return }
+    if (!form.name) { toast.error("Bundle name is required"); return }
     setSaving(true)
     const payload = { ...form, slug: form.slug || form.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") }
     const url = editing ? `/api/admin/bundles/${editing.id}` : "/api/admin/bundles"
@@ -120,20 +117,6 @@ export default function BundlesClient({ data, products }: { data: Bundle[]; prod
             <div>
               <label className="text-sm font-medium">Description</label>
               <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} />
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium">Bundle Price (৳) *</label>
-                <Input type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Compare Price (৳)</label>
-                <Input type="number" value={form.comparePrice} onChange={e => setForm({ ...form, comparePrice: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Discount %</label>
-                <Input type="number" value={form.discountPct} onChange={e => setForm({ ...form, discountPct: e.target.value })} />
-              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -231,7 +214,9 @@ export default function BundlesClient({ data, products }: { data: Bundle[]; prod
                   </div>
                 </TableCell>
                 <TableCell><Badge variant="outline">{b.type}</Badge></TableCell>
-                <TableCell className="font-mono font-medium">৳{Number(b.price).toLocaleString()}</TableCell>
+                <TableCell className="font-mono font-medium">
+                  ৳{b.items.reduce((s, i) => s + Number(i.product.price) * i.quantity, 0).toLocaleString()}
+                </TableCell>
                 <TableCell>{b.items.length} products</TableCell>
                 <TableCell><Badge variant={b.isActive ? "default" : "secondary"}>{b.isActive ? "Active" : "Draft"}</Badge></TableCell>
                 <TableCell className="text-right">

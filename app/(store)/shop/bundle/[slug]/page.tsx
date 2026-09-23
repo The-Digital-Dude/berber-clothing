@@ -20,9 +20,10 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
         orderBy: { sortOrder: "asc" },
         include: {
           product: {
-            include: {
-              images: { orderBy: { sortOrder: "asc" } },
-              variants: true,
+            select: {
+              id: true, name: true, slug: true, price: true, comparePrice: true,
+              images: { orderBy: { sortOrder: "asc" }, take: 1 },
+              variants: { select: { id: true, size: true, color: true, stock: true } },
             },
           },
         },
@@ -32,8 +33,13 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
 
   if (!bundle) notFound()
 
-  const originalTotal = bundle.items.reduce((s, item) => s + Number(item.product.price) * item.quantity, 0)
-  const saving = originalTotal - Number(bundle.price)
+  // Pricing derived purely from individual product prices — no bundle-level override
+  const setTotal = bundle.items.reduce((s, item) => s + Number(item.product.price) * item.quantity, 0)
+  const wasTotal = bundle.items.reduce((s, item) => {
+    const was = item.product.comparePrice ? Number(item.product.comparePrice) : Number(item.product.price)
+    return s + was * item.quantity
+  }, 0)
+  const saving = wasTotal - setTotal
 
   return (
     <div className="bg-berber-bg min-h-screen">
@@ -41,13 +47,15 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
         <div className="flex flex-col lg:flex-row gap-12">
           {/* Product grid */}
           <div className="flex-1">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-berber-gold">Bundle Deal</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-berber-gold">Complete Set</span>
             <h1 className="text-3xl font-heading font-bold text-berber-black mt-1 mb-2">{bundle.name}</h1>
             {bundle.description && <p className="text-berber-text-muted mb-8">{bundle.description}</p>}
 
             <div className="space-y-4">
               {bundle.items.map((item, idx) => {
                 const image = item.product.images[0]?.url
+                const price = Number(item.product.price)
+                const comparePrice = item.product.comparePrice ? Number(item.product.comparePrice) : null
                 return (
                   <div key={item.id} className="flex gap-4 bg-white rounded-xl p-4 border border-berber-border">
                     {idx > 0 && <div className="self-center text-xl font-bold text-berber-text-muted shrink-0">+</div>}
@@ -59,7 +67,12 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
                     <div className="flex-1">
                       <h3 className="font-bold text-berber-black">{item.product.name}</h3>
                       <p className="text-sm text-berber-text-muted">{item.quantity > 1 ? `×${item.quantity}` : ""}</p>
-                      <p className="font-mono text-sm text-berber-text-muted line-through">৳{Number(item.product.price).toLocaleString()}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="font-mono text-sm font-medium">৳{price.toLocaleString()}</span>
+                        {comparePrice && comparePrice > price && (
+                          <span className="font-mono text-xs text-berber-text-muted line-through">৳{comparePrice.toLocaleString()}</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -76,10 +89,12 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
                 </div>
               )}
               <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Bundle Price</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Set Total</p>
                 <div className="flex items-end gap-3 mt-1">
-                  <span className="text-3xl font-mono font-bold text-berber-black">৳{Number(bundle.price).toLocaleString()}</span>
-                  <span className="text-lg font-mono text-berber-text-muted line-through mb-0.5">৳{originalTotal.toLocaleString()}</span>
+                  <span className="text-3xl font-mono font-bold text-berber-black">৳{setTotal.toLocaleString()}</span>
+                  {saving > 0 && (
+                    <span className="text-lg font-mono text-berber-text-muted line-through mb-0.5">৳{wasTotal.toLocaleString()}</span>
+                  )}
                 </div>
                 {saving > 0 && (
                   <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-berber-success/10 text-berber-success rounded-full text-xs font-bold">
