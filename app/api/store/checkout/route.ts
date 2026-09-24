@@ -8,6 +8,7 @@ import { refreshCustomerSegments } from "@/lib/customerSegments"
 import { cookies } from "next/headers"
 import { sendOrderConfirmation, sendAdminNewOrder } from "@/lib/email"
 import { brevoOrderPlaced, brevoAddTags } from "@/lib/brevo"
+import { sendPurchaseEvent } from "@/lib/metaConversionsApi"
 
 export async function POST(req: Request) {
   try {
@@ -369,6 +370,27 @@ export async function POST(req: Request) {
     prisma.funnelEvent.create({
       data: { event: "purchase", orderId: order.id, metadata: JSON.stringify({ total: serverTotal, items: items.length }) },
     }).catch(() => {})
+
+    // Meta Conversions API — server-side Purchase event (fire-and-forget).
+    // Uses order.id as the event_id so Meta deduplicates this against the
+    // client-side Pixel Purchase event fired with the same eventID.
+    ;(async () => {
+      const cookieHeader = req.headers.get("cookie") || ""
+      const getCookie = (name: string) => cookieHeader.match(new RegExp(`${name}=([^;]+)`))?.[1] || null
+      const pixelSetting = await prisma.setting.findUnique({ where: { key: "meta_pixel_id" } }).catch(() => null)
+      await sendPurchaseEvent({
+        eventId: order.id,
+        value: serverTotal,
+        email: toEmail,
+        phone: address.phone,
+        eventSourceUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"}/order/${order.orderNumber}`,
+        clientIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+        userAgent: req.headers.get("user-agent"),
+        fbp: getCookie("_fbp"),
+        fbc: getCookie("_fbc"),
+        datasetId: pixelSetting?.value || null,
+      })
+    })().catch(() => {})
 
     return NextResponse.json({ orderId: order.id, depositAmount })
   } catch (error: any) {

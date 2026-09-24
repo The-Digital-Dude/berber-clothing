@@ -8,10 +8,12 @@ function gtag(event: string, params?: Record<string, unknown>) {
   if (typeof w.gtag === "function") w.gtag("event", event, params)
 }
 
-function fbq(event: string, params?: Record<string, unknown>) {
+function fbq(event: string, params?: Record<string, unknown>, eventID?: string) {
   if (typeof window === "undefined") return
   const w = window as any
-  if (typeof w.fbq === "function") w.fbq("track", event, params)
+  if (typeof w.fbq !== "function") return
+  if (eventID) w.fbq("track", event, params, { eventID })
+  else w.fbq("track", event, params)
 }
 
 // ─── Tracking events ──────────────────────────────────────────────────────────
@@ -62,7 +64,9 @@ export function trackPurchase(order: {
     value: order.total,
     items: order.items?.map((i) => ({ item_id: i.productId, item_name: i.name, price: i.price, quantity: i.quantity })),
   })
-  fbq("Purchase", { value: order.total, currency: "BDT" })
+  // eventID matches the order.id used server-side by the Conversions API
+  // Purchase event, so Meta deduplicates the two into one conversion.
+  fbq("Purchase", { value: order.total, currency: "BDT" }, order.id)
 }
 
 export function trackSearch(query: string) {
