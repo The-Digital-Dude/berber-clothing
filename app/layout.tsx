@@ -72,21 +72,61 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  let storeName = "Berber Clothing"
+  let supportEmail = "support@berber.clothing"
+  let supportPhone = ""
+  let sameAs: string[] = []
+
+  try {
+    const settings = await prisma.setting.findMany({
+      where: { key: { in: ["store_name", "support_email", "support_phone", "social_facebook", "social_instagram", "social_tiktok"] } },
+    })
+    const map = Object.fromEntries(settings.map((s) => [s.key, s.value]))
+    if (map.store_name) storeName = map.store_name
+    if (map.support_email) supportEmail = map.support_email
+    if (map.support_phone) supportPhone = map.support_phone
+    sameAs = [map.social_facebook, map.social_instagram, map.social_tiktok].filter(Boolean)
+  } catch { /* DB unavailable — use defaults */ }
+
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: storeName,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo-icon.png`,
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer service",
+      email: supportEmail,
+      ...(supportPhone && { telephone: supportPhone }),
+      availableLanguage: ["English", "Bengali"],
+    },
+    sameAs,
+  }
+
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: storeName,
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/shop?search={search_term_string}` },
+      "query-input": "required name=search_term_string",
+    },
+  }
+
   return (
     <html lang="en" className={cn("font-sans", inter.variable, playfair.variable, spaceGrotesk.variable)}>
       <body className="antialiased text-berber-text bg-berber-bg selection:bg-berber-gold/30">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "Berber Clothing",
-            url: SITE_URL,
-            logo: `${SITE_URL}/logo.png`,
-            contactPoint: { "@type": "ContactPoint", contactType: "customer service", email: "support@berber.clothing", availableLanguage: ["English", "Bengali"] },
-            sameAs: [],
-          }) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
         <NextTopLoader color="#C9A24B" showSpinner={false} />
         <VercelAnalytics />

@@ -77,8 +77,21 @@ const faqs = [
 ]
 
 export default function FaqPage() {
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.flatMap((section) =>
+      section.items.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: { "@type": "Answer", text: item.a },
+      }))
+    ),
+  }
+
   return (
     <div className="animate-in fade-in duration-500">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       {/* Hero */}
       <div className="bg-berber-black text-white py-20 px-4 text-center">
         <p className="text-berber-gold font-bold tracking-[0.2em] text-xs uppercase mb-4">Support</p>

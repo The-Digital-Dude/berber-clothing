@@ -84,7 +84,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     }).catch(() => null),
     prisma.review.findMany({
       where: { productId: product.id, isApproved: true },
-      include: { media: true },
+      include: { media: true, user: { select: { name: true } } },
       orderBy: { createdAt: 'desc' },
       take: 20,
     }).catch(() => []),
@@ -138,6 +138,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const freeShippingThreshold = settingsMap.free_shipping_above ? Number(settingsMap.free_shipping_above) : null
   const setBundle = JSON.parse(JSON.stringify(bundle))
 
+  const productUrl = `${SITE_URL}/shop/${product.slug}`
+  const priceValidUntil = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10)
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -145,7 +148,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     description: product.description || "",
     image: product.images.map((i) => i.url),
     sku: product.variants[0]?.sku || product.id,
+    url: productUrl,
     brand: { "@type": "Brand", name: product.brand?.name || "Berber" },
+    category: product.category?.name || undefined,
     ...(reviewAgg._count.rating > 0 && {
       aggregateRating: {
         "@type": "AggregateRating",
@@ -153,21 +158,69 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         reviewCount: reviewAgg._count.rating,
       },
     }),
+    ...(reviews.length > 0 && {
+      review: reviews.slice(0, 10).map((r) => ({
+        "@type": "Review",
+        author: { "@type": "Person", name: (r as any).user?.name || "Verified Buyer" },
+        reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5, worstRating: 1 },
+        ...(r.comment && { reviewBody: r.comment }),
+        datePublished: r.createdAt.toISOString().slice(0, 10),
+      })),
+    }),
     offers: {
       "@type": "AggregateOffer",
       priceCurrency: "BDT",
       lowPrice: Number(product.price),
-      highPrice: Number(product.comparePrice || product.price),
+      highPrice: hasCompareDiscount ? Number(product.comparePrice) : Number(product.price),
+      offerCount: product.variants.length || 1,
+      priceValidUntil,
+      itemCondition: "https://schema.org/NewCondition",
       availability: product.variants.some((v) => v.stock > 0)
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
-      url: `${SITE_URL}/shop/${product.slug}`,
+      url: productUrl,
+      seller: { "@type": "Organization", name: product.brand?.name || "Berber Clothing", url: SITE_URL },
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: 60,
+          currency: "BDT",
+          ...(freeShippingThreshold && { freeShippingThreshold: { "@type": "MonetaryAmount", value: freeShippingThreshold, currency: "BDT" } }),
+        },
+        shippingDestination: { "@type": "DefinedRegion", addressCountry: "BD" },
+        deliveryTime: {
+          "@type": "ShippingDeliveryTime",
+          handlingTime: { "@type": "QuantitativeValue", minValue: 0, maxValue: 1, unitCode: "DAY" },
+          transitTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 5, unitCode: "DAY" },
+        },
+      },
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 7,
+        returnMethod: "https://schema.org/ReturnByMail",
+        returnFees: "https://schema.org/ReturnShippingFees",
+        applicableCountry: "BD",
+      },
     },
+  }
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${SITE_URL}/` },
+      { "@type": "ListItem", position: 2, name: "Shop", item: `${SITE_URL}/shop` },
+      ...(product.category ? [{ "@type": "ListItem", position: 3, name: product.category.name, item: `${SITE_URL}/shop?category=${product.category.slug}` }] : []),
+      { "@type": "ListItem", position: product.category ? 4 : 3, name: product.name, item: productUrl },
+    ],
   }
 
   return (
     <div className="bg-berber-bg animate-in fade-in duration-500">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <RecordView product={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, image: product.images[0]?.url }} />
       <TrackPageView productId={product.id} />
 
