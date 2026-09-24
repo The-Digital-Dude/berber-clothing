@@ -25,15 +25,18 @@ export default function ProductCard({
   const hoverImage = images[1]?.url || null
 
   const isNew = (Date.now() - new Date(product.createdAt).getTime()) < 1000 * 60 * 60 * 24 * 7
-  const hasSale = !!product.comparePrice || !!flashSalePrice
+  const comparePriceNum = Number(product.comparePrice) || 0
+  const priceNum = Number(product.price) || 0
+  const hasCompareDiscount = comparePriceNum > priceNum
+  const hasSale = hasCompareDiscount || !!flashSalePrice
   const hasFlashSale = !!flashSalePrice
-  const displayPrice = flashSalePrice ?? Number(product.price)
+  const displayPrice = flashSalePrice ?? priceNum
   const isLowStock = product.variants?.reduce((acc: number, v: any) => acc + v.stock, 0) < 5
   const hasSet = !!product.bundleId
-  const discountPercent = product.comparePrice
-    ? Math.round(((Number(product.comparePrice) - Number(product.price)) / Number(product.comparePrice)) * 100)
-    : flashSalePrice
-    ? Math.round(((Number(product.price) - flashSalePrice) / Number(product.price)) * 100)
+  const discountPercent = hasCompareDiscount
+    ? Math.round(((comparePriceNum - priceNum) / comparePriceNum) * 100)
+    : (flashSalePrice && priceNum > 0)
+    ? Math.round(((priceNum - flashSalePrice) / priceNum) * 100)
     : 0
   const sizes = Array.from(new Set(product.variants?.map((v: any) => v.size) || ["S", "M", "L"]))
 

@@ -18,7 +18,10 @@ const productSchema = z.object({
   description: z.string().nullish(),
   categoryId: z.string().min(1, "Category is required"),
   price: z.coerce.number().min(0, "Price must be positive"),
-  comparePrice: z.coerce.number().nullish(),
+  comparePrice: z.preprocess(
+    (v) => (v === "" || v === undefined || v === null || Number(v) === 0 ? null : v),
+    z.coerce.number().positive().nullable()
+  ),
   tags: z.string().nullish(),
   isActive: z.boolean().default(true),
   isFeatured: z.boolean().default(false),
@@ -34,7 +37,10 @@ const productSchema = z.object({
     sku: z.string().nullish(),
     stock: z.coerce.number().min(0),
     price: z.coerce.number().nullish(),
-    comparePrice: z.coerce.number().nullish(),
+    comparePrice: z.preprocess(
+      (v) => (v === "" || v === undefined || v === null || Number(v) === 0 ? null : v),
+      z.coerce.number().positive().nullable()
+    ),
   }))
 })
 

@@ -96,6 +96,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   const salePrice = flashSale ? applyFlashSaleDiscount(Number(product.price), flashSale) : null
   const displayPrice = salePrice ?? Number(product.price)
+  const hasCompareDiscount = Number(product.comparePrice) > Number(product.price)
 
   // Fetch related products, FBT suggestions, settings, and set bundle in parallel
   const [relatedProducts, fbtPairs, shippingSettings, bundle] = await Promise.all([
@@ -208,9 +209,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               )}
               <div className="flex items-center gap-4">
                 <span className="font-mono text-2xl font-bold">৳{displayPrice.toLocaleString()}</span>
-                {(product.comparePrice || (flashSale && Number(product.price) !== displayPrice)) && (
+                {(hasCompareDiscount || (flashSale && Number(product.price) !== displayPrice)) && (
                   <span className="font-mono text-lg text-berber-text-muted line-through">
-                    ৳{Number(product.comparePrice || product.price).toLocaleString()}
+                    ৳{Number(hasCompareDiscount ? product.comparePrice : product.price).toLocaleString()}
                   </span>
                 )}
                 {flashSale && (
@@ -220,7 +221,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
                       : `৳${flashSale.discountValue} off`}
                   </span>
                 )}
-                {!flashSale && product.comparePrice && (
+                {!flashSale && hasCompareDiscount && (
                   <span className="bg-berber-error/10 text-berber-error px-2 py-1 text-xs font-bold rounded uppercase tracking-widest">Sale</span>
                 )}
               </div>

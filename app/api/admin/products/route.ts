@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         slug: slugBase,
         description,
         price,
-        comparePrice,
+        comparePrice: comparePrice ? Number(comparePrice) : null,
         categoryId,
         tags,
         isActive,

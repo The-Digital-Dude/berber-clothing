@@ -14,6 +14,17 @@ export default async function StoreHomepage() {
     prisma.product.findMany({ where: { isActive: true, isFeatured: true }, include: { category: true, images: true }, take: 4, orderBy: { createdAt: 'desc' } }).catch(() => [])
   ]);
 
+  const categoryProducts = await Promise.all(
+    categories.map((cat) =>
+      prisma.product.findMany({
+        where: { isActive: true, categoryId: cat.id },
+        include: { category: true, images: true },
+        take: 4,
+        orderBy: { createdAt: 'desc' },
+      }).catch(() => [])
+    )
+  );
+
   const heroBanner = banners[0] || {
     title: "Wear Your Story",
     image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=2070&auto=format&fit=crop",
@@ -95,6 +106,25 @@ export default async function StoreHomepage() {
           </FadeIn>
         </div>
       </section>
+
+      {/* SECTION 2.5: Per-Category Product Rows */}
+      {categories.map((cat: any, idx: number) => {
+        const products = categoryProducts[idx]
+        if (!products || products.length === 0) return null
+        return (
+          <section key={cat.id} className="py-16 container mx-auto px-4">
+            <div className="flex items-end justify-between mb-10 border-b border-berber-border pb-4">
+              <h2 className="text-3xl md:text-4xl font-heading font-bold text-berber-black">{cat.name}</h2>
+              <Link href={`/shop?category=${cat.slug}`} className="text-sm font-medium hover:text-berber-gold transition-colors pb-1">
+                See All &rarr;
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10">
+              {serialize(products).map((product: any) => <ProductCard key={product.id} product={product} />)}
+            </div>
+          </section>
+        )
+      })}
 
       {/* SECTION 3: New Arrivals */}
       <section className="py-16 container mx-auto px-4">

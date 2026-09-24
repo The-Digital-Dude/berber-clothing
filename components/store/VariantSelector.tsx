@@ -42,7 +42,9 @@ export default function VariantSelector({
   const stock = activeVariant?.stock || 0
   const isOutOfStock = stock === 0
   const isLowStock = stock > 0 && stock <= 5
-  const variantComparePrice = activeVariant?.comparePrice ? Number(activeVariant.comparePrice) : null
+  const variantEffectivePrice = Number(activeVariant?.price ?? product.price) || 0
+  const variantComparePriceRaw = activeVariant?.comparePrice ? Number(activeVariant.comparePrice) : null
+  const variantComparePrice = variantComparePriceRaw && variantComparePriceRaw > variantEffectivePrice ? variantComparePriceRaw : null
 
   // Delivery estimate: order before 3pm → ships today, else tomorrow
   const now = new Date()
