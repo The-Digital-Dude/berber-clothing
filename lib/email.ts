@@ -86,7 +86,7 @@ async function getStoreMeta() {
     name: map.store_name || "Berber",
     logo: map.store_logo || "",
     email: map.support_email || process.env.FROM_EMAIL || "noreply@berber.clothing",
-    url: map.store_url || process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing",
+    url: map.store_url || process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing",
   }
 }
 

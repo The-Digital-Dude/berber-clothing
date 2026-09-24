@@ -24,7 +24,7 @@ import type { Metadata } from "next"
 import { getActiveFlashSale, applyFlashSaleDiscount } from "@/lib/flashSale"
 import Link from "next/link"
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params

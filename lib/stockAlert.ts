@@ -13,7 +13,7 @@ export async function notifyStockAlerts(variantId: string) {
   if (!resendKey) return
   const resend = new Resend(resendKey)
   const from = process.env.RESEND_FROM_EMAIL || "noreply@berber.clothing"
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
   const variant = alerts[0].variant
   const product = variant.product

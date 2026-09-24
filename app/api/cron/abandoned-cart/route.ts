@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   const setting = await prisma.setting.findUnique({ where: { key: "abandoned_cart_email_enabled" } })
   if (setting?.value !== "true") return NextResponse.json({ skipped: true })
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
   const now = Date.now()
 
   // ── Email 1: after 1 hour ────────────────────────────────────────────────

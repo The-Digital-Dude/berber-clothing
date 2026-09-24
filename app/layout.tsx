@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-heading" });
 const spaceGrotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-mono" });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
 export const viewport: Viewport = {
   themeColor: "#C9A84C",

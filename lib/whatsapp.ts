@@ -24,7 +24,7 @@ export function buildWhatsAppMessage(params: {
 }): string {
   const { customerName, orderNumber, status, trackingNumber, note } = params
   const emoji = STATUS_EMOJI[status] ?? "📋"
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://berber.clothing"
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.berber.clothing"
 
   let msg = `${emoji} *Berber Order Update*\n\nHi ${customerName},\n\nYour order *#${orderNumber}* status is now: *${status}*`
 

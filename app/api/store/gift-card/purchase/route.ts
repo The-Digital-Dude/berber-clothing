@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (process.env.RESEND_API_KEY) {
     const resend = new Resend(process.env.RESEND_API_KEY)
     const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@berber.clothing"
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
     await resend.emails.send({
       from: fromEmail,

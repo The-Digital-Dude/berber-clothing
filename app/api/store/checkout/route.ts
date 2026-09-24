@@ -383,7 +383,7 @@ export async function POST(req: Request) {
         value: serverTotal,
         email: toEmail,
         phone: address.phone,
-        eventSourceUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"}/order/${order.orderNumber}`,
+        eventSourceUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"}/order/${order.orderNumber}`,
         clientIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
         userAgent: req.headers.get("user-agent"),
         fbp: getCookie("_fbp"),

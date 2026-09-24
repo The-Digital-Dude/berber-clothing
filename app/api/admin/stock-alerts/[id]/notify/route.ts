@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { sendBackInStockAlert } from "@/lib/email"
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()

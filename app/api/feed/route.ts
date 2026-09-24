@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
 function escapeXml(str: string) {
   return str

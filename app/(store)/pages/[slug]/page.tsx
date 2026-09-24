@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://berber.clothing"
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
