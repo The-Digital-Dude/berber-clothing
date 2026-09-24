@@ -30,6 +30,8 @@ type PurchaseEventInput = {
   datasetId?: string | null
   /** Product IDs purchased — must match the `g:id` values in the catalog feed for catalog/dynamic-ads attribution. */
   contentIds?: string[]
+  /** A stable per-customer identifier (userId for logged-in customers, or an email/phone-derived fallback for guests) — hashed before sending. Meta uses this as an extra cross-device matching signal alongside em/ph. */
+  externalId?: string | null
 }
 
 /**
@@ -51,6 +53,7 @@ export async function sendPurchaseEvent(input: PurchaseEventInput): Promise<void
     if (input.userAgent) userData.client_user_agent = input.userAgent
     if (input.fbp) userData.fbp = input.fbp
     if (input.fbc) userData.fbc = input.fbc
+    if (input.externalId) userData.external_id = [sha256(input.externalId)]
 
     const body = {
       data: [

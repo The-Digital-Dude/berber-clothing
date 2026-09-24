@@ -384,12 +384,16 @@ export async function POST(req: Request) {
         email: toEmail,
         phone: address.phone,
         eventSourceUrl: `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"}/order/${order.orderNumber}`,
-        clientIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+        clientIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+          || req.headers.get("x-real-ip")
+          || req.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim()
+          || null,
         userAgent: req.headers.get("user-agent"),
         fbp: getCookie("_fbp"),
         fbc: getCookie("_fbc"),
         datasetId: pixelSetting?.value || null,
         contentIds: items.map((item: any) => item.productId),
+        externalId: userId || toEmail || address.phone || null,
       })
     })().catch(() => {})
 
