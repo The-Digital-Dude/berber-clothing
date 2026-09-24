@@ -46,17 +46,17 @@ export default function Footer({
             </p>
             <div className="flex gap-4 pt-2">
               {socialFacebook && (
-                <a href={socialFacebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-berber-surface flex items-center justify-center hover:bg-berber-gold hover:text-white transition-colors shadow-sm">
+                <a href={socialFacebook} target="_blank" rel="noopener noreferrer" aria-label="Follow us on Facebook" className="w-10 h-10 rounded-full bg-berber-surface flex items-center justify-center hover:bg-berber-gold hover:text-white transition-colors shadow-sm">
                   <Share2 className="w-5 h-5" />
                 </a>
               )}
               {socialInstagram && (
-                <a href={socialInstagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-berber-surface flex items-center justify-center hover:bg-berber-gold hover:text-white transition-colors shadow-sm">
+                <a href={socialInstagram} target="_blank" rel="noopener noreferrer" aria-label="Follow us on Instagram" className="w-10 h-10 rounded-full bg-berber-surface flex items-center justify-center hover:bg-berber-gold hover:text-white transition-colors shadow-sm">
                   <MessageCircle className="w-5 h-5" />
                 </a>
               )}
               {socialTiktok && (
-                <a href={socialTiktok} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-berber-surface flex items-center justify-center hover:bg-berber-gold hover:text-white transition-colors shadow-sm">
+                <a href={socialTiktok} target="_blank" rel="noopener noreferrer" aria-label="Follow us on TikTok" className="w-10 h-10 rounded-full bg-berber-surface flex items-center justify-center hover:bg-berber-gold hover:text-white transition-colors shadow-sm">
                   <Music className="w-5 h-5" />
                 </a>
               )}

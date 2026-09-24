@@ -1,5 +1,6 @@
 "use client"
 import Link from "next/link"
+import Image from "next/image"
 import { Heart, ShoppingBag, Columns2 } from "lucide-react"
 import { useWishlistStore } from "@/store/useWishlistStore"
 import { useCompareStore } from "@/store/useCompareStore"
@@ -59,16 +60,20 @@ export default function ProductCard({
       {/* Image Box */}
       <div className="relative aspect-[3/4] bg-berber-muted rounded-xl overflow-hidden cursor-pointer">
         <Link href={`/shop/${product.slug}`} className="absolute inset-0">
-          <img
+          <Image
             src={thumbnail}
             alt={product.name}
-            className={`absolute inset-0 object-cover w-full h-full transition-opacity duration-500 ${hoverImage ? "group-hover:opacity-0" : ""}`}
+            fill
+            sizes="(max-width: 768px) 50vw, 25vw"
+            className={`object-cover transition-opacity duration-500 ${hoverImage ? "group-hover:opacity-0" : ""}`}
           />
           {hoverImage && (
-            <img
+            <Image
               src={hoverImage}
               alt={product.name}
-              className="absolute inset-0 object-cover w-full h-full opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
             />
           )}
         </Link>
@@ -86,6 +91,7 @@ export default function ProductCard({
         <div className="absolute top-3 right-3 flex flex-col gap-1.5">
           <button
             onClick={handleWishlist}
+            aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
             className={`p-1.5 rounded-full backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 ${
               wishlisted
                 ? "bg-berber-error text-white opacity-100 translate-y-0"
@@ -100,6 +106,7 @@ export default function ProductCard({
               toggleCompare({ id: product.id, name: product.name, slug: product.slug, price: Number(product.price), comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined, image: thumbnail, category: product.category?.name, brand: product.brand?.name })
               toast.success(comparing ? "Removed from compare" : "Added to compare", { action: { label: "View", onClick: () => window.location.href = "/compare" } })
             }}
+            aria-label={comparing ? "Remove from compare" : "Add to compare"}
             className={`p-1.5 rounded-full backdrop-blur-sm transition-all duration-300 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 delay-75 ${
               comparing
                 ? "bg-berber-gold text-white opacity-100 translate-y-0"
