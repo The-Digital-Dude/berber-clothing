@@ -84,7 +84,7 @@ export default function Navbar({
               <Menu className="w-6 h-6" />
             </button>
             <Link href="/">
-              <img src="/logo.webp" alt={storeName} className="h-16 w-16 md:h-24 md:w-24 object-contain scale-125 origin-left" />
+              <img src="/logo-icon.png" alt={storeName} className="h-14 w-14 md:h-16 md:w-16 object-contain" />
             </Link>
           </div>
 
@@ -160,7 +160,7 @@ export default function Navbar({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <img src="/logo.webp" alt={storeName} className="h-10 w-10 object-contain" />
+              <img src="/logo-icon.png" alt={storeName} className="h-10 w-10 object-contain" />
               <button onClick={() => setMobileOpen(false)} className="p-2 -mr-2 hover:text-berber-gold transition-colors" aria-label="Close menu">
                 <X className="w-6 h-6" />
               </button>

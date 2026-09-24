@@ -67,7 +67,7 @@ export default function AdminTopbar({ email }: { email: string }) {
         } />
         <SheetContent side="left" className="p-0 w-[240px] bg-[#0f1117]">
           <div className="flex h-14 items-center border-b border-white/8 px-4">
-            <img src="/logo.webp" alt="Berber Clothing" className="h-8 w-auto object-contain brightness-0 invert" />
+            <img src="/logo-icon.png" alt="Berber Clothing" className="h-8 w-8 object-contain" />
           </div>
           <div className="flex-1 overflow-y-auto py-3">
             <Sidebar />
