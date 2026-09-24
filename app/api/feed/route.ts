@@ -28,9 +28,12 @@ export async function GET() {
   const items = products
     .filter((p) => p.images.length > 0)
     .map((p) => {
-      const price = Number(p.price).toFixed(2)
-      const comparePrice = p.comparePrice ? Number(p.comparePrice).toFixed(2) : null
-      const inStock = p.variants.length > 0 || true
+      const sellingPrice = Number(p.price)
+      const comparePriceNum = p.comparePrice ? Number(p.comparePrice) : 0
+      const hasDiscount = comparePriceNum > sellingPrice
+      const price = (hasDiscount ? comparePriceNum : sellingPrice).toFixed(2)
+      const salePrice = hasDiscount ? sellingPrice.toFixed(2) : null
+      const inStock = p.variants.length > 0
       const image = p.images[0]?.url ?? ""
       const url = `${SITE_URL}/shop/${p.slug}`
       const description = escapeXml((p.description ?? p.name).replace(/<[^>]*>/g, "").slice(0, 5000))
@@ -44,7 +47,7 @@ export async function GET() {
       <g:condition>new</g:condition>
       <g:availability>${inStock ? "in stock" : "out of stock"}</g:availability>
       <g:price>${price} BDT</g:price>
-      ${comparePrice ? `<g:sale_price>${price} BDT</g:sale_price>` : ""}
+      ${salePrice ? `<g:sale_price>${salePrice} BDT</g:sale_price>` : ""}
       <g:brand>${escapeXml(storeName)}</g:brand>
       <g:google_product_category>Apparel &amp; Accessories &gt; Clothing</g:google_product_category>
       <g:product_type>${escapeXml(p.category?.name ?? "Clothing")}</g:product_type>
