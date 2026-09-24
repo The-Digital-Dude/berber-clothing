@@ -67,7 +67,7 @@ export async function generateMetadata(): Promise<Metadata> {
       googleBot: { index: true, follow: true, "max-image-preview": "large" },
     },
     verification: {
-      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "",
+      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "QEPFzdJXen7lrD9nntkbv-ylTtE-a-NPIG6wKfRewVw",
     },
   };
 }
