@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { serialize } from "@/lib/utils"
 import { redirect } from "next/navigation"
 import { Check, X, ShoppingBag, MapPin, CreditCard, Gift, Package, Truck, Home, Ban } from "lucide-react"
 import Link from "next/link"
@@ -269,7 +270,7 @@ export default async function OrderConfirmationPage({
       )}
 
       {payment !== "failed" && <PostPurchaseUpsell orderId={order.id} />}
-      <PurchaseTracker order={order as any} />
+      <PurchaseTracker order={serialize(order) as any} />
 
       <div className="mt-16 text-center border-t border-berber-border pt-12 flex items-center justify-center gap-8">
         <Link href={`/order/${order.id}/invoice`} className="inline-block text-xs font-bold uppercase tracking-widest border-b border-berber-black pb-1 hover:text-berber-gold hover:border-berber-gold transition-colors">

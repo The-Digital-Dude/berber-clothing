@@ -29,7 +29,7 @@ export function trackViewContent(product: {
     value: product.price,
     items: [{ item_id: product.id, item_name: product.name, item_category: product.category, price: product.price }],
   })
-  fbq("ViewContent", { content_ids: [product.id], content_name: product.name, value: product.price, currency: "BDT" })
+  fbq("ViewContent", { content_ids: [product.id], content_type: "product", content_name: product.name, value: product.price, currency: "BDT" })
 }
 
 export function trackAddToCart(product: {
@@ -44,12 +44,22 @@ export function trackAddToCart(product: {
     value: product.price * qty,
     items: [{ item_id: product.id, item_name: product.name, price: product.price, quantity: qty }],
   })
-  fbq("AddToCart", { content_ids: [product.id], content_name: product.name, value: product.price * qty, currency: "BDT" })
+  fbq("AddToCart", { content_ids: [product.id], content_type: "product", content_name: product.name, value: product.price * qty, currency: "BDT" })
 }
 
-export function trackInitiateCheckout(value: number, itemCount: number) {
+export function trackInitiateCheckout(
+  value: number,
+  items: { productId: string; quantity: number }[]
+) {
+  const itemCount = items.reduce((s, i) => s + i.quantity, 0)
   gtag("begin_checkout", { currency: "BDT", value, num_items: itemCount })
-  fbq("InitiateCheckout", { value, currency: "BDT", num_items: itemCount })
+  fbq("InitiateCheckout", {
+    content_ids: items.map((i) => i.productId),
+    content_type: "product",
+    value,
+    currency: "BDT",
+    num_items: itemCount,
+  })
 }
 
 export function trackPurchase(order: {
@@ -66,7 +76,16 @@ export function trackPurchase(order: {
   })
   // eventID matches the order.id used server-side by the Conversions API
   // Purchase event, so Meta deduplicates the two into one conversion.
-  fbq("Purchase", { value: order.total, currency: "BDT" }, order.id)
+  fbq(
+    "Purchase",
+    {
+      content_ids: order.items?.map((i) => i.productId) || [],
+      content_type: "product",
+      value: order.total,
+      currency: "BDT",
+    },
+    order.id
+  )
 }
 
 export function trackSearch(query: string) {
@@ -76,7 +95,7 @@ export function trackSearch(query: string) {
 
 export function trackAddToWishlist(product: { id: string; name: string; price: number }) {
   gtag("add_to_wishlist", { currency: "BDT", value: product.price, items: [{ item_id: product.id, item_name: product.name }] })
-  fbq("AddToWishlist", { content_ids: [product.id], value: product.price, currency: "BDT" })
+  fbq("AddToWishlist", { content_ids: [product.id], content_type: "product", value: product.price, currency: "BDT" })
 }
 
 export function trackAddPaymentInfo(value: number, paymentMethod: string) {

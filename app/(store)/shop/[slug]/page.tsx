@@ -17,6 +17,7 @@ import SizeQuiz from "@/components/store/SizeQuiz"
 import StickyAddToCart from "@/components/store/StickyAddToCart"
 import CompleteTheSet from "@/components/store/CompleteTheSet"
 import TrackPageView from "@/components/store/TrackPageView"
+import ViewContentTracker from "@/components/store/ViewContentTracker"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Truck, RefreshCw, ShieldCheck } from "lucide-react"
 import type { Metadata } from "next"
@@ -223,6 +224,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
       <RecordView product={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, image: product.images[0]?.url }} />
       <TrackPageView productId={product.id} />
+      <ViewContentTracker product={{ id: product.id, name: product.name, price: displayPrice, category: product.category?.name }} />
 
       {/* Breadcrumb - Minimal */}
       <div className="container mx-auto px-4 py-6 text-[10px] uppercase tracking-widest text-berber-text-muted">

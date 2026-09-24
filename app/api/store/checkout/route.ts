@@ -389,6 +389,7 @@ export async function POST(req: Request) {
         fbp: getCookie("_fbp"),
         fbc: getCookie("_fbc"),
         datasetId: pixelSetting?.value || null,
+        contentIds: items.map((item: any) => item.productId),
       })
     })().catch(() => {})
 

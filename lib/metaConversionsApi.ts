@@ -28,6 +28,8 @@ type PurchaseEventInput = {
   fbc?: string | null
   /** Same dataset/Pixel ID the browser Pixel is initialized with — pass the resolved value (settings DB, falling back to env) so CAPI never drifts from the client Pixel. */
   datasetId?: string | null
+  /** Product IDs purchased — must match the `g:id` values in the catalog feed for catalog/dynamic-ads attribution. */
+  contentIds?: string[]
 }
 
 /**
@@ -62,6 +64,7 @@ export async function sendPurchaseEvent(input: PurchaseEventInput): Promise<void
           custom_data: {
             currency: input.currency || "BDT",
             value: input.value,
+            ...(input.contentIds?.length && { content_ids: input.contentIds, content_type: "product" }),
           },
         },
       ],
