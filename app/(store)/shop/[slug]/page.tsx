@@ -136,7 +136,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
   const settingsMap = Object.fromEntries(shippingSettings.map((s: any) => [s.key, s.value]))
   const freeShippingThreshold = settingsMap.free_shipping_above ? Number(settingsMap.free_shipping_above) : null
-  const setBundle = JSON.parse(JSON.stringify(bundle))
+  const setBundle = serialize(bundle) as any
 
   const productUrl = `${SITE_URL}/shop/${product.slug}`
   const priceValidUntil = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10)

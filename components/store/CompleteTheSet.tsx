@@ -59,9 +59,9 @@ export default function CompleteTheSet({
   // Pricing
   const companionTotal = selectedCompanions.reduce((sum, p) => {
     const v = p.variants.find((v) => v.id === chosenVariant[p.id])
-    return sum + (v?.price != null ? Number(v.price) : p.price)
+    return sum + Number(v?.price ?? p.price)
   }, 0)
-  const subtotal = primaryPrice + companionTotal
+  const subtotal = Number(primaryPrice) + companionTotal
   const discountPct = bundle.discountPct ? Number(bundle.discountPct) : 0
   const discount = discountPct > 0 ? Math.round(subtotal * discountPct / 100) : 0
   const total = subtotal - discount
@@ -90,7 +90,7 @@ export default function CompleteTheSet({
         productId: p.id,
         productSlug: p.slug,
         name: p.name,
-        price: v.price != null ? Number(v.price) : p.price,
+        price: Number(v.price ?? p.price),
         size: v.size,
         color: v.color,
         image: p.images[0]?.url || "",
