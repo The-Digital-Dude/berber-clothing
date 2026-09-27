@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(filename, compressed, { contentType: compressedType, upsert: false })
+      .upload(filename, compressed, { contentType: compressedType, upsert: false, cacheControl: "31536000" })
 
     if (uploadError) throw uploadError
 
