@@ -4,10 +4,15 @@ import { redirect } from "next/navigation"
 import PrintButton from "../[id]/packing-slip/PrintButton"
 import { PackingSlipContent } from "@/components/print/PackingSlipContent"
 
-// Prints multiple orders' packing slips onto A4 sheets, two slips per
-// sheet (stacked, cut along the dashed line) instead of one order per
-// receipt-width printout. Same "lives outside app/(admin)/admin/**"
-// reasoning as the single-order packing slip page — see its comment.
+// Prints multiple orders' packing slips onto A4 sheets. Rather than
+// forcing a fixed count per sheet, each slip is left at its natural
+// content height and marked `break-inside: avoid` — the print engine
+// then packs as many whole slips as actually fit on each page based on
+// their real height (a 1-item order and a 6-item order don't take the
+// same space), and only overflows a slip to the next page when it
+// genuinely doesn't fit, instead of ever splitting one slip across two
+// pages. Same "lives outside app/(admin)/admin/**" reasoning as the
+// single-order packing slip page — see its comment.
 export default async function BulkPackingSlipPage({
   searchParams,
 }: {
@@ -55,36 +60,29 @@ export default async function BulkPackingSlipPage({
           * { box-sizing: border-box; }
           html, body { margin: 0; padding: 0; }
           body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; }
-          .slip-wrap { width: 100%; height: 138mm; padding-bottom: 6mm; overflow: hidden; }
-          .slip-wrap.pair-top { border-bottom: 1px dashed #999; margin-bottom: 6mm; }
-          .slip-wrap.page-end { page-break-after: always; }
+          .slip-wrap {
+            width: 100%;
+            max-width: 190mm;
+            margin: 0 auto 6mm;
+            padding-bottom: 6mm;
+            border-bottom: 1px dashed #999;
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .slip-wrap:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
           @media screen {
             body { background: #ddd; padding: 10mm 0; }
-            .slip-wrap { background: #fff; max-width: 190mm; margin: 0 auto 6mm; box-shadow: 0 1px 4px rgba(0,0,0,0.2); padding: 8mm 8mm 6mm; }
-            .slip-wrap.pair-top { border-bottom: 1px dashed #999; }
+            .slip-wrap { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); padding: 8mm; border-bottom: none; margin-bottom: 6mm; }
           }
           @media print { button { display: none; } }
         `}</style>
       </head>
       <body>
-        {orders.map((order, i) => {
-          const isBottomOfPair = i % 2 === 1
-          const hasPairPartnerBelow = i % 2 === 0 && i + 1 < orders.length
-          const isLastOverall = i === orders.length - 1
-          const classes = [
-            "slip-wrap",
-            hasPairPartnerBelow ? "pair-top" : "",
-            // Force a page break after every completed pair — but never
-            // after the very last slip, or the print engine adds a
-            // trailing blank page.
-            (isBottomOfPair && !isLastOverall) ? "page-end" : "",
-          ].filter(Boolean).join(" ")
-          return (
-            <div key={order.id} className={classes}>
-              <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
-            </div>
-          )
-        })}
+        {orders.map((order) => (
+          <div key={order.id} className="slip-wrap">
+            <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
+          </div>
+        ))}
         <PrintButton />
       </body>
     </html>

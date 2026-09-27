@@ -12,10 +12,6 @@ import { PackingSlipContent } from "@/components/print/PackingSlipContent"
 // truly standalone document is to live outside that layout's subtree —
 // which means auth has to be checked explicitly here instead of inheriting
 // it for free from app/(admin)/admin/layout.tsx.
-//
-// Prints on A4 (not a narrow receipt-width layout) with 2 copies of the
-// same slip per sheet — one for the parcel, one to keep as a paper record
-// — instead of wasting a whole sheet on a single narrow slip.
 export default async function PackingSlipPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
   if (!session?.user || (session.user as any).role !== "ADMIN") {
@@ -45,19 +41,15 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
           * { box-sizing: border-box; }
           html, body { margin: 0; padding: 0; }
           body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; }
-          .slip-wrap { width: 100%; height: 138mm; padding-bottom: 6mm; overflow: hidden; }
-          .slip-wrap.pair-top { border-bottom: 1px dashed #999; margin-bottom: 6mm; }
+          .slip-wrap { width: 100%; max-width: 190mm; margin: 0 auto; }
           @media screen {
             body { background: #ddd; padding: 10mm 0; }
-            .slip-wrap { background: #fff; max-width: 190mm; margin: 0 auto 6mm; box-shadow: 0 1px 4px rgba(0,0,0,0.2); padding: 8mm 8mm 6mm; height: auto; }
+            .slip-wrap { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); padding: 8mm; }
           }
           @media print { button { display: none; } }
         `}</style>
       </head>
       <body>
-        <div className="slip-wrap pair-top">
-          <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
-        </div>
         <div className="slip-wrap">
           <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
         </div>
