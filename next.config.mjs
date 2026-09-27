@@ -1,16 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    // Default is 60s, which causes Vercel to re-run (and re-bill) the
-    // Image Optimization pipeline on nearly every request. Product photos
-    // get a new filename on every upload (never overwritten in place), so
-    // a long cache lifetime is safe — this is the single biggest lever
-    // against Vercel's Cached Egress usage.
-    minimumCacheTTL: 31536000, // 1 year
-    // Trim the default 8 device breakpoints down to what this store's
-    // layouts actually request (grid cards top out around 25vw/50vw,
-    // the widest is a 100vw hero) — fewer unique cached variants per image.
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    // Vercel's on-demand Image Optimization (/_next/image) is a metered,
+    // pausable-on-overage service — and redundant here, since every upload
+    // already goes through sharp at upload time (resized to a 1200px max
+    // width, re-encoded to WebP at quality 82 — see app/api/admin/upload/
+    // route.ts). Rather than pay Vercel to re-resize an already-optimized
+    // image on every unique width request, skip that pipeline entirely:
+    // <Image> renders a plain <img src={original}> with zero Vercel-side
+    // transformations, ever. Optimization still happens — it just happens
+    // once, in our own code, at upload time, instead of repeatedly and
+    // metered on Vercel's infrastructure.
+    unoptimized: true,
     remotePatterns: [
       // Supabase Storage (any project)
       {
