@@ -71,6 +71,11 @@ export async function sendPurchaseEvent(input: PurchaseEventInput): Promise<void
           },
         },
       ],
+      // When set, routes events to Events Manager's Test Events tool only —
+      // excluded from normal reporting and ad optimization. MUST be unset in
+      // production. Set META_TEST_EVENT_CODE locally when testing this
+      // integration so test calls never pollute real conversion data again.
+      ...(process.env.META_TEST_EVENT_CODE && { test_event_code: process.env.META_TEST_EVENT_CODE }),
     }
 
     const res = await fetch(
