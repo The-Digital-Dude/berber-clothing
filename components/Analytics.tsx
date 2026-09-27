@@ -26,8 +26,12 @@ export default async function Analytics() {
     <>
       {GA4_ID && (
         <>
-          <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />
-          <Script id="ga4-init" strategy="afterInteractive">{`
+          {/* beforeInteractive: window.gtag must exist before hydration runs,
+              because PurchaseTracker's useEffect fires on the order
+              confirmation page's very first mount — an afterInteractive
+              script here loses that race and silently drops the event. */}
+          <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="beforeInteractive" />
+          <Script id="ga4-init" strategy="beforeInteractive">{`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
