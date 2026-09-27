@@ -138,7 +138,31 @@ export default function CheckoutForm({
   const [deliveryDate, setDeliveryDate] = useState("")
 
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
-  const shippingCharge = (freeShippingThreshold && subtotal >= freeShippingThreshold) ? 0 : shippingChargeAmount
+
+  // The shippingChargeAmount prop is a static default computed once at page
+  // load using only the global setting — it doesn't know about district-based
+  // shipping zones. Re-resolve it whenever the customer's district changes so
+  // the displayed estimate matches what the server will actually charge.
+  const [zoneShippingCharge, setZoneShippingCharge] = useState<number | null>(null)
+  useEffect(() => {
+    if (!address.district) { setZoneShippingCharge(null); return }
+    const controller = new AbortController()
+    fetch(`/api/store/shipping-estimate?district=${encodeURIComponent(address.district)}&subtotal=${subtotal}`, { signal: controller.signal })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data && typeof data.charge === "number") setZoneShippingCharge(data.charge) })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [address.district, subtotal])
+
+  // Once the zone-aware estimate has resolved, trust it exactly as-is —
+  // resolveShippingCharge() already accounts for free-shipping thresholds
+  // (including per-zone overrides), so re-applying the global-only check
+  // on top of it could produce a different result than what the server
+  // will actually charge. Only fall back to the static global estimate
+  // before a district is selected / the estimate call hasn't resolved yet.
+  const shippingCharge = zoneShippingCharge !== null
+    ? zoneShippingCharge
+    : ((freeShippingThreshold && subtotal >= freeShippingThreshold) ? 0 : shippingChargeAmount)
   const taxAmount = taxEnabled ? Math.round((subtotal * taxRate) / 100) : 0
   const giftWrapAmount = giftWrap ? giftWrapCharge : 0
   const loyaltyDiscount = redeemPoints ? Math.min(pointsToRedeem, loyaltyMaxDiscount) : 0
