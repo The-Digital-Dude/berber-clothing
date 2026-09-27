@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { DIVISIONS, getDistricts, getAreaSuggestions } from "@/lib/bangladeshAddress"
 
 interface AddressModalProps {
   isOpen: boolean
@@ -146,19 +147,47 @@ export default function AddressModal({ isOpen, onClose, onSaved, addressToEdit }
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Division</label>
-              <input name="division" value={formData.division} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.division ? "border-red-500" : ""}`} />
+              <select
+                name="division"
+                value={formData.division}
+                onChange={e => { setFormData(prev => ({ ...prev, division: e.target.value, district: "", area: "" })); setErrors(prev => ({ ...prev, division: "" })) }}
+                className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.division ? "border-red-500" : ""}`}
+              >
+                <option value="">Select Division</option>
+                {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
               {errors.division && <p className="text-xs text-red-500 mt-1">{errors.division}</p>}
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">District / City</label>
-              <input name="district" value={formData.district} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.district ? "border-red-500" : ""}`} />
+              <select
+                name="district"
+                value={formData.district}
+                onChange={e => { setFormData(prev => ({ ...prev, district: e.target.value, area: "" })); setErrors(prev => ({ ...prev, district: "" })) }}
+                disabled={!formData.division}
+                className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all disabled:opacity-50 ${errors.district ? "border-red-500" : ""}`}
+              >
+                <option value="">{formData.division ? "Select District" : "Select division first"}</option>
+                {getDistricts(formData.division).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
               {errors.district && <p className="text-xs text-red-500 mt-1">{errors.district}</p>}
             </div>
 
             <div className="space-y-1.5 md:col-span-2">
               <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Area / Thana</label>
-              <input name="area" value={formData.area} onChange={handleChange} className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all ${errors.area ? "border-red-500" : ""}`} />
+              <input
+                list="account-area-suggestions"
+                name="area"
+                value={formData.area}
+                onChange={handleChange}
+                disabled={!formData.district}
+                placeholder={formData.district ? "e.g. Gulshan, Dhanmondi, or your upazila" : "Select district first"}
+                className={`w-full bg-berber-muted border border-transparent focus:border-berber-gold focus:bg-white rounded-lg px-4 py-3 text-sm outline-none transition-all disabled:opacity-50 ${errors.area ? "border-red-500" : ""}`}
+              />
+              <datalist id="account-area-suggestions">
+                {getAreaSuggestions(formData.district).map(a => <option key={a} value={a} />)}
+              </datalist>
               {errors.area && <p className="text-xs text-red-500 mt-1">{errors.area}</p>}
             </div>
 

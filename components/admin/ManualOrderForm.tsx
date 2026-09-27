@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Trash2, AlertTriangle, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import type { CustomerRisk } from "@/lib/customerRisk"
+import { DIVISIONS, getDistricts, getAreaSuggestions } from "@/lib/bangladeshAddress"
 
 type Variant = {
   id: string
@@ -234,9 +235,29 @@ export default function ManualOrderForm() {
             <div className="grid grid-cols-2 gap-4">
               <Input placeholder="Full Name" value={address.name} onChange={(e) => setAddress({ ...address, name: e.target.value })} />
               <Input placeholder="Phone Number" value={address.phone} onChange={(e) => setAddress({ ...address, phone: e.target.value })} />
-              <Input placeholder="Division" value={address.division} onChange={(e) => setAddress({ ...address, division: e.target.value })} />
-              <Input placeholder="District" value={address.district} onChange={(e) => setAddress({ ...address, district: e.target.value })} />
-              <Input placeholder="Area / Thana" value={address.area} onChange={(e) => setAddress({ ...address, area: e.target.value })} className="col-span-2" />
+              <Select value={address.division || undefined} onValueChange={(v) => setAddress({ ...address, division: v || "", district: "", area: "" })}>
+                <SelectTrigger><SelectValue placeholder="Division" /></SelectTrigger>
+                <SelectContent>
+                  {DIVISIONS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={address.district || undefined} onValueChange={(v) => setAddress({ ...address, district: v || "", area: "" })} disabled={!address.division}>
+                <SelectTrigger><SelectValue placeholder={address.division ? "District" : "Select division first"} /></SelectTrigger>
+                <SelectContent>
+                  {getDistricts(address.division).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input
+                list="manual-order-area-suggestions"
+                placeholder={address.district ? "Area / Thana (e.g. Gulshan, Dhanmondi)" : "Select district first"}
+                value={address.area}
+                onChange={(e) => setAddress({ ...address, area: e.target.value })}
+                disabled={!address.district}
+                className="col-span-2"
+              />
+              <datalist id="manual-order-area-suggestions">
+                {getAreaSuggestions(address.district).map(a => <option key={a} value={a} />)}
+              </datalist>
               <Input placeholder="Full Address" value={address.fullAddress} onChange={(e) => setAddress({ ...address, fullAddress: e.target.value })} className="col-span-2" />
             </div>
 

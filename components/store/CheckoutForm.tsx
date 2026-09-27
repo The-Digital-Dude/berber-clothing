@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useCartStore } from "@/store/useCartStore"
 import { useRouter } from "next/navigation"
 import { MapPin, CreditCard, ClipboardCheck, ChevronRight, Check, Gift, MessageSquare, User, Star, Wallet, Tag, Calendar, ShoppingBag, ChevronDown } from "lucide-react"
+import { DIVISIONS, getDistricts, getAreaSuggestions } from "@/lib/bangladeshAddress"
 
 type CheckoutField = {
   id: string
@@ -438,17 +439,42 @@ export default function CheckoutForm({
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Division *</label>
-                    <input value={address.division} onChange={e => { setAddress({ ...address, division: e.target.value }); setErrors(prev => ({...prev, division: ""})) }} className={`${inputCls} ${errors.division ? "border-red-500" : ""}`} />
+                    <select
+                      value={address.division}
+                      onChange={e => { setAddress({ ...address, division: e.target.value, district: "", area: "" }); setErrors(prev => ({...prev, division: ""})) }}
+                      className={`${inputCls} ${errors.division ? "border-red-500" : ""}`}
+                    >
+                      <option value="">Select Division</option>
+                      {DIVISIONS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
                     {errors.division && <p className="text-xs text-red-500">{errors.division}</p>}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">District *</label>
-                    <input value={address.district} onChange={e => { setAddress({ ...address, district: e.target.value }); setErrors(prev => ({...prev, district: ""})) }} className={`${inputCls} ${errors.district ? "border-red-500" : ""}`} />
+                    <select
+                      value={address.district}
+                      onChange={e => { setAddress({ ...address, district: e.target.value, area: "" }); setErrors(prev => ({...prev, district: ""})) }}
+                      disabled={!address.division}
+                      className={`${inputCls} ${errors.district ? "border-red-500" : ""} disabled:opacity-50`}
+                    >
+                      <option value="">{address.division ? "Select District" : "Select division first"}</option>
+                      {getDistricts(address.division).map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
                     {errors.district && <p className="text-xs text-red-500">{errors.district}</p>}
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Area / Thana *</label>
-                    <input value={address.area} onChange={e => { setAddress({ ...address, area: e.target.value }); setErrors(prev => ({...prev, area: ""})) }} className={`${inputCls} ${errors.area ? "border-red-500" : ""}`} />
+                    <input
+                      list="area-suggestions"
+                      value={address.area}
+                      onChange={e => { setAddress({ ...address, area: e.target.value }); setErrors(prev => ({...prev, area: ""})) }}
+                      disabled={!address.district}
+                      placeholder={address.district ? "e.g. Gulshan, Dhanmondi, or your upazila" : "Select district first"}
+                      className={`${inputCls} ${errors.area ? "border-red-500" : ""} disabled:opacity-50`}
+                    />
+                    <datalist id="area-suggestions">
+                      {getAreaSuggestions(address.district).map(a => <option key={a} value={a} />)}
+                    </datalist>
                     {errors.area && <p className="text-xs text-red-500">{errors.area}</p>}
                   </div>
                   <div className="space-y-1.5 md:col-span-2">

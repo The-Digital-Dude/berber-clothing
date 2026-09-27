@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Pencil, Trash2, MapPin } from "lucide-react"
+import { DIVISIONS, DISTRICTS_BY_DIVISION } from "@/lib/bangladeshAddress"
 
 type Zone = { id: string; name: string; districts: string; charge: number; freeShippingAbove: number | null; isActive: boolean; sortOrder: number }
 
@@ -25,8 +26,27 @@ export default function ShippingZoneClient({ data }: { data: Zone[] }) {
   function openNew() { setEditing(null); setForm(empty); setOpen(true) }
   function openEdit(z: Zone) { setEditing(z); setForm({ name: z.name, districts: z.districts, charge: z.charge, freeShippingAbove: z.freeShippingAbove, isActive: z.isActive, sortOrder: z.sortOrder }); setOpen(true) }
 
+  const selectedDistricts = form.districts.split(",").map(d => d.trim()).filter(Boolean)
+
+  function toggleDistrict(district: string) {
+    const set = new Set(selectedDistricts)
+    if (set.has(district)) set.delete(district)
+    else set.add(district)
+    setForm({ ...form, districts: Array.from(set).join(", ") })
+  }
+
+  function toggleDivision(division: string, allSelected: boolean) {
+    const set = new Set(selectedDistricts)
+    for (const d of DISTRICTS_BY_DIVISION[division] || []) {
+      if (allSelected) set.delete(d)
+      else set.add(d)
+    }
+    setForm({ ...form, districts: Array.from(set).join(", ") })
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
+    if (selectedDistricts.length === 0) { toast.error("Select at least one district"); return }
     setSaving(true)
     try {
       const url = editing ? `/api/admin/shipping-zones/${editing.id}` : "/api/admin/shipping-zones"
@@ -62,9 +82,34 @@ export default function ShippingZoneClient({ data }: { data: Zone[] }) {
               <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Dhaka City" required />
             </div>
             <div>
-              <label className="text-sm font-medium">Districts (comma-separated)</label>
-              <Input value={form.districts} onChange={e => setForm({ ...form, districts: e.target.value })} placeholder="Dhaka, Narayanganj, Gazipur" required />
-              <p className="text-xs text-muted-foreground mt-1">Customer's district is matched against this list (case-insensitive).</p>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Districts</label>
+                <span className="text-xs text-muted-foreground">{selectedDistricts.length} selected</span>
+              </div>
+              <p className="text-xs text-muted-foreground mb-2">Customer's district (from the checkout dropdown) is matched against this list.</p>
+              <div className="border rounded-md max-h-64 overflow-y-auto divide-y">
+                {DIVISIONS.map(division => {
+                  const districts = DISTRICTS_BY_DIVISION[division] || []
+                  const allSelected = districts.length > 0 && districts.every(d => selectedDistricts.includes(d))
+                  return (
+                    <div key={division} className="p-2">
+                      <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                        <input type="checkbox" checked={allSelected} onChange={() => toggleDivision(division, allSelected)} className="w-4 h-4" />
+                        {division}
+                      </label>
+                      <div className="grid grid-cols-2 gap-x-2 mt-1.5 ml-6">
+                        {districts.map(district => (
+                          <label key={district} className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer py-0.5">
+                            <input type="checkbox" checked={selectedDistricts.includes(district)} onChange={() => toggleDistrict(district)} className="w-3.5 h-3.5" />
+                            {district}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              {selectedDistricts.length === 0 && <p className="text-xs text-destructive mt-1">Select at least one district</p>}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
