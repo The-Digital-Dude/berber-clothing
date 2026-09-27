@@ -89,9 +89,8 @@ export default function OrdersBulkClient({
   }
 
   function printSelected() {
-    for (const id of Array.from(selected)) {
-      window.open(`/print/orders/${id}/packing-slip`, "_blank")
-    }
+    const ids = Array.from(selected).join(",")
+    window.open(`/print/orders/bulk-packing-slip?ids=${encodeURIComponent(ids)}`, "_blank")
   }
 
   return (
