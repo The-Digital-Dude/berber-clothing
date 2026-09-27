@@ -103,7 +103,7 @@ export default function OrderDetailsClient({
               <Printer className="h-4 w-4" /> Invoice
             </Button>
           </a>
-          <a href={`/admin/orders/${order.id}/packing-slip`} target="_blank" rel="noopener noreferrer">
+          <a href={`/print/orders/${order.id}/packing-slip`} target="_blank" rel="noopener noreferrer">
             <Button variant="outline" className="gap-2">
               <Printer className="h-4 w-4" /> Packing Slip
             </Button>

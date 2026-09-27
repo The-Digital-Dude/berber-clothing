@@ -1,8 +1,22 @@
 import prisma from "@/lib/prisma"
-import { notFound } from "next/navigation"
+import { auth } from "@/lib/auth"
+import { notFound, redirect } from "next/navigation"
 import PrintButton from "./PrintButton"
 
+// Deliberately NOT nested under app/(admin)/admin/** — that layout renders
+// the sidebar/topbar admin chrome around {children}, but this page renders
+// its own full <html>/<body> (a clean, print-friendly document meant to be
+// sent straight to a receipt/thermal printer). Next.js has no way for a
+// nested page to "opt out" of an ancestor layout's rendered UI, so the only
+// way to get a truly standalone document is to live outside that layout's
+// subtree — which means auth has to be checked explicitly here instead of
+// inheriting it for free from app/(admin)/admin/layout.tsx.
 export default async function PackingSlipPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await auth()
+  if (!session?.user || (session.user as any).role !== "ADMIN") {
+    redirect("/login")
+  }
+
   const { id } = await params
   const order = await prisma.order.findUnique({
     where: { id },
@@ -12,9 +26,10 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
   })
   if (!order) notFound()
 
-  const settings = await prisma.setting.findMany({ where: { key: { in: ["store_name", "store_logo", "support_phone"] } } })
+  const settings = await prisma.setting.findMany({ where: { key: { in: ["store_name", "support_phone"] } } })
   const map = Object.fromEntries(settings.map(s => [s.key, s.value]))
   const storeName = map.store_name || "Berber"
+  const supportPhone = map.support_phone || ""
 
   return (
     <html>
@@ -37,7 +52,7 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
       <body>
         <div className="header" style={{ borderBottom: "2px solid #000", paddingBottom: 10, marginBottom: 10 }}>
           <div style={{ fontSize: 22, fontWeight: "bold", letterSpacing: 4 }}>{storeName}</div>
-          <div style={{ fontSize: 10, color: "#666" }}>PACKING SLIP</div>
+          <div style={{ fontSize: 10, color: "#666" }}>PACKING SLIP{supportPhone ? ` · ${supportPhone}` : ""}</div>
           <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between" }}>
             <span style={{ fontSize: 16, fontWeight: "bold" }}>{order.orderNumber}</span>
             <span style={{ fontSize: 10, color: "#666" }}>{new Date(order.createdAt).toLocaleDateString()}</span>
