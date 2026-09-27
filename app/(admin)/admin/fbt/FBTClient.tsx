@@ -81,7 +81,7 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
               <div className="flex items-center gap-3 px-4 py-3">
                 {primary.images[0] && (
                   <div className="relative w-9 h-9 rounded overflow-hidden shrink-0">
-                    <Image src={primary.images[0].url} alt={primary.name} fill className="object-cover" />
+                    <Image src={primary.images[0].url} alt={primary.name} fill sizes="36px" className="object-cover" />
                   </div>
                 )}
                 <p className="font-medium text-sm flex-1">{primary.name}</p>
@@ -92,7 +92,7 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
                     <div key={pair.id} className="flex items-center gap-1.5 bg-slate-100 rounded-full pl-1 pr-2 py-0.5">
                       {pair.secondary?.images?.[0] && (
                         <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0">
-                          <Image src={pair.secondary.images[0].url} alt={pair.secondary.name} fill className="object-cover" />
+                          <Image src={pair.secondary.images[0].url} alt={pair.secondary.name} fill sizes="20px" className="object-cover" />
                         </div>
                       )}
                       <span className="text-xs text-slate-700 max-w-[100px] truncate">{pair.secondary?.name}</span>
@@ -161,7 +161,7 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
                             >
                               {p.images[0] && (
                                 <div className="relative w-7 h-7 rounded overflow-hidden shrink-0">
-                                  <Image src={p.images[0].url} alt={p.name} fill className="object-cover" />
+                                  <Image src={p.images[0].url} alt={p.name} fill sizes="28px" className="object-cover" />
                                 </div>
                               )}
                               <span className="text-sm">{p.name}</span>

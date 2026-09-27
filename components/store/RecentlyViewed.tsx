@@ -46,7 +46,7 @@ export default function RecentlyViewed({ currentProductId }: { currentProductId?
           <Link key={p.id} href={`/shop/${p.slug}`} className="group">
             <div className="aspect-[3/4] rounded-xl overflow-hidden bg-muted mb-3 relative">
               {p.image ? (
-                <Image src={p.image} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                <Image src={p.image} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
               ) : (
                 <div className="w-full h-full bg-berber-muted" />
               )}

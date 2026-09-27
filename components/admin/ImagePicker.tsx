@@ -52,7 +52,7 @@ export default function ImagePicker({ value, onChange, bucket }: Props) {
       {value ? (
         <div className="relative inline-block">
           <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border">
-            <Image src={value} alt="Preview" fill className="object-cover" />
+            <Image src={value} alt="Preview" fill sizes="128px" className="object-cover" />
           </div>
           <button
             type="button"

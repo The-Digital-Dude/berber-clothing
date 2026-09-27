@@ -23,7 +23,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
       {/* Brand hero */}
       {brand.banner && (
         <div className="relative w-full h-40 rounded-xl overflow-hidden mb-6">
-          <Image src={brand.banner} alt={brand.name} fill className="object-cover" />
+          <Image src={brand.banner} alt={brand.name} fill sizes="(max-width: 1152px) 100vw, 1152px" className="object-cover" />
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             {brand.logo && <Image src={brand.logo} alt={brand.name} width={120} height={60} className="object-contain" />}
           </div>

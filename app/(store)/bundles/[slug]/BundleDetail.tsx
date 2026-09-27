@@ -85,12 +85,12 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
         {/* Image */}
         <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-50">
           {firstImage ? (
-            <Image src={firstImage} alt={bundle.name} fill className="object-cover" />
+            <Image src={firstImage} alt={bundle.name} fill sizes="(max-width: 1024px) 100vw, 512px" className="object-cover" />
           ) : (
             <div className="grid grid-cols-2 h-full gap-1 p-1">
               {bundle.items.slice(0, 4).map((item) => (
                 <div key={item.id} className="relative overflow-hidden rounded-xl bg-gray-100">
-                  {item.product.images[0] && <Image src={item.product.images[0].url} alt={item.product.name} fill className="object-cover" />}
+                  {item.product.images[0] && <Image src={item.product.images[0].url} alt={item.product.name} fill sizes="(max-width: 1024px) 50vw, 256px" className="object-cover" />}
                 </div>
               ))}
             </div>
@@ -137,7 +137,7 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
                   } ${isSelected ? "border-black bg-gray-50" : "border-gray-200 opacity-60"}`}
                 >
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    {item.product.images[0] && <Image src={item.product.images[0].url} alt={item.product.name} fill className="object-cover" />}
+                    {item.product.images[0] && <Image src={item.product.images[0].url} alt={item.product.name} fill sizes="56px" className="object-cover" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{item.product.name}</p>

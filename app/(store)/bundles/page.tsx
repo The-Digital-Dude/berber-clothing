@@ -41,13 +41,13 @@ export default async function BundlesPage() {
                 {/* Bundle image or product collage */}
                 <div className="relative bg-gray-50 aspect-square overflow-hidden">
                   {bundle.image ? (
-                    <Image src={bundle.image} alt={bundle.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <Image src={bundle.image} alt={bundle.name} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <div className="grid grid-cols-2 h-full gap-0.5">
                       {bundle.items.slice(0, 4).map((item) => (
                         <div key={item.id} className="relative overflow-hidden bg-gray-100">
                           {item.product.images[0] && (
-                            <Image src={item.product.images[0].url} alt={item.product.name} fill className="object-cover" />
+                            <Image src={item.product.images[0].url} alt={item.product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw" className="object-cover" />
                           )}
                         </div>
                       ))}

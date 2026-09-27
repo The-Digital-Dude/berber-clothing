@@ -35,7 +35,7 @@ export default async function BlogTagPage({ params }: { params: { tag: string } 
           <article key={post.id} className="flex gap-6">
             {post.coverImage && (
               <div className="relative w-32 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                <Image src={post.coverImage} alt={post.title} fill className="object-cover" />
+                <Image src={post.coverImage} alt={post.title} fill sizes="128px" className="object-cover" />
               </div>
             )}
             <div className="flex-1 min-w-0">
