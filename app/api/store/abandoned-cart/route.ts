@@ -7,11 +7,15 @@ export async function POST(req: Request) {
     const { sessionId, email, phone, name, items, subtotal } = await req.json()
     if (!sessionId || !items?.length) return NextResponse.json({ ok: true })
 
+    const itemsJson = JSON.stringify(items)
     await prisma.abandonedCart.upsert({
       where: { sessionId },
-      create: { sessionId, email: email || null, phone: phone || null, name: name || null, items, subtotal },
-      update: { email: email || undefined, phone: phone || undefined, name: name || undefined, items, subtotal, updatedAt: new Date() },
+      create: { sessionId, email: email || null, phone: phone || null, name: name || null, items: itemsJson, subtotal },
+      update: { email: email || undefined, phone: phone || undefined, name: name || undefined, items: itemsJson, subtotal, updatedAt: new Date() },
     })
     return NextResponse.json({ ok: true })
-  } catch { return NextResponse.json({ ok: true }) }
+  } catch (err) {
+    console.error("abandoned-cart upsert failed", err)
+    return NextResponse.json({ ok: true })
+  }
 }

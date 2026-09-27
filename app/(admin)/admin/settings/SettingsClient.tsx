@@ -84,6 +84,8 @@ export function SettingsClient({
   const [testEmailTo, setTestEmailTo] = useState("")
   const [isSmtpSaving, setIsSmtpSaving] = useState(false)
   const [isSendingTest, setIsSendingTest] = useState(false)
+  const [abandonedCartEmailEnabled, setAbandonedCartEmailEnabled] = useState(initialSettings["abandoned_cart_email_enabled"] === "true")
+  const [isAbandonedCartSaving, setIsAbandonedCartSaving] = useState(false)
 
   // Tracking
   const [ga4Id, setGa4Id] = useState(initialSettings["ga4_id"] || "")
@@ -174,6 +176,14 @@ export function SettingsClient({
       const d = await res.json()
       res.ok ? toast.success("Test email sent! Check your inbox.") : toast.error(d.error || "Failed to send")
     } catch { toast.error("Error sending") } finally { setIsSendingTest(false) }
+  }
+
+  const handleSaveAbandonedCart = async () => {
+    setIsAbandonedCartSaving(true)
+    try {
+      const ok = await patch({ abandoned_cart_email_enabled: abandonedCartEmailEnabled })
+      ok ? toast.success("Abandoned cart settings saved") : toast.error("Failed to save")
+    } catch { toast.error("Error saving") } finally { setIsAbandonedCartSaving(false) }
   }
 
   const handleSaveTracking = async () => {
@@ -429,6 +439,19 @@ export function SettingsClient({
               </CardContent>
             </Card>
             <Button onClick={handleSaveSmtp} disabled={isSmtpSaving}>{isSmtpSaving ? "Saving…" : "Save SMTP Settings"}</Button>
+            <Card>
+              <CardHeader><CardTitle className="text-base">Abandoned Cart Recovery</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <ToggleRow
+                  label="Send abandoned cart emails"
+                  description="Emails a customer's saved cart 1 hour and 24 hours after they leave it idle (24h email includes a discount code if a COMEBACK coupon is active)."
+                  checked={abandonedCartEmailEnabled} onChange={setAbandonedCartEmailEnabled}
+                />
+                <Button onClick={handleSaveAbandonedCart} disabled={isAbandonedCartSaving}>
+                  {isAbandonedCartSaving ? "Saving…" : "Save Abandoned Cart Settings"}
+                </Button>
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Test Email</CardTitle>
