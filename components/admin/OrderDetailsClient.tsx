@@ -105,7 +105,7 @@ export default function OrderDetailsClient({
   const [codNote, setCodNote] = useState(order.codCallNote ?? "")
   const [tagsInput, setTagsInput] = useState((order.tags ?? "").split(",").filter(Boolean).join(", "))
   const [deliveryData, setDeliveryData] = useState({
-    courier: order.delivery?.courier || "PATHAO",
+    courier: order.delivery?.courier || "STEADFAST",
     consignmentId: order.delivery?.consignmentId || "",
     trackingCode: order.delivery?.trackingCode || "",
   })
@@ -300,8 +300,8 @@ export default function OrderDetailsClient({
                     onChange={e => setDeliveryData({...deliveryData, courier: e.target.value})}
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="PATHAO">Pathao</option>
                     <option value="STEADFAST">Steadfast</option>
+                    <option value="PATHAO">Pathao</option>
                     <option value="REDX">RedX</option>
                     <option value="PAPERFLY">Paperfly</option>
                     <option value="SELF">Self Delivery</option>
