@@ -31,7 +31,27 @@ export default async function ProductsPage({
           ],
         }
       : {}),
-    ...(status === "active" ? { isActive: true } : status === "inactive" ? { isActive: false } : {}),
+    ...(status === "active"
+      ? { isActive: true }
+      : status === "inactive"
+      ? { isActive: false }
+      : status === "low_stock"
+      ? {
+          variants: {
+            some: {
+              stock: { lte: 5, gt: 0 },
+            },
+          },
+        }
+      : status === "out_of_stock"
+      ? {
+          variants: {
+            every: {
+              stock: { lte: 0 },
+            },
+          },
+        }
+      : {}),
   }
 
   const [products, total] = await Promise.all([

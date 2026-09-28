@@ -9,6 +9,8 @@ const STATUS_PILLS = [
   { value: "", label: "All Products" },
   { value: "active", label: "Active" },
   { value: "inactive", label: "Draft / Inactive" },
+  { value: "low_stock", label: "⚠️ Low Stock (≤ 5)" },
+  { value: "out_of_stock", label: "🚨 Out of Stock (0)" },
 ]
 
 export default function ProductsFilters({
@@ -27,7 +29,7 @@ export default function ProductsFilters({
       if (value) params.set(key, value)
       else params.delete(key)
       params.delete("page")
-      router.push(`/admin/products?${params.toString()}`)
+      router.push(`/admin/products?${params.toString()}`, { scroll: false })
     },
     [router, searchParams]
   )

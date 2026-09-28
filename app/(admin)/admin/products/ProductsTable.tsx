@@ -17,15 +17,19 @@ import {
   Layers,
   Sparkles,
   AlertTriangle,
+  ShoppingCart,
+  Plus,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import QuickPOModal from "@/components/admin/QuickPOModal"
 
 interface VariantRowProps {
   productId: string
   productBasePrice: number
   variant: any
   onVariantUpdated: (updatedVariant: any) => void
+  onOpenPO: (variantId: string) => void
 }
 
 function VariantQuickEditorRow({
@@ -33,6 +37,7 @@ function VariantQuickEditorRow({
   productBasePrice,
   variant,
   onVariantUpdated,
+  onOpenPO,
 }: VariantRowProps) {
   const [stock, setStock] = useState<number>(variant.stock ?? 0)
   const [price, setPrice] = useState<string>(
@@ -100,11 +105,11 @@ function VariantQuickEditorRow({
             {variant.color || "Default"}
           </span>
           {stock === 0 ? (
-            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
               Out of stock
             </span>
           ) : stock <= 5 ? (
-            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
               Low stock ({stock})
             </span>
           ) : null}
@@ -200,9 +205,21 @@ function VariantQuickEditorRow({
         </div>
       </td>
 
-      {/* Status indicator */}
+      {/* Status indicator & PO action */}
       <td className="py-2.5 pr-6 text-right">
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end gap-2">
+          {stock <= 5 && (
+            <button
+              type="button"
+              onClick={() => onOpenPO(variant.id)}
+              className="px-2 py-1 rounded-md text-[10px] font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-colors shadow-2xs flex items-center gap-1 cursor-pointer"
+              title="Create Restock PO for this variant"
+            >
+              <ShoppingCart className="w-2.5 h-2.5" />
+              <span>PO</span>
+            </button>
+          )}
+
           {saving ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-400" />
           ) : justSaved ? (
@@ -224,6 +241,10 @@ export default function ProductsTable({ products: initialProducts }: { products:
   const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
+
+  // Quick PO Modal state
+  const [poModalProduct, setPoModalProduct] = useState<any | null>(null)
+  const [poModalVariantId, setPoModalVariantId] = useState<string | undefined>(undefined)
 
   const toggleExpand = (productId: string) => {
     setExpandedProductIds((prev) => {
@@ -296,6 +317,11 @@ export default function ProductsTable({ products: initialProducts }: { products:
     toast.success(`Variant ${updatedVariant.size}/${updatedVariant.color} saved!`)
   }
 
+  const handleOpenPO = (product: any, variantId?: string) => {
+    setPoModalProduct(product)
+    setPoModalVariantId(variantId)
+  }
+
   if (products.length === 0) {
     return (
       <TableBody>
@@ -309,218 +335,247 @@ export default function ProductsTable({ products: initialProducts }: { products:
   }
 
   return (
-    <TableBody>
-      {products.map((product: any) => {
-        const totalStock = product.variants?.reduce((acc: number, v: any) => acc + (v.stock || 0), 0) ?? 0
-        const isToggling = toggling === product.id
-        const isExpanded = expandedProductIds.has(product.id)
-        const imgUrl = product.images?.[0]?.url || "/placeholder.png"
-        const variantCount = product.variants?.length || 0
+    <>
+      <TableBody>
+        {products.map((product: any) => {
+          const totalStock = product.variants?.reduce((acc: number, v: any) => acc + (v.stock || 0), 0) ?? 0
+          const isToggling = toggling === product.id
+          const isExpanded = expandedProductIds.has(product.id)
+          const imgUrl = product.images?.[0]?.url || "/placeholder.png"
+          const variantCount = product.variants?.length || 0
+          const isLowStock = totalStock <= 5
 
-        return (
-          <>
-            <TableRow
-              key={product.id}
-              className={cn(
-                "text-xs transition-colors hover:bg-zinc-50/80 group",
-                isExpanded && "bg-zinc-50/60 border-b-0"
-              )}
-            >
-              {/* Product Info + Variant expander */}
-              <TableCell className="py-3 pl-4">
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(product.id)}
-                    className={cn(
-                      "p-1.5 rounded-lg border text-zinc-500 hover:text-zinc-900 transition-all cursor-pointer shrink-0 shadow-2xs",
-                      isExpanded
-                        ? "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800 hover:text-white"
-                        : "bg-white border-zinc-200 hover:bg-zinc-100"
-                    )}
-                    title={isExpanded ? "Collapse variants" : "Quick edit variants stock & prices"}
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-
-                  <img
-                    src={imgUrl}
-                    alt={product.name}
-                    className="w-11 h-11 rounded-lg object-cover bg-zinc-100 border border-zinc-200 shrink-0 shadow-2xs"
-                  />
-                  <div className="min-w-0">
-                    <Link
-                      href={`/admin/products/${product.id}`}
-                      className="font-bold text-zinc-900 group-hover:text-amber-600 transition-colors truncate block"
-                    >
-                      {product.name}
-                    </Link>
-                    <p className="text-[11px] text-zinc-400 font-mono mt-0.5 truncate">
-                      /{product.slug}
-                    </p>
-                  </div>
-                </div>
-              </TableCell>
-
-              {/* Category */}
-              <TableCell className="text-zinc-600 font-medium">
-                {product.category?.name || "Uncategorized"}
-              </TableCell>
-
-              {/* Base Retail Price */}
-              <TableCell className="font-mono font-bold text-zinc-900">
-                ৳{Number(product.price).toLocaleString()}
-                {product.comparePrice && Number(product.comparePrice) > Number(product.price) && (
-                  <span className="text-[10px] text-zinc-400 line-through block font-normal">
-                    ৳{Number(product.comparePrice).toLocaleString()}
-                  </span>
+          return (
+            <>
+              <TableRow
+                key={product.id}
+                className={cn(
+                  "text-xs transition-colors hover:bg-zinc-50/80 group",
+                  isExpanded && "bg-zinc-50/60 border-b-0"
                 )}
-              </TableCell>
-
-              {/* Stock Levels & Expand Pill */}
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleExpand(product.id)}
-                    className={cn(
-                      "font-mono font-bold text-xs px-2.5 py-1 rounded-full border flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer",
-                      totalStock === 0
-                        ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
-                        : totalStock <= 5
-                        ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-                        : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                    )}
-                  >
-                    <span>{totalStock} in stock</span>
-                    <span className="text-[10px] text-zinc-400">({variantCount} var)</span>
-                  </button>
-                </div>
-              </TableCell>
-
-              {/* Status Toggle */}
-              <TableCell>
-                <button
-                  type="button"
-                  disabled={isToggling}
-                  onClick={() => handleToggleActive(product.id, product.isActive, product.name)}
-                  title="Click to toggle status"
-                  className={cn(
-                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs",
-                    product.isActive
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                      : "bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200"
-                  )}
-                >
-                  {isToggling ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <span
+              >
+                {/* Product Info + Variant expander */}
+                <TableCell className="py-3 pl-4">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(product.id)}
                       className={cn(
-                        "w-1.5 h-1.5 rounded-full",
-                        product.isActive ? "bg-emerald-500" : "bg-zinc-400"
+                        "p-1.5 rounded-lg border text-zinc-500 hover:text-zinc-900 transition-all cursor-pointer shrink-0 shadow-2xs",
+                        isExpanded
+                          ? "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800 hover:text-white"
+                          : "bg-white border-zinc-200 hover:bg-zinc-100"
                       )}
+                      title={isExpanded ? "Collapse variants" : "Quick edit variants stock & prices"}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+
+                    <img
+                      src={imgUrl}
+                      alt={product.name}
+                      className="w-11 h-11 rounded-lg object-cover bg-zinc-100 border border-zinc-200 shrink-0 shadow-2xs"
                     />
-                  )}
-                  <span>{product.isActive ? "Active" : "Draft"}</span>
-                </button>
-              </TableCell>
-
-              {/* Actions */}
-              <TableCell className="text-right pr-4">
-                <div className="flex items-center justify-end gap-1">
-                  <Link href={`/shop/${product.slug}`} target="_blank" title="View in storefront">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                  <Link href={`/admin/products/${product.id}`} title="Edit Full Product Page">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg"
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(product.id, product.name)}
-                    disabled={deleting === product.id}
-                    title="Delete Product"
-                    className="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-
-            {/* EXPANDABLE INLINE QUICK VARIANT EDITOR */}
-            {isExpanded && (
-              <tr key={`${product.id}-variants-expansion`} className="bg-zinc-50/90 border-b border-zinc-200/80">
-                <td colSpan={6} className="p-0">
-                  <div className="py-3 px-6 space-y-2.5">
-                    <div className="flex items-center justify-between pb-1 border-b border-zinc-200/60">
-                      <div className="flex items-center gap-2">
-                        <Layers className="w-3.5 h-3.5 text-zinc-500" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">
-                          Variant Stock & Price Quick-Editor
-                        </span>
-                        <span className="text-[10px] text-zinc-400">
-                          (Edits auto-save on blur / Enter)
-                        </span>
-                      </div>
+                    <div className="min-w-0">
                       <Link
-                        href={`/admin/products/${product.id}#variants`}
-                        className="text-[11px] font-semibold text-amber-600 hover:underline"
+                        href={`/admin/products/${product.id}`}
+                        className="font-bold text-zinc-900 group-hover:text-amber-600 transition-colors truncate block"
                       >
-                        Manage variant sizes/colors in full editor →
+                        {product.name}
                       </Link>
-                    </div>
-
-                    <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-2xs">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="border-b border-zinc-100 bg-zinc-50/60 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                            <th className="py-2 pl-6 pr-3">Size & Color</th>
-                            <th className="py-2 px-3">SKU</th>
-                            <th className="py-2 px-3">Cost Price (৳)</th>
-                            <th className="py-2 px-3">Retail Price (৳)</th>
-                            <th className="py-2 px-3">Gross Margin</th>
-                            <th className="py-2 px-3">Stock Units</th>
-                            <th className="py-2 pr-6 text-right">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-100">
-                          {product.variants?.map((v: any) => (
-                            <VariantQuickEditorRow
-                              key={v.id}
-                              productId={product.id}
-                              productBasePrice={Number(product.price)}
-                              variant={v}
-                              onVariantUpdated={(updated) => handleVariantUpdated(product.id, updated)}
-                            />
-                          ))}
-                        </tbody>
-                      </table>
+                      <p className="text-[11px] text-zinc-400 font-mono mt-0.5 truncate">
+                        /{product.slug}
+                      </p>
                     </div>
                   </div>
-                </td>
-              </tr>
-            )}
-          </>
-        )
-      })}
-    </TableBody>
+                </TableCell>
+
+                {/* Category */}
+                <TableCell className="text-zinc-600 font-medium">
+                  {product.category?.name || "Uncategorized"}
+                </TableCell>
+
+                {/* Base Retail Price */}
+                <TableCell className="font-mono font-bold text-zinc-900">
+                  ৳{Number(product.price).toLocaleString()}
+                  {product.comparePrice && Number(product.comparePrice) > Number(product.price) && (
+                    <span className="text-[10px] text-zinc-400 line-through block font-normal">
+                      ৳{Number(product.comparePrice).toLocaleString()}
+                    </span>
+                  )}
+                </TableCell>
+
+                {/* Stock Levels & Expand Pill */}
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleExpand(product.id)}
+                      className={cn(
+                        "font-mono font-bold text-xs px-2.5 py-1 rounded-full border flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer",
+                        totalStock === 0
+                          ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100"
+                          : totalStock <= 5
+                          ? "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                      )}
+                    >
+                      <span>{totalStock} in stock</span>
+                      <span className="text-[10px] text-zinc-400">({variantCount} var)</span>
+                    </button>
+                  </div>
+                </TableCell>
+
+                {/* Status Toggle */}
+                <TableCell>
+                  <button
+                    type="button"
+                    disabled={isToggling}
+                    onClick={() => handleToggleActive(product.id, product.isActive, product.name)}
+                    title="Click to toggle status"
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition-all cursor-pointer shadow-2xs",
+                      product.isActive
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                        : "bg-zinc-100 text-zinc-600 border-zinc-200 hover:bg-zinc-200"
+                    )}
+                  >
+                    {isToggling ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <span
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          product.isActive ? "bg-emerald-500" : "bg-zinc-400"
+                        )}
+                      />
+                    )}
+                    <span>{product.isActive ? "Active" : "Draft"}</span>
+                  </button>
+                </TableCell>
+
+                {/* Actions */}
+                <TableCell className="text-right pr-4">
+                  <div className="flex items-center justify-end gap-1.5">
+                    {isLowStock && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPO(product)}
+                        className="h-8 px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                        title="Quick Restock Purchase Order"
+                      >
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Reorder</span>
+                      </button>
+                    )}
+
+                    <Link href={`/shop/${product.slug}`} target="_blank" title="View in storefront">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                    <Link href={`/admin/products/${product.id}`} title="Edit Full Product Page">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(product.id, product.name)}
+                      disabled={deleting === product.id}
+                      title="Delete Product"
+                      className="h-8 w-8 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+
+              {/* EXPANDABLE INLINE QUICK VARIANT EDITOR */}
+              {isExpanded && (
+                <tr key={`${product.id}-variants-expansion`} className="bg-zinc-50/90 border-b border-zinc-200/80">
+                  <td colSpan={6} className="p-0">
+                    <div className="py-3 px-6 space-y-2.5">
+                      <div className="flex items-center justify-between pb-1 border-b border-zinc-200/60">
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-3.5 h-3.5 text-zinc-500" />
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-700">
+                            Variant Stock & Price Quick-Editor
+                          </span>
+                          <span className="text-[10px] text-zinc-400">
+                            (Edits auto-save on blur / Enter)
+                          </span>
+                        </div>
+                        <Link
+                          href={`/admin/products/${product.id}#variants`}
+                          className="text-[11px] font-semibold text-amber-600 hover:underline"
+                        >
+                          Manage variant sizes/colors in full editor →
+                        </Link>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-zinc-200/80 bg-white shadow-2xs">
+                        <table className="w-full text-left">
+                          <thead>
+                            <tr className="border-b border-zinc-100 bg-zinc-50/60 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                              <th className="py-2 pl-6 pr-3">Size & Color</th>
+                              <th className="py-2 px-3">SKU</th>
+                              <th className="py-2 px-3">Cost Price (৳)</th>
+                              <th className="py-2 px-3">Retail Price (৳)</th>
+                              <th className="py-2 px-3">Gross Margin</th>
+                              <th className="py-2 px-3">Stock Units</th>
+                              <th className="py-2 pr-6 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-zinc-100">
+                            {product.variants?.map((v: any) => (
+                              <VariantQuickEditorRow
+                                key={v.id}
+                                productId={product.id}
+                                productBasePrice={Number(product.price)}
+                                variant={v}
+                                onVariantUpdated={(updated) => handleVariantUpdated(product.id, updated)}
+                                onOpenPO={(variantId) => handleOpenPO(product, variantId)}
+                              />
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </>
+          )
+        })}
+      </TableBody>
+
+      {/* Quick Purchase Order Restock Modal */}
+      {poModalProduct && (
+        <QuickPOModal
+          product={poModalProduct}
+          initialVariantId={poModalVariantId}
+          isOpen={Boolean(poModalProduct)}
+          onClose={() => {
+            setPoModalProduct(null)
+            setPoModalVariantId(undefined)
+          }}
+        />
+      )}
+    </>
   )
 }
