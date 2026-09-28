@@ -196,7 +196,7 @@ export async function POST(req: Request) {
     if (userId && loyaltyPointsRedeemed > 0) {
       const loyaltyAgg = await prisma.loyaltyPoint.aggregate({ where: { userId }, _sum: { points: true } })
       const balance = loyaltyAgg._sum.points ?? 0
-      const redemptionRate = Number((await prisma.setting.findUnique({ where: { key: "loyalty_redemption_rate" } }))?.value || 100)
+      const redemptionRate = Number((await prisma.setting.findUnique({ where: { key: "points_redemption_rate" } }))?.value || 10)
       const maxDiscount = Math.floor(balance / redemptionRate)
       serverLoyaltyDiscount = Math.min(loyaltyDiscount || 0, maxDiscount)
     }
@@ -319,7 +319,7 @@ export async function POST(req: Request) {
 
     // Deduct loyalty points used
     if (userId && serverLoyaltyDiscount > 0) {
-      const redemptionRate = Number((await prisma.setting.findUnique({ where: { key: "loyalty_redemption_rate" } }))?.value || 100)
+      const redemptionRate = Number((await prisma.setting.findUnique({ where: { key: "points_redemption_rate" } }))?.value || 10)
       const pointsUsed = serverLoyaltyDiscount * redemptionRate
       prisma.loyaltyPoint.create({
         data: { userId, points: -pointsUsed, type: "REDEEMED", description: `Redeemed for order ${order.orderNumber}`, orderId: order.id },

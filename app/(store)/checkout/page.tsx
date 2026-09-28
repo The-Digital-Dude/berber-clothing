@@ -26,7 +26,7 @@ export default async function CheckoutPage({
 
   const [settings, checkoutFields, loyaltyData, creditData] = await Promise.all([
     prisma.setting.findMany({
-      where: { key: { in: ["free_shipping_above", "shipping_charge", "enabled_payment_methods", "tax_enabled", "tax_rate", "tax_label", "gift_wrap_enabled", "gift_wrap_charge", "loyalty_points_per_taka", "loyalty_redemption_rate", "bkash_merchant_number", "nagad_merchant_number"] } },
+      where: { key: { in: ["free_shipping_above", "shipping_charge", "enabled_payment_methods", "tax_enabled", "tax_rate", "tax_label", "gift_wrap_enabled", "gift_wrap_charge", "points_per_taka", "points_redemption_rate", "bkash_merchant_number", "nagad_merchant_number"] } },
     }).catch(() => []),
     prisma.checkoutField.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }).catch(() => []),
     userId ? prisma.loyaltyPoint.aggregate({ where: { userId }, _sum: { points: true } }).catch(() => null) : null,
@@ -57,8 +57,8 @@ export default async function CheckoutPage({
   const giftWrapCharge = Number(map.gift_wrap_charge || 50)
 
   const loyaltyBalance = loyaltyData?._sum?.points ?? 0
-  // 100 points = ৳1 by default (configurable)
-  const loyaltyRedemptionRate = Number(map.loyalty_redemption_rate || 100)
+  // 10 points = ৳1 by default (configurable in Admin > Loyalty)
+  const loyaltyRedemptionRate = Number(map.points_redemption_rate || 10)
   const loyaltyMaxDiscount = Math.floor(loyaltyBalance / loyaltyRedemptionRate)
 
   const storeCreditBalance = Number(creditData?.balance ?? 0)
