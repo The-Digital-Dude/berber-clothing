@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { serialize } from "@/lib/utils"
 import { redirect } from "next/navigation"
+import { auth } from "@/lib/auth"
 import { Check, X, ShoppingBag, MapPin, CreditCard, Gift, Package, Truck, Home, Ban } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -8,6 +9,9 @@ import { getBalance } from "@/lib/loyalty"
 import OrderMessages from "@/components/store/OrderMessages"
 import PostPurchaseUpsell from "@/components/store/PostPurchaseUpsell"
 import PurchaseTracker from "@/components/store/PurchaseTracker"
+import EditOrderItemButton from "@/components/store/EditOrderItemButton"
+
+const EDITABLE_STATUSES = ["PENDING", "CONFIRMED"]
 
 const STATUS_STEPS = ["PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"] as const
 
@@ -36,7 +40,8 @@ export default async function OrderConfirmationPage({
         include: {
           product: {
             include: {
-              images: { orderBy: { sortOrder: 'asc' }, take: 1 }
+              images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+              variants: { select: { id: true, size: true, color: true, stock: true } },
             }
           }
         }
@@ -50,7 +55,11 @@ export default async function OrderConfirmationPage({
   if (!order) {
     redirect("/shop")
   }
-  
+
+  const session = await auth()
+  const canEditItems = !!order.userId && session?.user?.id === order.userId && EDITABLE_STATUSES.includes(order.status)
+  const allItemVariantIds = order.items.map((i) => i.variantId)
+
   let pointsEarned = 0
   let currentBalance = 0
   if (order.userId) {
@@ -154,6 +163,15 @@ export default async function OrderConfirmationPage({
                       <span className="text-xs text-berber-text-muted">Qty: {item.quantity}</span>
                       <span className="font-mono font-bold">৳{(Number(item.price) * item.quantity).toLocaleString()}</span>
                     </div>
+                    {canEditItems && item.product.variants.length > 1 && (
+                      <EditOrderItemButton
+                        orderId={order.id}
+                        itemId={item.id}
+                        currentVariantId={item.variantId}
+                        variants={item.product.variants}
+                        otherItemVariantIds={allItemVariantIds.filter((v) => v !== item.variantId)}
+                      />
+                    )}
                   </div>
                 </div>
               ))}
