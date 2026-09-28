@@ -117,3 +117,21 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAdmin()
+  if (error) return error
+  const { id } = await params
+  try {
+    const body = await req.json()
+    const updated = await prisma.product.update({
+      where: { id },
+      data: body,
+    })
+    revalidatePath("/")
+    revalidatePath("/shop")
+    return NextResponse.json(updated)
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}

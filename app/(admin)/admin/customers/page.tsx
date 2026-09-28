@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import { CustomerClient } from "./CustomerClient"
+import { Users, UserPlus } from "lucide-react"
 
 export default async function CustomersPage({
   searchParams,
@@ -13,6 +14,7 @@ export default async function CustomersPage({
         OR: [
           { name: { contains: search, mode: "insensitive" as const } },
           { email: { contains: search, mode: "insensitive" as const } },
+          { phone: { contains: search } },
         ],
       }
     : {}
@@ -111,16 +113,26 @@ export default async function CustomersPage({
   )
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5 max-w-7xl mx-auto pb-10">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {registeredCustomers.length} registered · {guestCustomers.length} guests
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Customers</h1>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
+              {registeredCustomers.length} registered · {guestCustomers.length} guests
+            </span>
+          </div>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Manage customer accounts, lifetime value, and order history
           </p>
         </div>
       </div>
-      <CustomerClient data={customers} />
+
+      {/* Table Container */}
+      <div className="rounded-2xl border border-zinc-200/90 bg-white shadow-2xs overflow-hidden">
+        <CustomerClient data={customers} />
+      </div>
     </div>
   )
 }
