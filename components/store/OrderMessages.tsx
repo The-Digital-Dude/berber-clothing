@@ -18,7 +18,7 @@ export default function OrderMessages({ orderId, isAdmin = false }: { orderId: s
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   const apiBase = isAdmin ? `/api/admin/orders/${orderId}/messages` : `/api/orders/${orderId}/messages`
 
@@ -40,7 +40,9 @@ export default function OrderMessages({ orderId, isAdmin = false }: { orderId: s
   }, [apiBase])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+    }
   }, [messages])
 
   async function send() {
@@ -86,7 +88,7 @@ export default function OrderMessages({ orderId, isAdmin = false }: { orderId: s
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-transparent to-berber-muted/20">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-transparent to-berber-muted/20">
         {loading && messages.length === 0 && (
           <div className="flex items-center justify-center h-full text-xs text-berber-text-muted">
             Loading messages…
@@ -143,7 +145,6 @@ export default function OrderMessages({ orderId, isAdmin = false }: { orderId: s
             </div>
           )
         })}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input Composer */}

@@ -1,25 +1,67 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Printer, AlertTriangle, ShieldCheck, MessageCircle, Check, RefreshCw, Truck, Edit, Package } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
+import {
+  Printer,
+  AlertTriangle,
+  ShieldCheck,
+  MessageCircle,
+  Check,
+  RefreshCw,
+  Truck,
+  Edit,
+  Package,
+  ArrowLeft,
+  Phone,
+  User,
+  Clock,
+  ExternalLink,
+  Copy,
+  CreditCard,
+  Tag,
+  FileText,
+  Send,
+  Sparkles,
+  ChevronRight,
+  HelpCircle,
+} from "lucide-react"
 import { toast } from "sonner"
 import type { CustomerRisk } from "@/lib/customerRisk"
 import OrderItemsEditorModal from "@/components/admin/OrderItemsEditorModal"
+import OrderMessages from "@/components/store/OrderMessages"
+import { cn } from "@/lib/utils"
 
 const RISK_BADGE_CLASS: Record<string, string> = {
-  LOW: "bg-green-100 text-green-800 border-green-200",
-  MEDIUM: "bg-yellow-100 text-yellow-800 border-yellow-200",
-  HIGH: "bg-red-100 text-red-800 border-red-200",
+  LOW: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+  MEDIUM: "bg-amber-50 text-amber-700 border-amber-200/80",
+  HIGH: "bg-rose-50 text-rose-700 border-rose-200/80",
+  NEW: "bg-zinc-100 text-zinc-600 border-zinc-200",
+}
+
+const STATUS_BADGE_CLASS: Record<string, string> = {
+  PENDING: "bg-amber-50 text-amber-700 border-amber-200",
+  CONFIRMED: "bg-blue-50 text-blue-700 border-blue-200",
+  PACKED: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  SHIPPED: "bg-purple-50 text-purple-700 border-purple-200",
+  DELIVERED: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  CANCELLED: "bg-rose-50 text-rose-700 border-rose-200",
+  RETURNED: "bg-zinc-100 text-zinc-700 border-zinc-200",
+}
+
+const PAYMENT_STATUS_BADGE: Record<string, string> = {
+  PAID: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  PARTIAL: "bg-amber-50 text-amber-700 border-amber-200",
+  UNPAID: "bg-zinc-100 text-zinc-600 border-zinc-200",
+  PENDING_VERIFICATION: "bg-sky-50 text-sky-700 border-sky-200",
+  REFUNDED: "bg-rose-50 text-rose-700 border-rose-200",
 }
 
 const STEPPER_STAGES = ["PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"] as const
 const EXCEPTION_STATUSES = ["CANCELLED", "RETURNED"]
 
-function OrderStepper({
+function ModernOrderStepper({
   status,
   loading,
   onAdvance,
@@ -34,58 +76,83 @@ function OrderStepper({
   const currentIndex = STEPPER_STAGES.indexOf(status as any)
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center">
+    <div className="space-y-4">
+      {/* Progress Track */}
+      <div className="relative flex items-center justify-between">
         {STEPPER_STAGES.map((stage, i) => {
-          const done = !isException && i < currentIndex
-          const active = !isException && i === currentIndex
-          const clickable = !isException && !loading && i === currentIndex + 1
+          const isDone = !isException && i < currentIndex
+          const isActive = !isException && i === currentIndex
+          const isNext = !isException && !loading && i === currentIndex + 1
+
           return (
             <div key={stage} className="flex items-center flex-1 last:flex-none">
               <button
                 type="button"
-                disabled={!clickable}
-                onClick={() => clickable && onAdvance(stage)}
-                title={clickable ? `Mark as ${stage}` : stage}
-                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-xs font-bold shrink-0 transition-colors ${
-                  done
-                    ? "bg-green-600 border-green-600 text-white"
-                    : active
-                    ? "bg-indigo-600 border-indigo-600 text-white"
-                    : clickable
-                    ? "border-indigo-300 text-indigo-600 hover:bg-indigo-50 cursor-pointer"
-                    : "border-muted text-muted-foreground"
-                }`}
+                disabled={!isNext}
+                onClick={() => isNext && onAdvance(stage)}
+                title={isNext ? `Advance to ${stage}` : stage}
+                className={cn(
+                  "relative z-10 flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0 transition-all",
+                  isDone && "bg-emerald-600 text-white shadow-2xs hover:bg-emerald-700",
+                  isActive && "bg-zinc-950 text-white ring-4 ring-zinc-100 shadow-xs",
+                  isNext && "border-2 border-dashed border-zinc-400 text-zinc-700 hover:border-zinc-950 hover:bg-zinc-100 cursor-pointer animate-pulse",
+                  !isDone && !isActive && !isNext && "border border-zinc-200 bg-zinc-50 text-zinc-400 cursor-default"
+                )}
               >
-                {done ? <Check className="w-4 h-4" /> : i + 1}
+                {isDone ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : i + 1}
               </button>
               {i < STEPPER_STAGES.length - 1 && (
-                <div className={`h-0.5 flex-1 ${done ? "bg-green-600" : "bg-muted"}`} />
+                <div
+                  className={cn(
+                    "h-1 flex-1 transition-all mx-1.5 rounded-full",
+                    isDone ? "bg-emerald-600" : "bg-zinc-100"
+                  )}
+                />
               )}
             </div>
           )
         })}
       </div>
-      <div className="flex justify-between text-[10px] uppercase tracking-wide text-muted-foreground font-medium px-1">
+
+      {/* Stage Labels */}
+      <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-0.5">
         {STEPPER_STAGES.map((stage) => (
-          <span key={stage} className={stage === status ? "text-foreground font-bold" : ""}>{stage}</span>
+          <span
+            key={stage}
+            className={cn(
+              stage === status ? "text-zinc-950 font-extrabold" : "text-zinc-400"
+            )}
+          >
+            {stage}
+          </span>
         ))}
       </div>
-      <div className="flex items-center justify-between pt-1">
+
+      {/* Action Footer */}
+      <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
         {isException ? (
-          <Badge variant="destructive">{status}</Badge>
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+            Status: {status}
+          </span>
         ) : (
-          <span className="text-xs text-muted-foreground">Click the next circle to advance the order.</span>
+          <span className="text-[11px] text-zinc-500">
+            {currentIndex < STEPPER_STAGES.length - 1 ? (
+              <>Click <strong className="text-zinc-800">{STEPPER_STAGES[currentIndex + 1]}</strong> to advance.</>
+            ) : (
+              <span className="text-emerald-700 font-semibold">Order fulfillment completed</span>
+            )}
+          </span>
         )}
+
         <select
           value={isException ? status : ""}
           onChange={(e) => e.target.value && onSetException(e.target.value)}
           disabled={loading}
-          className="h-7 text-xs rounded-md border border-input bg-transparent px-2 focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-7 text-xs rounded-lg border border-zinc-200 bg-zinc-50/60 px-2 font-medium text-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-400"
         >
-          <option value="">Cancel / Return…</option>
-          <option value="CANCELLED">Cancelled</option>
-          <option value="RETURNED">Returned</option>
+          <option value="">Exception / Return…</option>
+          <option value="CANCELLED">Mark Cancelled</option>
+          <option value="RETURNED">Mark Returned</option>
         </select>
       </div>
     </div>
@@ -106,59 +173,75 @@ export default function OrderDetailsClient({
   const [codNote, setCodNote] = useState(order.codCallNote ?? "")
   const [tagsInput, setTagsInput] = useState((order.tags ?? "").split(",").filter(Boolean).join(", "))
   const [isEditingItems, setIsEditingItems] = useState(false)
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<"items" | "fulfillment" | "messages">("items")
   const [deliveryData, setDeliveryData] = useState({
     courier: order.delivery?.courier || "STEADFAST",
     consignmentId: order.delivery?.consignmentId || "",
     trackingCode: order.delivery?.trackingCode || "",
   })
 
+  // Copy helper
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text)
+    toast.success(`Copied ${label} to clipboard!`)
+  }
+
+  // Status update
   const updateStatus = async (status: string) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/orders/${order.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status }),
       })
       if (res.ok) {
         const updated = await res.json()
         setOrder({ ...order, status: updated.status })
         if (updated.waLink) setPendingWaLink(updated.waLink)
+        toast.success(`Order status updated to ${status}`)
         router.refresh()
+      } else {
+        toast.error("Failed to update order status")
       }
     } finally {
       setLoading(false)
     }
   }
 
+  // Payment status update
   const updatePaymentStatus = async (paymentStatus: string) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/orders/${order.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentStatus })
+        body: JSON.stringify({ paymentStatus }),
       })
       if (res.ok) {
         const updated = await res.json()
         setOrder({ ...order, paymentStatus: updated.paymentStatus })
+        toast.success(`Payment status set to ${paymentStatus}`)
         router.refresh()
+      } else {
+        toast.error("Failed to update payment status")
       }
     } finally {
       setLoading(false)
     }
   }
 
+  // Delivery update
   const saveDelivery = async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/orders/${order.id}/delivery`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(deliveryData)
+        body: JSON.stringify(deliveryData),
       })
       if (res.ok) {
-        toast.success("Delivery information saved")
+        toast.success("Delivery information saved successfully")
         router.refresh()
       } else {
         toast.error("Failed to save delivery info")
@@ -168,6 +251,7 @@ export default function OrderDetailsClient({
     }
   }
 
+  // Dispatch courier
   const dispatchToCourier = async () => {
     setLoading(true)
     try {
@@ -185,7 +269,7 @@ export default function OrderDetailsClient({
           consignmentId: String(consignment.consignmentId ?? consignment.consignment_id ?? ""),
           trackingCode: consignment.trackingCode ?? consignment.tracking_code ?? "",
         })
-        toast.success(`Parcel created with ${isSteadfast ? "Steadfast" : "Pathao"}`)
+        toast.success(`Parcel created successfully with ${isSteadfast ? "Steadfast" : "Pathao"}`)
         router.refresh()
       } else {
         toast.error(data.error || "Failed to create parcel")
@@ -195,6 +279,7 @@ export default function OrderDetailsClient({
     }
   }
 
+  // Refresh tracking
   const refreshCourierTracking = async () => {
     setLoading(true)
     try {
@@ -205,7 +290,7 @@ export default function OrderDetailsClient({
       const res = await fetch(url)
       const data = await res.json()
       if (res.ok) {
-        toast.success(`Latest status: ${data.internalStatus ?? data.status}`)
+        toast.success(`Courier status: ${data.internalStatus ?? data.status}`)
         router.refresh()
       } else {
         toast.error(data.error || "Failed to refresh tracking")
@@ -215,381 +300,633 @@ export default function OrderDetailsClient({
     }
   }
 
+  // WhatsApp verification message generator
   const verifyCodViaWhatsApp = () => {
     const itemSummary = order.items
-      .map((item: any) => `- ${item.productName} (${item.size}/${item.color}) x${item.quantity}`)
+      .map((item: any) => `• ${item.productName} (${item.size}/${item.color}) x${item.quantity}`)
       .join("\n")
     const address = `${order.shippingAddress}, ${order.shippingArea}, ${order.shippingDistrict}, ${order.shippingDivision}`
     const message =
-      `Hi ${order.shippingName}, this is Berber calling to confirm your Cash on Delivery order *#${order.orderNumber}*:\n\n` +
+      `Hi ${order.shippingName}, this is Berber Clothing calling to confirm your Cash on Delivery order *#${order.orderNumber}*:\n\n` +
       `${itemSummary}\n\n` +
-      `Total due on delivery: ৳${order.total}\n` +
-      `Delivery address: ${address}\n\n` +
-      `Can you confirm this order and address so we can dispatch it? Thank you!`
+      `💵 Total due on delivery: ৳${order.total.toLocaleString()}\n` +
+      `📍 Delivery address: ${address}\n\n` +
+      `Can you please reply to confirm this order so our team can pack and dispatch your parcel today? Thank you!`
     const phone = order.shippingPhone.replace(/\D/g, "").replace(/^0/, "880")
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer")
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Order {order.orderNumber}</h1>
-          <p className="text-muted-foreground">Placed on {new Date(order.createdAt).toLocaleString()}</p>
+    <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">
+      {/* Top Breadcrumb & Action Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white border border-zinc-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/orders"
+            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors border border-zinc-200/70 shrink-0"
+            title="Back to Orders"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-900 font-mono">
+                {order.orderNumber}
+              </h1>
+              <span
+                className={cn(
+                  "px-2.5 py-0.5 rounded-full text-xs font-bold border",
+                  STATUS_BADGE_CLASS[order.status] || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                )}
+              >
+                {order.status}
+              </span>
+              <span
+                className={cn(
+                  "px-2.5 py-0.5 rounded-full text-xs font-bold border",
+                  PAYMENT_STATUS_BADGE[order.paymentStatus] || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                )}
+              >
+                {order.paymentStatus}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-400 mt-1 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Placed {new Date(order.createdAt).toLocaleDateString()} at {new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <a href={`/order/${order.id}/invoice`} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" className="gap-2">
-              <Printer className="h-4 w-4" /> Invoice
-            </Button>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <a
+            href={`/order/${order.id}/invoice`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors shadow-2xs"
+          >
+            <Printer className="w-3.5 h-3.5 text-zinc-500" />
+            <span>Invoice</span>
           </a>
-          <a href={`/print/orders/${order.id}/packing-slip`} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" className="gap-2">
-              <Printer className="h-4 w-4" /> Packing Slip
-            </Button>
+          <a
+            href={`/print/orders/${order.id}/packing-slip`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors shadow-2xs"
+          >
+            <FileText className="w-3.5 h-3.5 text-zinc-500" />
+            <span>Packing Slip</span>
           </a>
+          {!["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status) && (
+            <button
+              onClick={() => setIsEditingItems(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200/90 text-xs font-bold text-amber-800 hover:bg-amber-100 transition-colors shadow-2xs"
+            >
+              <Edit className="w-3.5 h-3.5 text-amber-600" />
+              <span>Edit Items & Variants</span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Order Items</CardTitle>
-              {!["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status) ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsEditingItems(true)}
-                  className="h-8 px-2.5 text-xs font-semibold text-amber-700 bg-amber-50/60 border-amber-200 hover:bg-amber-100 hover:text-amber-800 gap-1.5 shadow-2xs"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                  <span>Edit Items & Variants</span>
-                </Button>
-              ) : (
-                <span className="text-[11px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded">
-                  Items locked ({order.status})
-                </span>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {order.items.map((item: any) => (
-                  <div key={item.id} className="flex justify-between items-center border-b pb-4 last:border-0 last:pb-0">
-                    <div>
-                      <p className="font-medium">{item.productName}</p>
-                      <p className="text-sm text-muted-foreground">Size: {item.size} | Color: {item.color}</p>
-                    </div>
-                    <div className="text-right">
-                      <p>৳{item.price.toString()} x {item.quantity}</p>
-                      <p className="font-bold">৳{(item.price * item.quantity).toString()}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 pt-4 border-t space-y-2 text-right">
-                <div className="flex justify-between"><span className="text-muted-foreground">Subtotal:</span> <span>৳{order.subtotal.toString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Shipping:</span> <span>৳{order.shippingCharge.toString()}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Discount:</span> <span>-৳{order.discount.toString()}</span></div>
-                <div className="flex justify-between font-bold text-lg"><span>Total:</span> <span>৳{order.total.toString()}</span></div>
-                {Number(order.depositAmount) > 0 && (
-                  <div className={`flex justify-between text-sm ${order.depositPaid ? "text-green-700" : "text-orange-700"}`}>
-                    <span>{order.depositPaid ? "Advance paid (bKash)" : "Advance payment pending"}:</span>
-                    <span>৳{order.depositAmount.toString()}</span>
-                  </div>
-                )}
-                {order.depositPaid && (
-                  <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Due on delivery (cash):</span>
-                    <span>৳{(Number(order.total) - Number(order.depositAmount)).toLocaleString()}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+      {/* Manual WhatsApp Notification Banner if triggered */}
+      {pendingWaLink && (
+        <div className="flex items-center justify-between gap-3 p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl text-xs sm:text-sm text-emerald-900 shadow-2xs animate-in fade-in slide-in-from-top-2">
+          <span className="font-semibold flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            Customer notification link generated — click to send on WhatsApp:
+          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href={pendingWaLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors shadow-xs"
+            >
+              Open WhatsApp
+            </a>
+            <button
+              onClick={() => setPendingWaLink(null)}
+              className="px-2 py-1 text-emerald-700 text-xs hover:underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
-          <Card>
-            <CardHeader><CardTitle>Delivery Information</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Courier</label>
-                  <select 
-                    value={deliveryData.courier} 
-                    onChange={e => setDeliveryData({...deliveryData, courier: e.target.value})}
-                    className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+      {/* Main Grid: 8 cols Workspace + 4 cols Sticky Intelligence Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left 8-col Operations Workspace */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Workspace Navigation Tabs */}
+          <div className="flex items-center gap-2 border-b border-zinc-200 pb-1">
+            <button
+              onClick={() => setActiveWorkspaceTab("items")}
+              className={cn(
+                "px-3.5 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5",
+                activeWorkspaceTab === "items"
+                  ? "bg-zinc-900 text-white shadow-2xs"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              <Package className="w-3.5 h-3.5" />
+              <span>Ordered Items ({order.items?.length || 0})</span>
+            </button>
+            <button
+              onClick={() => setActiveWorkspaceTab("fulfillment")}
+              className={cn(
+                "px-3.5 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5",
+                activeWorkspaceTab === "fulfillment"
+                  ? "bg-zinc-900 text-white shadow-2xs"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              <Truck className="w-3.5 h-3.5" />
+              <span>Logistics & Courier ({deliveryData.courier})</span>
+            </button>
+            <button
+              onClick={() => setActiveWorkspaceTab("messages")}
+              className={cn(
+                "px-3.5 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5",
+                activeWorkspaceTab === "messages"
+                  ? "bg-zinc-900 text-white shadow-2xs"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              )}
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Customer Thread</span>
+            </button>
+          </div>
+
+          {/* TAB 1: ORDERED ITEMS & FINANCIAL SUMMARY */}
+          {activeWorkspaceTab === "items" && (
+            <div className="bg-white border border-zinc-200/80 rounded-2xl overflow-hidden shadow-2xs">
+              <div className="p-5 border-b border-zinc-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-bold text-zinc-900">Line Items & Cart Breakdown</h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">Ordered products, size/color variants and price ledger</p>
+                </div>
+                {!["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status) && (
+                  <button
+                    onClick={() => setIsEditingItems(true)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-colors shadow-2xs"
                   >
-                    <option value="STEADFAST">Steadfast</option>
-                    <option value="PATHAO">Pathao</option>
-                    <option value="REDX">RedX</option>
+                    <Edit className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Swap / Modify Items</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Items List */}
+              <div className="divide-y divide-zinc-100 p-5 space-y-4">
+                {order.items?.map((item: any) => {
+                  const img = item.product?.images?.[0]?.url || item.image
+                  return (
+                    <div key={item.id} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        {img ? (
+                          <img
+                            src={img}
+                            alt={item.productName}
+                            className="w-13 h-13 rounded-xl object-cover bg-zinc-50 border border-zinc-200 shrink-0 shadow-2xs"
+                          />
+                        ) : (
+                          <div className="w-13 h-13 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-400 shrink-0">
+                            <Package className="w-6 h-6" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-zinc-900 text-sm truncate">{item.productName}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 text-[11px] font-semibold font-mono">
+                              Size: {item.size || "Standard"}
+                            </span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 text-[11px] font-semibold font-mono">
+                              Color: {item.color || "Default"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <p className="text-xs text-zinc-500 font-mono">
+                          ৳{Number(item.price).toLocaleString()} × {item.quantity}
+                        </p>
+                        <p className="text-sm font-extrabold text-zinc-900 font-mono mt-0.5">
+                          ৳{(Number(item.price) * Number(item.quantity)).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Order Financials Ledger */}
+              <div className="bg-zinc-50/70 border-t border-zinc-200/80 p-5 space-y-2.5 text-xs">
+                <div className="flex justify-between text-zinc-600 font-medium">
+                  <span>Subtotal:</span>
+                  <span className="font-mono font-bold text-zinc-800">৳{Number(order.subtotal).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-zinc-600 font-medium">
+                  <span>Delivery Charge:</span>
+                  <span className="font-mono font-bold text-zinc-800">+৳{Number(order.shippingCharge).toLocaleString()}</span>
+                </div>
+                {Number(order.discount) > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-medium">
+                    <span>Discount / Promo:</span>
+                    <span className="font-mono font-bold">-৳{Number(order.discount).toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center text-sm font-black text-zinc-900 pt-2 border-t border-zinc-200">
+                  <span>Grand Total:</span>
+                  <span className="font-mono text-base">৳{Number(order.total).toLocaleString()}</span>
+                </div>
+
+                {Number(order.depositAmount) > 0 && (
+                  <div
+                    className={cn(
+                      "flex justify-between items-center p-2.5 rounded-xl border font-semibold text-xs mt-2",
+                      order.depositPaid
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                        : "bg-amber-50 border-amber-200 text-amber-800"
+                    )}
+                  >
+                    <span>{order.depositPaid ? "Advance Paid (bKash)" : "Advance Pending"}:</span>
+                    <span className="font-mono">৳{Number(order.depositAmount).toLocaleString()}</span>
+                  </div>
+                )}
+
+                {order.depositPaid && (
+                  <div className="flex justify-between text-zinc-500 font-medium pt-1">
+                    <span>Cash Due upon Delivery:</span>
+                    <span className="font-mono font-bold text-zinc-900">
+                      ৳{Math.max(0, Number(order.total) - Number(order.depositAmount)).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: LOGISTICS & COURIER DISPATCH */}
+          {activeWorkspaceTab === "fulfillment" && (
+            <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 sm:p-6 space-y-6 shadow-2xs">
+              <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
+                <div>
+                  <h2 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-indigo-600" />
+                    <span>Courier & Parcel Fulfillment Center</span>
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-0.5">Automated Steadfast / Pathao parcel dispatch & tracking</p>
+                </div>
+                {order.delivery?.status && (
+                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Live: {order.delivery.status}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-600">Selected Courier</label>
+                  <select
+                    value={deliveryData.courier}
+                    onChange={(e) => setDeliveryData({ ...deliveryData, courier: e.target.value })}
+                    className="w-full h-10 rounded-xl border border-zinc-300 bg-white px-3 text-xs font-bold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
+                  >
+                    <option value="STEADFAST">Steadfast Courier</option>
+                    <option value="PATHAO">Pathao Courier</option>
+                    <option value="REDX">RedX Delivery</option>
                     <option value="PAPERFLY">Paperfly</option>
                     <option value="SELF">Self Delivery</option>
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Consignment ID</label>
-                  <input
-                    type="text"
-                    value={deliveryData.consignmentId}
-                    onChange={e => setDeliveryData({...deliveryData, consignmentId: e.target.value})}
-                    className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-600">Consignment ID</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      value={deliveryData.consignmentId}
+                      onChange={(e) => setDeliveryData({ ...deliveryData, consignmentId: e.target.value })}
+                      placeholder="e.g. 192837482"
+                      className="w-full h-10 rounded-xl border border-zinc-300 bg-white px-3 pr-9 text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
+                    />
+                    {deliveryData.consignmentId && (
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(deliveryData.consignmentId, "Consignment ID")}
+                        className="absolute right-2.5 text-zinc-400 hover:text-zinc-900"
+                        title="Copy Consignment ID"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2 col-span-2">
-                  <label className="text-sm font-medium">Tracking Code</label>
-                  <input
-                    type="text"
-                    value={deliveryData.trackingCode}
-                    onChange={e => setDeliveryData({...deliveryData, trackingCode: e.target.value})}
-                    className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
+
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-600">Tracking Code / Link</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      value={deliveryData.trackingCode}
+                      onChange={(e) => setDeliveryData({ ...deliveryData, trackingCode: e.target.value })}
+                      placeholder="e.g. STF-8492048 or URL"
+                      className="w-full h-10 rounded-xl border border-zinc-300 bg-white px-3 pr-9 text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
+                    />
+                    {deliveryData.trackingCode && (
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(deliveryData.trackingCode, "Tracking Code")}
+                        className="absolute right-2.5 text-zinc-400 hover:text-zinc-900"
+                        title="Copy Tracking Code"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-              {order.delivery?.status && (
-                <div className="text-xs text-muted-foreground">Last known courier status: <span className="font-medium text-foreground">{order.delivery.status}</span></div>
-              )}
-              {(deliveryData.courier === "PATHAO" || deliveryData.courier === "STEADFAST") && (
-                <div className="flex gap-2">
-                  {!deliveryData.consignmentId ? (
-                    <Button onClick={dispatchToCourier} disabled={loading} variant="outline" className="flex-1 gap-2">
-                      <Truck className="w-4 h-4" /> {loading ? "Creating…" : `Create ${deliveryData.courier === "PATHAO" ? "Pathao" : "Steadfast"} Parcel`}
-                    </Button>
-                  ) : (
-                    <Button onClick={refreshCourierTracking} disabled={loading} variant="outline" className="flex-1 gap-2">
-                      <RefreshCw className="w-4 h-4" /> {loading ? "Refreshing…" : "Refresh Tracking Status"}
-                    </Button>
-                  )}
-                </div>
-              )}
-              <Button onClick={saveDelivery} disabled={loading} className="w-full">
-                {loading ? "Saving..." : "Save Delivery Info"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
 
-        <div className="space-y-6">
-          {pendingWaLink && (
-            <div className="flex items-center justify-between gap-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
-              <span className="text-green-800 font-medium flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" /> WhatsApp not configured — send manually
-              </span>
-              <div className="flex gap-2">
-                <a
-                  href={pendingWaLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition-colors"
-                >
-                  Open WhatsApp
-                </a>
+              {/* Automated Actions */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                {(deliveryData.courier === "PATHAO" || deliveryData.courier === "STEADFAST") && (
+                  <>
+                    {!deliveryData.consignmentId ? (
+                      <button
+                        type="button"
+                        onClick={dispatchToCourier}
+                        disabled={loading}
+                        className="flex-1 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
+                      >
+                        <Truck className="w-4 h-4" />
+                        <span>{loading ? "Creating parcel…" : `Dispatch to ${deliveryData.courier === "PATHAO" ? "Pathao" : "Steadfast"}`}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={refreshCourierTracking}
+                        disabled={loading}
+                        className="flex-1 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                        <span>Refresh Live Tracking</span>
+                      </button>
+                    )}
+                  </>
+                )}
                 <button
-                  onClick={() => setPendingWaLink(null)}
-                  className="px-2 py-1 text-green-700 text-xs hover:underline"
+                  type="button"
+                  onClick={saveDelivery}
+                  disabled={loading}
+                  className="h-10 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-colors shadow-2xs disabled:opacity-50"
                 >
-                  Dismiss
+                  {loading ? "Saving…" : "Save Delivery Info"}
                 </button>
               </div>
             </div>
           )}
-          <Card>
-            <CardHeader><CardTitle>Customer & Shipping</CardTitle></CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div>
-                <p className="font-semibold">{order.shippingName}</p>
-                <div className="flex items-center gap-2">
-                  <p>{order.shippingPhone}</p>
-                  {order.shippingPhone && (
-                    <a
-                      href={`https://wa.me/${order.shippingPhone.replace(/\D/g,"").replace(/^0/,"880")}?text=${encodeURIComponent(`Hi ${order.shippingName}, this is Berber regarding your order #${order.orderNumber}.`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium hover:bg-green-200 transition-colors"
-                    >
-                      <MessageCircle className="w-3 h-3" /> WhatsApp
-                    </a>
+
+          {/* TAB 3: CUSTOMER COMMUNICATION THREAD */}
+          {activeWorkspaceTab === "messages" && (
+            <div className="space-y-4">
+              <OrderMessages orderId={order.id} isAdmin />
+            </div>
+          )}
+        </div>
+
+        {/* Right 4-col Sticky Intelligence Sidebar */}
+        <div className="lg:col-span-4 space-y-5">
+          {/* Card 1: Order Lifecycle Stepper */}
+          <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
+              Fulfillment Progression
+            </h2>
+            <ModernOrderStepper
+              status={order.status}
+              loading={loading}
+              onAdvance={updateStatus}
+              onSetException={updateStatus}
+            />
+          </div>
+
+          {/* Card 2: Customer Profile & Risk Intelligence */}
+          <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
+                Customer & Shipping
+              </h2>
+              {customerRisk && (
+                <span
+                  className={cn(
+                    "px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-wider",
+                    RISK_BADGE_CLASS[customerRisk.riskLevel] || "bg-zinc-100 text-zinc-600 border-zinc-200"
+                  )}
+                >
+                  {customerRisk.riskLevel} Risk
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold shrink-0">
+                  <User className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-extrabold text-zinc-900">{order.shippingName}</p>
+                  <p className="text-zinc-500 font-mono mt-0.5">{order.shippingPhone}</p>
+                  {order.user?.email && (
+                    <p className="text-zinc-400 text-[11px] truncate mt-0.5">{order.user.email}</p>
                   )}
                 </div>
-                <p className="mt-2">{order.shippingAddress}</p>
-                <p>{order.shippingArea}, {order.shippingDistrict}</p>
-                <p>{order.shippingDivision}</p>
               </div>
-              {order.paymentMethod === "COD" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={verifyCodViaWhatsApp}
-                  className="w-full gap-2 border-green-200 text-green-700 hover:bg-green-50"
+
+              {/* Shipping Address Box */}
+              <div className="p-3 bg-zinc-50/80 rounded-xl border border-zinc-200/70 space-y-1 text-zinc-700">
+                <p className="font-semibold text-zinc-900">{order.shippingAddress}</p>
+                <p className="text-[11px] text-zinc-500">
+                  {[order.shippingArea, order.shippingDistrict, order.shippingDivision].filter(Boolean).join(", ")}
+                </p>
+              </div>
+
+              {/* Direct Quick Contact Buttons */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <a
+                  href={`https://wa.me/${order.shippingPhone.replace(/\D/g, "").replace(/^0/, "880")}?text=${encodeURIComponent(`Hi ${order.shippingName}, this is Berber regarding your order #${order.orderNumber}.`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-bold text-xs transition-colors"
                 >
-                  <MessageCircle className="w-4 h-4" /> Verify COD via WhatsApp
-                </Button>
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>WhatsApp</span>
+                </a>
+                <a
+                  href={`tel:${order.shippingPhone}`}
+                  className="flex items-center justify-center gap-1.5 h-8 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 font-bold text-xs transition-colors"
+                >
+                  <Phone className="w-3.5 h-3.5 text-zinc-600" />
+                  <span>Call Direct</span>
+                </a>
+              </div>
+
+              {/* COD WhatsApp Verification Trigger */}
+              {order.paymentMethod === "COD" && (
+                <button
+                  type="button"
+                  onClick={verifyCodViaWhatsApp}
+                  className="w-full h-8.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Verify COD Bill on WhatsApp</span>
+                </button>
               )}
-              {order.note && (
-                <div className="mt-4 p-3 bg-muted rounded-md text-sm">
-                  <strong>Note: </strong> {order.note}
-                </div>
-              )}
+
+              {/* Customer Risk Details */}
               {customerRisk && customerRisk.riskLevel !== "NEW" && (
-                <div className={`mt-4 p-3 rounded-md border text-xs space-y-1 ${RISK_BADGE_CLASS[customerRisk.riskLevel]}`}>
-                  <div className="flex items-center gap-2 font-bold">
+                <div className={cn("p-3 rounded-xl border text-[11px] space-y-1.5", RISK_BADGE_CLASS[customerRisk.riskLevel])}>
+                  <div className="flex items-center gap-1.5 font-bold">
                     {customerRisk.riskLevel === "HIGH" ? (
-                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                     ) : (
-                      <ShieldCheck className="h-4 w-4" />
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                     )}
-                    {customerRisk.riskLevel} risk customer
+                    <span>{customerRisk.riskLevel} Return Risk Warning</span>
                   </div>
                   <p>
-                    {customerRisk.delivered} delivered / {customerRisk.returnedOrCancelled} returned or cancelled
-                    {" "}({Math.round((customerRisk.successRate ?? 0) * 100)}% success rate, {customerRisk.totalOrders} total orders)
+                    <strong>{customerRisk.delivered}</strong> delivered vs <strong>{customerRisk.returnedOrCancelled}</strong> cancelled/returned ({Math.round((customerRisk.successRate ?? 0) * 100)}% delivery success).
                   </p>
-                  {customerRisk.riskLevel === "HIGH" && (
-                    <p className="font-medium">Consider requiring an advance payment before confirming.</p>
-                  )}
                 </div>
               )}
-              {customerRisk && customerRisk.riskLevel === "NEW" && customerRisk.totalOrders <= 1 && (
-                <div className="mt-4 p-3 rounded-md border bg-muted text-xs text-muted-foreground">
-                  First order from this phone number — no delivery history yet.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader><CardTitle>Status Management</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Order Status</label>
-                <OrderStepper
-                  status={order.status}
-                  loading={loading}
-                  onAdvance={updateStatus}
-                  onSetException={updateStatus}
-                />
-              </div>
+          {/* Card 3: Payment Management & Notes */}
+          <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
+              Payment & Operations
+            </h2>
 
-              <div className="space-y-2 pt-2 border-t">
-                <label className="text-sm font-medium">Payment Status</label>
-                <div className="flex justify-between items-center bg-muted p-2 rounded">
-                  <span className="font-medium">{order.paymentMethod}</span>
-                  <Badge variant="outline">{order.paymentStatus}</Badge>
-                </div>
-                <select 
-                  value={order.paymentStatus} 
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Payment Status</label>
+                <select
+                  value={order.paymentStatus}
                   onChange={(e) => updatePaymentStatus(e.target.value)}
                   disabled={loading}
-                  className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full h-9 rounded-xl border border-zinc-300 bg-white px-2.5 font-bold text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
                 >
                   <option value="UNPAID">Unpaid</option>
                   <option value="PENDING_VERIFICATION">Pending Verification</option>
-                  <option value="PARTIAL">Partial (deposit only)</option>
-                  <option value="PAID">Paid</option>
+                  <option value="PARTIAL">Partial (Deposit paid)</option>
+                  <option value="PAID">Paid in Full</option>
                   <option value="REFUNDED">Refunded</option>
                 </select>
               </div>
 
-              {/* Manual payment evidence */}
+              {/* Payment Proof Preview if present */}
               {order.payment && (order.payment.transactionId || order.payment.screenshotUrl) && (
-                <div className="space-y-2 pt-2 border-t">
-                  <label className="text-sm font-medium">Payment Evidence</label>
+                <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80 space-y-2">
+                  <p className="text-[10px] font-bold uppercase text-zinc-500">Transaction Evidence</p>
                   {order.payment.transactionId && (
-                    <div className="text-sm bg-muted rounded px-3 py-2 font-mono break-all">
+                    <p className="font-mono text-xs font-bold text-zinc-900 break-all">
                       Trx ID: {order.payment.transactionId}
-                    </div>
+                    </p>
                   )}
                   {order.payment.screenshotUrl && (
                     <a href={order.payment.screenshotUrl} target="_blank" rel="noopener noreferrer">
                       <img
                         src={order.payment.screenshotUrl}
-                        alt="Payment screenshot"
-                        className="rounded border max-h-48 w-full object-contain cursor-zoom-in"
+                        alt="Payment Proof"
+                        className="rounded-lg border border-zinc-200 max-h-36 w-full object-cover cursor-zoom-in"
                       />
                     </a>
                   )}
-                  {order.paymentStatus === "PENDING_VERIFICATION" && (
-                    <div className="flex gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                        disabled={loading}
-                        onClick={() => updatePaymentStatus("PAID")}
-                      >
-                        Confirm Payment
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="flex-1"
-                        disabled={loading}
-                        onClick={() => updatePaymentStatus("UNPAID")}
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  )}
                 </div>
               )}
-            </CardContent>
-          </Card>
 
-          <Card>
-            <CardHeader><CardTitle>COD Call Note</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              <textarea
-                value={codNote}
-                onChange={(e) => setCodNote(e.target.value)}
-                placeholder="e.g. Customer confirmed delivery on 3rd attempt…"
-                rows={3}
-                className="w-full border rounded-lg px-3 py-2 text-sm resize-none"
-              />
-              <Button size="sm" variant="outline" onClick={async () => {
-                await fetch(`/api/admin/orders/${order.id}/note`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codCallNote: codNote }) })
-                toast.success("COD note saved")
-              }}>Save Note</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Order Tags</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              <input
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                placeholder="vip, fragile, urgent (comma-separated)"
-                className="w-full border rounded-lg px-3 py-2 text-sm"
-              />
-              <Button size="sm" variant="outline" onClick={async () => {
-                const tags = tagsInput.split(",").map((t: string) => t.trim()).filter(Boolean)
-                await fetch(`/api/admin/orders/${order.id}/tags`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tags }) })
-                toast.success("Tags saved")
-              }}>Save Tags</Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>Timeline</CardTitle></CardHeader>
-            <CardContent>
-              <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
-                {order.statusLogs.map((log: any, i: number) => (
-                  <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                    <div className="flex items-center justify-center w-4 h-4 rounded-full border border-white bg-slate-300 group-[.is-active]:bg-indigo-500 text-slate-500 group-[.is-active]:text-emerald-50 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2"></div>
-                    <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] p-4 rounded border border-slate-200 shadow">
-                      <div className="flex items-center justify-between space-x-2 mb-1">
-                        <div className="font-bold text-slate-900 text-sm">{log.status}</div>
-                        <time className="text-xs font-medium text-slate-500">{new Date(log.createdAt).toLocaleDateString()}</time>
-                      </div>
-                      <div className="text-slate-500 text-xs">{log.note}</div>
-                    </div>
-                  </div>
-                ))}
+              {/* COD Call Notes */}
+              <div className="space-y-1.5 pt-2 border-t border-zinc-100">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Internal COD Call Note</label>
+                <textarea
+                  value={codNote}
+                  onChange={(e) => setCodNote(e.target.value)}
+                  placeholder="e.g. Customer confirmed delivery on 2nd attempt, deliver after 4 PM…"
+                  rows={2}
+                  className="w-full rounded-xl border border-zinc-300 p-2.5 text-xs text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900 resize-none shadow-2xs"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch(`/api/admin/orders/${order.id}/note`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ codCallNote: codNote }),
+                    })
+                    toast.success("COD call note saved")
+                  }}
+                  className="px-3 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[11px] transition-colors"
+                >
+                  Save Note
+                </button>
               </div>
-            </CardContent>
-          </Card>
+
+              {/* Order Tags */}
+              <div className="space-y-1.5 pt-2 border-t border-zinc-100">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Order Tags</label>
+                <div className="flex gap-2">
+                  <input
+                    value={tagsInput}
+                    onChange={(e) => setTagsInput(e.target.value)}
+                    placeholder="vip, fragile, urgent"
+                    className="flex-1 h-8 rounded-lg border border-zinc-300 px-2.5 text-xs font-medium text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const tags = tagsInput.split(",").map((t: string) => t.trim()).filter(Boolean)
+                      await fetch(`/api/admin/orders/${order.id}/tags`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ tags }),
+                      })
+                      toast.success("Tags updated")
+                    }}
+                    className="px-3 h-8 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs transition-colors shrink-0"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Activity & Status Log Timeline */}
+          <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
+              Audit & Activity Log
+            </h2>
+            <div className="space-y-3 relative before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
+              {order.statusLogs?.map((log: any) => (
+                <div key={log.id} className="relative pl-7 text-xs">
+                  <div className="absolute left-1.5 top-1 w-2.5 h-2.5 rounded-full bg-zinc-900 ring-4 ring-white" />
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-zinc-900">{log.status}</span>
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      {new Date(log.createdAt).toLocaleDateString()} {new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  {log.note && <p className="text-zinc-500 text-[11px] mt-0.5 leading-relaxed">{log.note}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Order Items & Variant Modification Modal */}
+      {/* Line Item & Variant Modifier Modal */}
       <OrderItemsEditorModal
         order={order}
         isOpen={isEditingItems}
