@@ -106,9 +106,22 @@ export default function Footer({
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-berber-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-berber-text-muted text-center md:text-left">
-            &copy; {new Date().getFullYear()} {storeName}. Made in Bangladesh 🇧🇩. All rights reserved.
-          </p>
+          <div className="text-center md:text-left space-y-1">
+            <p className="text-xs text-berber-text-muted">
+              &copy; {new Date().getFullYear()} {storeName}. Made in Bangladesh 🇧🇩. All rights reserved.
+            </p>
+            <p className="text-xs text-berber-text-muted">
+              Developed with ❤ by{" "}
+              <a
+                href="https://digitaldude.co.uk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-berber-gold hover:underline"
+              >
+                The Digital Dude
+              </a>
+            </p>
+          </div>
           <div className="flex gap-4 items-center">
             <span className="text-[10px] font-bold uppercase tracking-widest text-berber-text-muted">Payments:</span>
             <div className="flex gap-2 text-xs font-mono font-medium text-berber-text-muted bg-berber-surface px-2 py-1 rounded">bKash</div>
