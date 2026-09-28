@@ -27,12 +27,19 @@ export default async function FlashSalesPage() {
   }))
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Flash Sales</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Time-limited discounts with countdown timers. Applied automatically — no coupon code needed.
-        </p>
+    <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Flash Sales Studio</h1>
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+              {sales.length} campaigns
+            </span>
+          </div>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            Time-limited discounts with live countdown timers applied automatically across the store
+          </p>
+        </div>
       </div>
       <FlashSaleClient
         data={formatted}
