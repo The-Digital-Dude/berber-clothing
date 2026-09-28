@@ -4,6 +4,8 @@ import Image from "next/image"
 import { Heart, ShoppingBag, Columns2 } from "lucide-react"
 import { useWishlistStore } from "@/store/useWishlistStore"
 import { useCompareStore } from "@/store/useCompareStore"
+import { useCartStore } from "@/store/useCartStore"
+import { useCartUIStore } from "@/store/useCartUIStore"
 import { toast } from "sonner"
 import FadeIn from "@/components/ui/FadeIn"
 
@@ -18,6 +20,8 @@ export default function ProductCard({
 }) {
   const { toggleItem, isWishlisted } = useWishlistStore()
   const { toggleItem: toggleCompare, hasItem: inCompare } = useCompareStore()
+  const addItem = useCartStore((s) => s.addItem)
+  const openCartDrawer = useCartUIStore((s) => s.open)
   const wishlisted = isWishlisted(product.id)
   const comparing = inCompare(product.id)
 
@@ -40,6 +44,29 @@ export default function ProductCard({
     ? Math.round(((priceNum - flashSalePrice) / priceNum) * 100)
     : 0
   const sizes = Array.from(new Set(product.variants?.map((v: any) => v.size) || ["S", "M", "L"]))
+
+  const quickAddVariant = product.variants?.find((v: any) => v.stock > 0) || null
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!quickAddVariant) return
+    addItem({
+      id: quickAddVariant.id,
+      variantId: quickAddVariant.id,
+      productId: product.id,
+      productSlug: product.slug,
+      name: product.name,
+      price: Number(quickAddVariant.price ?? product.price),
+      size: quickAddVariant.size,
+      color: quickAddVariant.color,
+      image: thumbnail,
+      quantity: 1,
+    })
+    toast.success("Added to bag!", {
+      description: `${product.name} — ${quickAddVariant.size} / ${quickAddVariant.color}`,
+    })
+    openCartDrawer()
+  }
 
   const handleWishlist = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -120,11 +147,20 @@ export default function ProductCard({
 
         {/* Quick Add (Desktop) */}
         <div className="absolute bottom-0 left-0 w-full p-4 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hidden md:block">
-          <Link href={`/shop/${product.slug}`}>
-            <button className="w-full bg-white/90 backdrop-blur-sm text-berber-black font-medium py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-berber-gold hover:text-white transition-colors text-sm shadow-sm">
+          {quickAddVariant ? (
+            <button
+              onClick={handleQuickAdd}
+              className="w-full bg-white/90 backdrop-blur-sm text-berber-black font-medium py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-berber-gold hover:text-white transition-colors text-sm shadow-sm"
+            >
               <ShoppingBag className="w-4 h-4" /> Quick Add
             </button>
-          </Link>
+          ) : (
+            <Link href={`/shop/${product.slug}`}>
+              <button className="w-full bg-white/90 backdrop-blur-sm text-berber-black font-medium py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-berber-gold hover:text-white transition-colors text-sm shadow-sm">
+                <ShoppingBag className="w-4 h-4" /> Notify Me
+              </button>
+            </Link>
+          )}
         </div>
       </div>
 
