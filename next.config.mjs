@@ -13,10 +13,21 @@ const nextConfig = {
     // metered on Vercel's infrastructure.
     unoptimized: true,
     remotePatterns: [
-      // Supabase Storage (any project)
+      // Supabase Storage (any project) — still allowed for any URLs not yet
+      // migrated to the CDN, and as a fallback.
       {
         protocol: "https",
         hostname: "**.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      // Cloudflare Worker caching reverse proxy in front of Supabase
+      // Storage (see cdn.berber.clothing route) — a direct Cloudflare
+      // CNAME-proxy to *.supabase.co is blocked by Cloudflare's own
+      // "CNAME Cross-User Banned" policy since Supabase's domain is also
+      // on Cloudflare, so a Worker fetches + edge-caches images instead.
+      {
+        protocol: "https",
+        hostname: "cdn.berber.clothing",
         pathname: "/storage/v1/object/public/**",
       },
       // Unsplash (used in homepage featured banner)

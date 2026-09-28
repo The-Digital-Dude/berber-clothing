@@ -57,8 +57,12 @@ export async function POST(req: NextRequest) {
     if (uploadError) throw uploadError
 
     const { data: { publicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(filename)
+    const cdnUrl = publicUrl.replace(
+      /^https:\/\/[^/]+\.supabase\.co/,
+      "https://cdn.berber.clothing"
+    )
 
-    return NextResponse.json({ url: publicUrl })
+    return NextResponse.json({ url: cdnUrl })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
