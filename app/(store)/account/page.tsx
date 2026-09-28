@@ -33,6 +33,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import AddressList from "@/components/store/account/AddressList"
+import PartnerPortalTab from "@/components/store/PartnerPortalTab"
 import { useCartStore } from "@/store/useCartStore"
 import { cn } from "@/lib/utils"
 
@@ -313,20 +314,18 @@ export default function AccountPage() {
             )
           })}
 
-          {affiliate && (
-            <button
-              onClick={() => setActiveTab("affiliate")}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all",
-                activeTab === "affiliate"
-                  ? "bg-zinc-900 text-white shadow-2xs"
-                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70"
-              )}
-            >
-              <Link2 className="w-4 h-4 shrink-0" />
-              <span>Affiliate Partner Hub</span>
-            </button>
-          )}
+          <button
+            onClick={() => setActiveTab("affiliate")}
+            className={cn(
+              "w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer",
+              activeTab === "affiliate"
+                ? "bg-zinc-900 text-white shadow-2xs"
+                : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100/70"
+            )}
+          >
+            <Link2 className="w-4 h-4 shrink-0" />
+            <span>Partner & Reseller Desk</span>
+          </button>
 
           <div className="pt-3 mt-3 border-t border-zinc-100">
             <button
@@ -803,55 +802,9 @@ export default function AccountPage() {
             </div>
           )}
 
-          {/* 7. AFFILIATE TAB */}
-          {activeTab === "affiliate" && affiliate && (
-            <div className="p-6 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs space-y-6">
-              <div>
-                <h2 className="text-xl font-bold text-zinc-900">Affiliate Partner Hub</h2>
-                <p className="text-xs text-zinc-500 mt-0.5">Track your partner link clicks, customer conversions, and earned commissions</p>
-              </div>
-
-              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 space-y-2">
-                <span className="text-xs font-bold text-zinc-700">Your Partner Tracking Link:</span>
-                <div className="flex gap-2">
-                  <input
-                    readOnly
-                    value={`${typeof window !== "undefined" ? window.location.origin : ""}?ref=${affiliate.code}`}
-                    className="flex-1 bg-white border border-zinc-200 rounded-xl px-3.5 py-2 text-xs font-mono text-zinc-900 outline-none"
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}?ref=${affiliate.code}`)
-                      toast.success("Affiliate link copied!")
-                    }}
-                    className="px-4 py-2 bg-zinc-900 text-white font-bold rounded-xl text-xs hover:bg-zinc-800 transition"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 pt-2">
-                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-center">
-                  <span className="text-xs text-zinc-500 font-semibold block">Total Clicks</span>
-                  <span className="text-2xl font-bold font-mono text-zinc-900 mt-1 block">
-                    {affiliate.totalClicks || 0}
-                  </span>
-                </div>
-                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200 text-center">
-                  <span className="text-xs text-zinc-500 font-semibold block">Conversions</span>
-                  <span className="text-2xl font-bold font-mono text-zinc-900 mt-1 block">
-                    {affiliate._count?.conversions || 0}
-                  </span>
-                </div>
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center">
-                  <span className="text-xs text-emerald-800 font-semibold block">Earned Commission</span>
-                  <span className="text-2xl font-bold font-mono text-emerald-700 mt-1 block">
-                    ৳{Number(affiliate.totalEarned || 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* 7. PARTNER & RESELLER DESK */}
+          {activeTab === "affiliate" && (
+            <PartnerPortalTab />
           )}
         </div>
       </div>

@@ -27,8 +27,29 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       include: {
         user: { select: { email: true, name: true } },
         items: { take: 1, include: { product: { select: { name: true } } } },
+        reseller: true,
       },
     })
+
+    // Reseller profit crediting on successful delivery
+    if (status === "DELIVERED" && order.isResellerOrder && order.resellerId && !order.resellerProfitPaid) {
+      const profit = Number(order.resellerProfit || 0)
+      if (profit > 0) {
+        await prisma.$transaction([
+          prisma.affiliate.update({
+            where: { id: order.resellerId },
+            data: {
+              walletBalance: { increment: profit },
+              totalEarned: { increment: profit },
+            },
+          }),
+          prisma.order.update({
+            where: { id: order.id },
+            data: { resellerProfitPaid: true },
+          }),
+        ]).catch(() => {})
+      }
+    }
 
     // WhatsApp notification — Cloud API if configured, otherwise return wa.me link for manual send
     let waLink: string | null = null

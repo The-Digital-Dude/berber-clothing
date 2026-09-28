@@ -38,6 +38,7 @@ model User {
   storeCreditTxns    StoreCreditTransaction[]
   referralsMade      ReferralLog[] @relation("Referrer")
   referralReceived   ReferralLog[] @relation("Referee")
+  affiliates         Affiliate[]
 
   @@map("users")
 }
@@ -278,6 +279,21 @@ model Order {
   guestEmail      String?
   codCallNote     String?       // admin note from COD verification call
   tags            String?       // comma-separated admin tags on the order
+  
+  // Reseller Dropship details
+  isResellerOrder       Boolean       @default(false)
+  resellerId            String?
+  resellerShopName      String?
+  resellerPhone         String?
+  resellerBaseCost      Decimal?
+  resellerCustomerPrice Decimal?
+  resellerProfit        Decimal?
+  resellerProfitPaid    Boolean       @default(false)
+  advanceCharge         Decimal       @default(0)
+  advancePaid           Boolean       @default(false)
+  advanceTrxId          String?
+  advanceMethod         String?       // WALLET, BKASH, NAGAD, UDDOKTAPAY
+  
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
@@ -292,6 +308,7 @@ model Order {
   user        User?          @relation(fields: [userId], references: [id])
   address     Address?       @relation(fields: [addressId], references: [id])
   coupon      Coupon?        @relation(fields: [couponId], references: [id])
+  reseller    Affiliate?     @relation("ResellerOrders", fields: [resellerId], references: [id])
   items       OrderItem[]
   payment     Payment?
   delivery    Delivery?
@@ -405,8 +422,9 @@ model Coupon {
   expiresAt     DateTime?
   createdAt     DateTime     @default(now())
 
-  orders Order[]
-  rule   CouponRule?
+  orders     Order[]
+  rule       CouponRule?
+  affiliates Affiliate[]
 
   @@map("coupons")
 }
@@ -845,20 +863,48 @@ model AbandonedCart {
 // ─────────────────────────────────────────────
 
 model Affiliate {
-  id           String          @id @default(cuid())
-  userId       String?         // null if non-user affiliate
-  name         String
-  email        String          @unique
-  code         String          @unique // ref code in URL ?ref=CODE
-  commissionType String  @default("PERCENTAGE")
-  commissionValue Decimal      @default(10)
-  totalEarned  Decimal         @default(0)
-  totalPaid    Decimal         @default(0)
-  isActive     Boolean         @default(true)
-  createdAt    DateTime        @default(now())
+  id                  String          @id @default(cuid())
+  userId              String?         // null if non-user affiliate
+  name                String
+  email               String          @unique
+  code                String          @unique // ref code in URL ?ref=CODE
+  partnerType         String          @default("AFFILIATE") // AFFILIATE, RESELLER, BOTH
+  status              String          @default("APPROVED") // PENDING, APPROVED, REJECTED, SUSPENDED
+  shopName            String?         // Reseller brand/shop name
+  phone               String?
+  facebookPage        String?
+  website             String?
+  
+  // Commission & Wholesale rates
+  commissionType      String          @default("PERCENTAGE") // PERCENTAGE or FLAT
+  commissionValue     Decimal         @default(10)
+  resellerDiscountPct Decimal         @default(15) // % wholesale discount on retail
+  couponId            String?         // Linked exclusive coupon code
+  
+  // Wallet Ledger
+  walletBalance       Decimal         @default(0)
+  totalEarned         Decimal         @default(0)
+  totalPaid           Decimal         @default(0)
+  isActive            Boolean         @default(true)
+  
+  // Payout Details
+  payoutMethod        String?         // BKASH, NAGAD, ROCKET, BANK
+  payoutNumber        String?
+  bankName            String?
+  bankAccountName     String?
+  bankAccountNumber   String?
+  bankBranch          String?
+  bankRouting         String?
 
-  clicks      AffiliateClick[]
-  conversions AffiliateConversion[]
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  user                User?           @relation(fields: [userId], references: [id])
+  coupon              Coupon?         @relation(fields: [couponId], references: [id])
+  clicks              AffiliateClick[]
+  conversions         AffiliateConversion[]
+  resellerOrders      Order[]         @relation("ResellerOrders")
+  payoutRequests      PayoutRequest[]
 
   @@map("affiliates")
 }
@@ -890,6 +936,23 @@ model AffiliateConversion {
   order     Order     @relation(fields: [orderId], references: [id])
 
   @@map("affiliate_conversions")
+}
+
+model PayoutRequest {
+  id             String    @id @default(cuid())
+  affiliateId    String
+  amount         Decimal
+  method         String    // BKASH, NAGAD, ROCKET, BANK, STORE_CREDIT
+  accountDetails String
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED, PAID
+  transactionId  String?
+  adminNote      String?
+  createdAt      DateTime  @default(now())
+  processedAt    DateTime?
+
+  affiliate      Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+
+  @@map("payout_requests")
 }
 
 // ─────────────────────────────────────────────

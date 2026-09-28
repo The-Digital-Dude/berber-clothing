@@ -53,11 +53,13 @@ export const groups = [
     ],
   },
   {
-    label: "Customers & Retention",
+    label: "Partner & Reseller Ecosystem",
     items: [
-      { href: "/admin/store-credit", label: "Store Credit", icon: Wallet },
-      { href: "/admin/loyalty", label: "Loyalty Points", icon: Award },
       { href: "/admin/affiliates", label: "Affiliates", icon: Users2 },
+      { href: "/admin/resellers", label: "Resellers & Dropship", icon: ShoppingBag },
+      { href: "/admin/payouts", label: "Partner Payouts", icon: Wallet },
+      { href: "/admin/store-credit", label: "Store Credit", icon: CreditCard },
+      { href: "/admin/loyalty", label: "Loyalty Points", icon: Award },
     ],
   },
   {

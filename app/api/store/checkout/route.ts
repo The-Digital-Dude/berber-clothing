@@ -339,29 +339,40 @@ export async function POST(req: Request) {
       refreshCustomerSegments(userId).catch(() => {})
     }
 
-    // Record affiliate conversion if referral cookie present
+    // Record affiliate conversion if referral cookie present OR affiliate coupon used
     const cookieStore = await cookies()
     const refCode = cookieStore.get("berber_ref")?.value
-    if (refCode) {
-      try {
-        const affiliate = await prisma.affiliate.findUnique({ where: { code: refCode, isActive: true } })
-        if (affiliate) {
-          const commission = affiliate.commissionType === "PERCENTAGE"
-            ? Math.round((serverTotal * Number(affiliate.commissionValue)) / 100)
-            : Number(affiliate.commissionValue)
+    try {
+      let affiliate: any = null
+      if (refCode) {
+        affiliate = await prisma.affiliate.findUnique({ where: { code: refCode, isActive: true } })
+      }
+      if (!affiliate && validatedCouponId) {
+        affiliate = await prisma.affiliate.findFirst({ where: { couponId: validatedCouponId, isActive: true } })
+      }
+
+      if (affiliate) {
+        const commission = affiliate.commissionType === "PERCENTAGE"
+          ? Math.round((serverTotal * Number(affiliate.commissionValue)) / 100)
+          : Number(affiliate.commissionValue)
+        
+        if (commission > 0) {
           await prisma.$transaction([
             prisma.affiliateConversion.create({
               data: { affiliateId: affiliate.id, orderId: order.id, orderTotal: serverTotal, commission },
             }),
             prisma.affiliate.update({
               where: { id: affiliate.id },
-              data: { totalEarned: { increment: commission } },
+              data: {
+                totalEarned: { increment: commission },
+                walletBalance: { increment: commission },
+              },
             }),
           ])
         }
-      } catch {
-        // non-critical
       }
+    } catch {
+      // non-critical
     }
 
     // Send order confirmation email (fire-and-forget)
