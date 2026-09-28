@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { trackParcel } from "@/lib/pathao"
+import { sendOrderDelivered } from "@/lib/email"
 
 export async function GET(req: Request) {
   try {
@@ -39,10 +40,23 @@ export async function GET(req: Request) {
       })
       
       if (newStatus === "DELIVERED") {
-        await prisma.order.update({
+        const order = await prisma.order.update({
           where: { id: orderId },
-          data: { status: "DELIVERED" }
+          data: { status: "DELIVERED" },
+          include: {
+            user: { select: { email: true, name: true } },
+            items: { take: 1, include: { product: { select: { name: true } } } },
+          },
         })
+        const toEmail = order.user?.email || order.guestEmail
+        if (toEmail) {
+          sendOrderDelivered({
+            to: toEmail,
+            customerName: order.user?.name || order.shippingName || "Customer",
+            orderNumber: order.orderNumber,
+            productName: order.items[0]?.product?.name || "your order",
+          }).catch(() => {})
+        }
       } else if (newStatus === "RETURNED") {
         await prisma.order.update({
           where: { id: orderId },

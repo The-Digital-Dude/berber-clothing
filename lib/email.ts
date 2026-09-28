@@ -460,6 +460,47 @@ export async function sendStoreCreditIssued(data: {
   await sendMail(data.to, `৳${data.amount.toLocaleString()} store credit added to your account`, baseTemplate(store, content))
 }
 
+export async function sendOrderDelivered(data: {
+  to: string
+  customerName: string
+  orderNumber: string
+  productName: string
+}) {
+  const store = await getStoreMeta()
+  const content = `
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Delivered! 🎉</h1>
+    <p class="muted">Hi ${data.customerName}, your order <strong>${data.orderNumber}</strong> has arrived.</p>
+    <hr class="divider">
+    <h3 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:12px">Care tips</h3>
+    <p>To keep your ${store.name} pieces looking sharp:</p>
+    <ul style="margin:12px 0 12px 20px;color:#444;font-size:14px;line-height:1.8">
+      <li>Dry clean or hand wash in cold water</li>
+      <li>Hang to dry — avoid direct sunlight and tumble dryers</li>
+      <li>Iron on a low-to-medium heat setting</li>
+    </ul>
+    <p class="muted">We'd love to hear what you think.</p>
+    <a href="${store.url}/account/orders" class="btn">Leave a review →</a>`
+
+  await sendMail(data.to, `Delivered — ${data.orderNumber} has arrived!`, baseTemplate(store, content))
+}
+
+export async function sendReviewRequest(data: {
+  to: string
+  customerName: string
+  orderNumber: string
+  productName: string
+}) {
+  const store = await getStoreMeta()
+  const content = `
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">How was your ${data.productName}?</h1>
+    <p class="muted">Hi ${data.customerName}, we hope you're loving order <strong>${data.orderNumber}</strong>.</p>
+    <hr class="divider">
+    <p>Would you mind leaving a quick review? It helps other customers and supports our small team.</p>
+    <a href="${store.url}/account/orders" class="btn">Leave a review →</a>`
+
+  await sendMail(data.to, `How was your ${data.productName}?`, baseTemplate(store, content))
+}
+
 export async function sendAdminLowStockAlert(data: {
   productName: string
   sku: string
@@ -489,4 +530,270 @@ export async function sendAdminLowStockAlert(data: {
     <a href="${store.url}/admin/inventory" class="btn">Go to Inventory →</a>`
 
   await sendMail(adminEmail, `Low stock: ${data.productName} (${data.size}/${data.color}) — ${data.stock} left`, baseTemplate(store, content))
+}
+
+// ---------------------------------------------------------------------------
+// Admin Email Studio — preview + test-send support
+// ---------------------------------------------------------------------------
+
+export const EMAIL_TEMPLATE_KEYS = [
+  "order_confirmation",
+  "shipping_dispatched",
+  "order_status_update",
+  "order_delivered",
+  "return_update",
+  "abandoned_cart",
+  "review_request",
+  "welcome_email",
+  "gift_card",
+  "store_credit",
+  "back_in_stock",
+  "admin_new_order",
+  "admin_low_stock",
+] as const
+
+export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number]
+
+const DUMMY_ITEMS = [
+  { productName: "Berber Student Blazer – Classic Black", size: "M", color: "Black", quantity: 1, price: 1750 },
+  { productName: "Berber Student Trouser – Classic Black", size: "32", color: "Black", quantity: 1, price: 800 },
+]
+
+// Builds { subject, content } for a given template key using representative
+// dummy data — used only for the admin preview/test-send, kept separate
+// from the sendX() functions above so a preview can never accidentally
+// trigger a real customer-facing side effect (stock decrement, coupon use, etc).
+function buildPreview(key: EmailTemplateKey, storeName: string): { subject: string; content: string } {
+  switch (key) {
+    case "order_confirmation": {
+      const itemRows = DUMMY_ITEMS.map((i) => `
+        <div class="item-row">
+          <div>
+            <div style="font-weight:500">${i.productName}</div>
+            <div class="muted">${i.size} / ${i.color} &nbsp;×${i.quantity}</div>
+          </div>
+          <div style="font-weight:500;white-space:nowrap">৳${(i.price * i.quantity).toLocaleString()}</div>
+        </div>`).join("")
+      return {
+        subject: "Order confirmed — ORD-2026-0001",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Order confirmed!</h1>
+          <p class="muted">Hi Rafiq, your order has been placed and is being processed.</p>
+          <hr class="divider">
+          <div class="grid-2">
+            <div><div class="label">Order number</div><div class="value">ORD-2026-0001</div></div>
+            <div><div class="label">Payment method</div><div class="value">COD</div></div>
+          </div>
+          <h3 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:12px">Items ordered</h3>
+          ${itemRows}
+          <div style="margin-top:16px">
+            <div class="total-row"><span>Subtotal</span><span>৳2,550</span></div>
+            <div class="total-row"><span>Shipping</span><span>৳80</span></div>
+            <div class="total-final"><span>Total</span><span>৳2,630</span></div>
+          </div>
+          <hr class="divider">
+          <h3 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:12px">Shipping to</h3>
+          <p style="font-weight:500">Rafiq Islam</p>
+          <p class="muted">01700000000</p>
+          <p class="muted">House 12, Road 5, Gulshan</p>
+          <p class="muted">Dhaka, Dhaka</p>
+          <a href="#" class="btn">Track your order →</a>`,
+      }
+    }
+    case "shipping_dispatched":
+      return {
+        subject: "Dispatched — ORD-2026-0001 is on the way!",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Your order is on the way!</h1>
+          <p class="muted">Hi Rafiq, <strong>ORD-2026-0001</strong> has been dispatched.</p>
+          <hr class="divider">
+          <div class="grid-2">
+            <div><div class="label">Courier</div><div class="value">Steadfast</div></div>
+            <div><div class="label">Tracking number</div><div class="value" style="font-family:monospace">SF123456789</div></div>
+          </div>
+          <a href="#" class="btn">Track shipment →</a>
+          <p class="muted" style="margin-top:16px">Delivery typically takes 1–3 business days after dispatch.</p>`,
+      }
+    case "order_status_update":
+      return {
+        subject: "Order confirmed — ORD-2026-0001",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Order update</h1>
+          <p class="muted">Hi Rafiq, here's an update on <strong>ORD-2026-0001</strong>.</p>
+          <hr class="divider">
+          <div style="margin:20px 0">
+            <div class="label">New status</div>
+            <span class="tag tag-green" style="font-size:14px;padding:6px 16px;margin-top:6px;display:inline-block">Order confirmed</span>
+          </div>
+          <a href="#" class="btn">View order →</a>`,
+      }
+    case "order_delivered":
+      return {
+        subject: "Delivered — ORD-2026-0001 has arrived!",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Delivered! 🎉</h1>
+          <p class="muted">Hi Rafiq, your order <strong>ORD-2026-0001</strong> has arrived.</p>
+          <hr class="divider">
+          <h3 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:12px">Care tips</h3>
+          <p>To keep your ${storeName} pieces looking sharp:</p>
+          <ul style="margin:12px 0 12px 20px;color:#444;font-size:14px;line-height:1.8">
+            <li>Dry clean or hand wash in cold water</li>
+            <li>Hang to dry — avoid direct sunlight and tumble dryers</li>
+            <li>Iron on a low-to-medium heat setting</li>
+          </ul>
+          <a href="#" class="btn">Leave a review →</a>`,
+      }
+    case "return_update":
+      return {
+        subject: "Return approved — ORD-2026-0001",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Return request update</h1>
+          <p class="muted">Hi Rafiq, your return request for <strong>ORD-2026-0001</strong> has been updated.</p>
+          <hr class="divider">
+          <div style="margin:20px 0">
+            <span class="tag tag-green" style="font-size:14px;padding:6px 16px;display:inline-block">Return approved</span>
+          </div>
+          <p><strong>Refund amount:</strong> ৳1,750</p>
+          <a href="#" class="btn">View order →</a>`,
+      }
+    case "abandoned_cart": {
+      const itemRows = DUMMY_ITEMS.map((i) => `
+        <div class="item-row">
+          <div style="flex:1">
+            <div style="font-weight:500">${i.productName}</div>
+            <div class="muted">${i.size} / ${i.color} &nbsp;×${i.quantity}</div>
+          </div>
+          <div style="font-weight:500">৳${(i.price * i.quantity).toLocaleString()}</div>
+        </div>`).join("")
+      return {
+        subject: `Your bag is waiting — complete your ${storeName} order`,
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You left something behind</h1>
+          <p class="muted">Hi Rafiq, you left 2 items in your bag.</p>
+          <hr class="divider">
+          ${itemRows}
+          <div class="total-final" style="margin-top:16px"><span>Total</span><span>৳2,550</span></div>
+          <a href="#" class="btn">Complete your order →</a>`,
+      }
+    }
+    case "review_request":
+      return {
+        subject: "How was your Berber Student Blazer?",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">How was your Berber Student Blazer?</h1>
+          <p class="muted">Hi Rafiq, we hope you're loving order <strong>ORD-2026-0001</strong>.</p>
+          <hr class="divider">
+          <p>Would you mind leaving a quick review? It helps other customers and supports our small team.</p>
+          <a href="#" class="btn">Leave a review →</a>`,
+      }
+    case "welcome_email":
+      return {
+        subject: `Welcome to ${storeName}`,
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Welcome to ${storeName}</h1>
+          <p class="muted">Hi Rafiq, your account is ready.</p>
+          <hr class="divider">
+          <p>Explore the latest drops, save your favourites, and track your orders — all from one place.</p>
+          <a href="#" class="btn">Start shopping →</a>`,
+      }
+    case "gift_card":
+      return {
+        subject: `Nadia sent you a ৳1,000 ${storeName} gift card`,
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You've received a gift card!</h1>
+          <p class="muted"><strong>Nadia</strong> sent you a ${storeName} gift card.</p>
+          <div class="alert" style="margin:20px 0;font-style:italic">"Happy birthday! Treat yourself."</div>
+          <div style="background:#f5f5f0;border-radius:12px;padding:28px;text-align:center;margin:20px 0">
+            <div class="label" style="text-align:center">Gift card value</div>
+            <div style="font-size:40px;font-weight:700;margin:8px 0">৳1,000</div>
+            <div class="label" style="text-align:center;margin-top:16px">Redemption code</div>
+            <div style="font-size:24px;font-weight:700;font-family:monospace;letter-spacing:3px;margin-top:4px;background:#fff;border:2px dashed #ccc;border-radius:8px;padding:12px 24px;display:inline-block">BERBER-GIFT</div>
+          </div>
+          <a href="#" class="btn" style="display:block;text-align:center">Start shopping →</a>`,
+      }
+    case "store_credit":
+      return {
+        subject: "৳500 store credit added to your account",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Store credit added!</h1>
+          <p class="muted">Hi Rafiq, you've received store credit.</p>
+          <hr class="divider">
+          <div class="grid-2">
+            <div><div class="label">Amount added</div><div class="value tag-green" style="font-size:18px;font-weight:700;color:#3b6d11">+৳500</div></div>
+            <div><div class="label">New balance</div><div class="value" style="font-size:18px;font-weight:700">৳500</div></div>
+          </div>
+          <p class="muted" style="margin-top:12px">Reason: Return refund</p>
+          <a href="#" class="btn">Use your credit →</a>`,
+      }
+    case "back_in_stock":
+      return {
+        subject: "Back in stock: Berber Student Blazer – Classic Black",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Back in stock!</h1>
+          <p class="muted">Good news — an item on your watchlist just came back.</p>
+          <hr class="divider">
+          <div style="margin:20px 0">
+            <div style="font-size:18px;font-weight:600">Berber Student Blazer – Classic Black</div>
+            <div class="muted" style="margin-top:4px">Size M</div>
+          </div>
+          <a href="#" class="btn">Shop now →</a>`,
+      }
+    case "admin_new_order": {
+      const itemRows = DUMMY_ITEMS.map((i) => `
+        <div class="item-row">
+          <div>
+            <div style="font-weight:500">${i.productName}</div>
+            <div class="muted">${i.size} / ${i.color} &nbsp;×${i.quantity}</div>
+          </div>
+          <div style="font-weight:500;white-space:nowrap">৳${(i.price * i.quantity).toLocaleString()}</div>
+        </div>`).join("")
+      return {
+        subject: "New order — ORD-2026-0001 (৳2,630)",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">New order received</h1>
+          <p class="muted">A new order just landed in your store.</p>
+          <hr class="divider">
+          <div class="grid-2">
+            <div><div class="label">Order number</div><div class="value">ORD-2026-0001</div></div>
+            <div><div class="label">Payment</div><div class="value">COD</div></div>
+          </div>
+          <div class="grid-2" style="margin-top:0">
+            <div><div class="label">Customer</div><div class="value">Rafiq Islam</div></div>
+            <div><div class="label">Phone</div><div class="value">01700000000</div></div>
+          </div>
+          <h3 style="font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#888;margin:20px 0 12px">Items</h3>
+          ${itemRows}
+          <div style="margin-top:16px"><div class="total-final"><span>Total</span><span>৳2,630</span></div></div>
+          <a href="#" class="btn">View in admin →</a>`,
+      }
+    }
+    case "admin_low_stock":
+      return {
+        subject: "Low stock: Berber Student Blazer – Classic Black (M/Black) — 2 left",
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">⚠️ Low stock alert</h1>
+          <p class="muted">A variant is running low and may need restocking.</p>
+          <hr class="divider">
+          <div class="grid-2">
+            <div><div class="label">Product</div><div class="value">Berber Student Blazer – Classic Black</div></div>
+            <div><div class="label">SKU</div><div class="value">BSB-BLK-M</div></div>
+          </div>
+          <div class="grid-2" style="margin-top:0">
+            <div><div class="label">Variant</div><div class="value">M / Black</div></div>
+            <div><div class="label">Remaining stock</div><div class="value tag-red" style="color:#b91c1c;font-weight:700;font-size:18px">2</div></div>
+          </div>
+          <a href="#" class="btn">Go to Inventory →</a>`,
+      }
+  }
+}
+
+export async function renderTemplatePreview(key: EmailTemplateKey): Promise<{ subject: string; html: string }> {
+  const store = await getStoreMeta()
+  const { subject, content } = buildPreview(key, store.name)
+  return { subject, html: baseTemplate(store, content) }
+}
+
+export async function sendTemplatePreviewTo(key: EmailTemplateKey, to: string): Promise<void> {
+  const { subject, html } = await renderTemplatePreview(key)
+  await sendMail(to, `[Test] ${subject}`, html)
 }

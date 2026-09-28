@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { Resend } from "resend"
+import { sendReviewRequest } from "@/lib/email"
 
 // Called by Supabase pg_cron (Vercel Cron was removed from vercel.json to
 // avoid duplicate/triple firing — see abandoned-cart route for the same note)
@@ -28,13 +28,9 @@ export async function GET(req: NextRequest) {
     take: 50,
   })
 
-  if (!process.env.RESEND_API_KEY || deliveredOrders.length === 0) {
-    return NextResponse.json({ sent: 0, message: "Nothing to send or Resend not configured" })
+  if (deliveredOrders.length === 0) {
+    return NextResponse.json({ sent: 0, message: "Nothing to send" })
   }
-
-  const resend = new Resend(process.env.RESEND_API_KEY)
-  const fromEmail = process.env.RESEND_FROM_EMAIL || "noreply@berber.clothing"
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
   let sent = 0
   for (const order of deliveredOrders) {
@@ -44,19 +40,11 @@ export async function GET(req: NextRequest) {
     const productName = order.items[0]?.product?.name ?? "your order"
     const customerName = order.user?.name ?? "there"
 
-    await resend.emails.send({
-      from: fromEmail,
+    await sendReviewRequest({
       to: email,
-      subject: `How was your ${productName}?`,
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
-          <h2 style="margin-bottom:8px">Hi ${customerName}!</h2>
-          <p>We hope you're loving your order #${order.orderNumber}.</p>
-          <p>Would you mind leaving a quick review? It helps other customers and supports our small team.</p>
-          <a href="${siteUrl}/account/orders" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#0f0e0c;color:#fff;text-decoration:none;border-radius:6px">Leave a Review</a>
-          <p style="margin-top:32px;color:#888;font-size:12px">Berber · Made in Bangladesh</p>
-        </div>
-      `,
+      customerName,
+      orderNumber: order.orderNumber,
+      productName,
     }).catch(() => {})
     sent++
   }

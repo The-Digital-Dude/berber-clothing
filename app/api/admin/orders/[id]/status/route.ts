@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
-import { sendOrderStatusUpdate, sendShippingDispatched } from "@/lib/email"
+import { sendOrderStatusUpdate, sendShippingDispatched, sendOrderDelivered } from "@/lib/email"
 import { buildWhatsAppMessage, buildWaLink, sendWhatsAppMessage } from "@/lib/whatsapp"
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -24,7 +24,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const order = await prisma.order.update({
       where: { id },
       data: updateData,
-      include: { user: { select: { email: true, name: true } } },
+      include: {
+        user: { select: { email: true, name: true } },
+        items: { take: 1, include: { product: { select: { name: true } } } },
+      },
     })
 
     // WhatsApp notification — Cloud API if configured, otherwise return wa.me link for manual send
@@ -59,7 +62,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             trackingNumber: body.trackingNumber || "",
             trackingUrl: body.trackingUrl,
           }).catch(() => {})
-        } else if (["CONFIRMED", "PROCESSING", "DELIVERED", "CANCELLED"].includes(status)) {
+        } else if (status === "DELIVERED") {
+          sendOrderDelivered({
+            to: toEmail,
+            customerName: customerName || "Customer",
+            orderNumber: order.orderNumber,
+            productName: order.items[0]?.product?.name || "your order",
+          }).catch(() => {})
+        } else if (["CONFIRMED", "PROCESSING", "CANCELLED"].includes(status)) {
           sendOrderStatusUpdate({
             to: toEmail,
             customerName: customerName || "Customer",

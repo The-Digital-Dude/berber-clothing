@@ -48,6 +48,7 @@ const groups = [
       { href: "/admin/flash-sales", label: "Flash Sales", icon: Zap },
       { href: "/admin/gift-cards", label: "Gift Cards", icon: CreditCard },
       { href: "/admin/campaigns", label: "Email Campaigns", icon: Mail },
+      { href: "/admin/email-studio", label: "Email Studio", icon: Mail },
       { href: "/admin/subscribers", label: "Subscribers", icon: Users2 },
     ],
   },

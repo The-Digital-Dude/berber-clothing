@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { createConsignment, getConsignmentStatus } from "@/lib/steadfast"
+import { sendOrderDelivered } from "@/lib/email"
 
 // POST: create a Steadfast consignment for an order
 export async function POST(req: NextRequest) {
@@ -68,11 +69,34 @@ export async function GET(req: NextRequest) {
   }
   const internalStatus = statusMap[result.status] ?? "SHIPPED"
 
+  const delivery = await prisma.delivery.findFirst({ where: { consignmentId } })
+
   // Update delivery record
   await prisma.delivery.updateMany({
     where: { consignmentId },
     data: { status: internalStatus },
   })
+
+  // Keep the order's own status in sync, and notify the customer on delivery
+  if (delivery && (internalStatus === "DELIVERED" || internalStatus === "RETURNED")) {
+    const order = await prisma.order.update({
+      where: { id: delivery.orderId },
+      data: { status: internalStatus },
+      include: {
+        user: { select: { email: true, name: true } },
+        items: { take: 1, include: { product: { select: { name: true } } } },
+      },
+    })
+    const toEmail = order.user?.email || order.guestEmail
+    if (toEmail && internalStatus === "DELIVERED") {
+      sendOrderDelivered({
+        to: toEmail,
+        customerName: order.user?.name || order.shippingName || "Customer",
+        orderNumber: order.orderNumber,
+        productName: order.items[0]?.product?.name || "your order",
+      }).catch(() => {})
+    }
+  }
 
   return NextResponse.json({ status: result.status, internalStatus })
 }
