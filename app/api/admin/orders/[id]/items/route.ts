@@ -42,115 +42,124 @@ export async function PUT(
       )
     }
 
-    // 2. Perform atomic database transaction
-    const updatedOrder = await prisma.$transaction(async (tx) => {
-      // A. Calculate stock adjustments:
-      // Map existing variant quantities
-      const oldVariantQtyMap: Record<string, number> = {}
-      for (const item of order.items) {
-        oldVariantQtyMap[item.variantId] = (oldVariantQtyMap[item.variantId] || 0) + item.quantity
-      }
-
-      // Map new variant quantities
-      const newVariantQtyMap: Record<string, number> = {}
-      for (const item of items) {
-        newVariantQtyMap[item.variantId] = (newVariantQtyMap[item.variantId] || 0) + Number(item.quantity)
-      }
-
-      // Combine all affected variant IDs
-      const allVariantIds = Array.from(
-        new Set([...Object.keys(oldVariantQtyMap), ...Object.keys(newVariantQtyMap)])
-      )
-
-      // Adjust inventory for each variant
-      for (const vId of allVariantIds) {
-        const oldQty = oldVariantQtyMap[vId] || 0
-        const newQty = newVariantQtyMap[vId] || 0
-        const delta = newQty - oldQty // if > 0: need to deduct more stock. If < 0: restock
-
-        if (delta !== 0) {
-          await tx.productVariant.update({
-            where: { id: vId },
-            data: {
-              stock: {
-                decrement: delta, // positive delta decreases stock, negative delta increases stock
-              },
-            },
-          })
+    // 2. Perform atomic database transaction with extended timeout (30s) and parallelized updates
+    await prisma.$transaction(
+      async (tx) => {
+        // A. Calculate stock adjustments
+        const oldVariantQtyMap: Record<string, number> = {}
+        for (const item of order.items) {
+          oldVariantQtyMap[item.variantId] = (oldVariantQtyMap[item.variantId] || 0) + item.quantity
         }
-      }
 
-      // B. Delete existing items and recreate
-      await tx.orderItem.deleteMany({
-        where: { orderId: id },
-      })
+        const newVariantQtyMap: Record<string, number> = {}
+        for (const item of items) {
+          newVariantQtyMap[item.variantId] = (newVariantQtyMap[item.variantId] || 0) + Number(item.quantity)
+        }
 
-      const createdItems = await Promise.all(
-        items.map((item: any) =>
-          tx.orderItem.create({
-            data: {
-              orderId: id,
-              productId: item.productId,
-              variantId: item.variantId,
-              productName: item.productName,
-              size: item.size || "Standard",
-              color: item.color || "Default",
-              quantity: Number(item.quantity),
-              price: Number(item.price),
-            },
+        const allVariantIds = Array.from(
+          new Set([...Object.keys(oldVariantQtyMap), ...Object.keys(newVariantQtyMap)])
+        )
+
+        // Adjust inventory in parallel
+        await Promise.all(
+          allVariantIds.map((vId) => {
+            const oldQty = oldVariantQtyMap[vId] || 0
+            const newQty = newVariantQtyMap[vId] || 0
+            const delta = newQty - oldQty
+
+            if (delta !== 0) {
+              return tx.productVariant.update({
+                where: { id: vId },
+                data: {
+                  stock: {
+                    decrement: delta,
+                  },
+                },
+              })
+            }
+            return Promise.resolve()
           })
         )
-      )
 
-      // C. Recalculate financial totals
-      const subtotal = items.reduce(
-        (sum: number, it: any) => sum + Number(it.price) * Number(it.quantity),
-        0
-      )
-      const finalShippingCharge =
-        shippingCharge !== undefined ? Number(shippingCharge) : Number(order.shippingCharge)
-      const finalDiscount =
-        discount !== undefined ? Number(discount) : Number(order.discount)
-      const total = Math.max(0, subtotal + finalShippingCharge - finalDiscount)
+        // B. Replace order items
+        await tx.orderItem.deleteMany({
+          where: { orderId: id },
+        })
 
-      // D. Update order header
-      const savedOrder = await tx.order.update({
-        where: { id },
-        data: {
-          subtotal,
-          shippingCharge: finalShippingCharge,
-          discount: finalDiscount,
-          total,
-        },
-        include: {
-          user: true,
-          address: true,
-          items: {
-            include: {
-              product: { include: { images: true } },
-              variant: true,
-            },
+        await Promise.all(
+          items.map((item: any) =>
+            tx.orderItem.create({
+              data: {
+                orderId: id,
+                productId: item.productId,
+                variantId: item.variantId,
+                productName: item.productName,
+                size: item.size || "Standard",
+                color: item.color || "Default",
+                quantity: Number(item.quantity),
+                price: Number(item.price),
+              },
+            })
+          )
+        )
+
+        // C. Recalculate financial totals
+        const subtotal = items.reduce(
+          (sum: number, it: any) => sum + Number(it.price) * Number(it.quantity),
+          0
+        )
+        const finalShippingCharge =
+          shippingCharge !== undefined ? Number(shippingCharge) : Number(order.shippingCharge)
+        const finalDiscount =
+          discount !== undefined ? Number(discount) : Number(order.discount)
+        const total = Math.max(0, subtotal + finalShippingCharge - finalDiscount)
+
+        // D. Fast update order header (without heavy relation joins inside transaction lock)
+        await tx.order.update({
+          where: { id },
+          data: {
+            subtotal,
+            shippingCharge: finalShippingCharge,
+            discount: finalDiscount,
+            total,
           },
-          payment: true,
-          delivery: true,
-          statusLogs: { orderBy: { createdAt: "desc" } },
+        })
+
+        // E. Write audit status log
+        const itemSummary = items
+          .map((i: any) => `${i.productName} (${i.size}/${i.color}) x${i.quantity}`)
+          .join(", ")
+
+        await tx.orderStatusLog.create({
+          data: {
+            orderId: id,
+            status: order.status,
+            note: `Admin modified items (${note ? `${note} · ` : ""}${itemSummary}). New total: ৳${total.toLocaleString()}`,
+          },
+        })
+      },
+      {
+        maxWait: 10000,
+        timeout: 30000,
+      }
+    )
+
+    // 3. Fetch full updated order outside transaction for UI state
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: true,
+        address: true,
+        items: {
+          include: {
+            product: { include: { images: true } },
+            variant: true,
+          },
         },
-      })
-
-      // E. Write audit status log
-      const itemSummary = items
-        .map((i: any) => `${i.productName} (${i.size}/${i.color}) x${i.quantity}`)
-        .join(", ")
-
-      await tx.orderStatusLog.create({
-        data: {
-          orderId: id,
-          status: order.status,
-          note: `Admin modified items (${note ? `${note} · ` : ""}${itemSummary}). New total: ৳${total.toLocaleString()}`,
-        },
-      })
-
-      return savedOrder
+        payment: true,
+        delivery: true,
+        statusLogs: { orderBy: { createdAt: "desc" } },
+      },
     })
 
     revalidatePath(`/admin/orders`)

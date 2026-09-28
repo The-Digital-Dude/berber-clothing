@@ -95,6 +95,9 @@ export async function POST(req: Request) {
       })
 
       return created
+    }, {
+      maxWait: 10000,
+      timeout: 30000,
     })
 
     return NextResponse.json({ orderId: order.id })
