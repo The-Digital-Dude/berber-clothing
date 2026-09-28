@@ -7,6 +7,7 @@ import { useCartStore } from "@/store/useCartStore"
 import { useWishlistStore } from "@/store/useWishlistStore"
 import CartDrawer from "@/components/store/CartDrawer"
 import SearchModal from "@/components/store/SearchModal"
+import { cn } from "@/lib/utils"
 
 type NavCategory = { id: string; name: string; slug: string; children?: { id: string; name: string; slug: string }[] }
 type NavFlashSale = { name: string; discountType: string; discountValue: number; endsAt: string }
@@ -17,9 +18,12 @@ function useCountdown(endsAt: string) {
     const tick = () => {
       const diff = new Date(endsAt).getTime() - Date.now()
       if (diff <= 0) { setLabel(""); return }
-      const h = Math.floor(diff / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000)
+      const d = Math.floor(diff / 86400000)
+      const h = Math.floor((diff % 86400000) / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
       const pad = (n: number) => String(n).padStart(2, "0")
-      setLabel(`${pad(h)}:${pad(m)}:${pad(s)}`)
+      setLabel(`${d > 0 ? `${d}d ` : ""}${pad(h)}:${pad(m)}:${pad(s)}`)
     }
     tick()
     const id = setInterval(tick, 1000)
@@ -56,18 +60,40 @@ export default function Navbar({
   return (
     <>
       {/* Announcement Bar */}
-      <div className={`text-berber-surface text-center py-2 text-xs md:text-sm font-medium tracking-wide overflow-hidden transition-colors ${activeFlashSale && flashCountdown ? "bg-berber-error" : "bg-berber-black"}`}>
+      <div
+        className={cn(
+          "text-white text-center py-2 px-4 text-xs font-medium tracking-wide overflow-hidden transition-all relative z-50",
+          activeFlashSale && flashCountdown
+            ? "bg-gradient-to-r from-rose-900 via-rose-700 to-amber-800 shadow-xs"
+            : "bg-zinc-950"
+        )}
+      >
         {activeFlashSale && flashCountdown ? (
-          <p className="flex items-center justify-center gap-2 flex-wrap">
-            <Zap className="w-3 h-3 inline shrink-0" />
-            <span>{activeFlashSale.name} — {flashLabel} sitewide!</span>
-            <span className="font-mono">Ends in {flashCountdown}</span>
-            <Zap className="w-3 h-3 inline shrink-0" />
-          </p>
+          <Link
+            href="/shop"
+            className="inline-flex items-center justify-center gap-2.5 flex-wrap hover:opacity-95 transition-opacity"
+          >
+            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-xs px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest text-amber-200">
+              <Zap className="w-3 h-3 fill-amber-300 text-amber-300 animate-pulse" />
+              Flash Sale
+            </span>
+            <span className="font-bold">
+              {activeFlashSale.name} — <span className="text-amber-200 font-extrabold">{flashLabel}</span>
+            </span>
+            <span className="font-mono font-extrabold bg-black/30 px-2.5 py-0.5 rounded-md text-[11px] border border-white/10">
+              ⏳ {flashCountdown}
+            </span>
+            <span className="text-[11px] font-bold underline underline-offset-2 opacity-90 hover:opacity-100">
+              Shop Now →
+            </span>
+          </Link>
         ) : freeShippingThreshold ? (
-          <p>Free delivery on orders above ৳{freeShippingThreshold} 🚚</p>
+          <p className="flex items-center justify-center gap-2">
+            <span>Free delivery on all orders above <strong>৳{freeShippingThreshold}</strong></span>
+            <span>🚚</span>
+          </p>
         ) : (
-          <p>Free returns · Secure checkout · Made in Bangladesh</p>
+          <p>Free returns within 7 days · Cash on Delivery nationwide · Made in Bangladesh</p>
         )}
       </div>
 

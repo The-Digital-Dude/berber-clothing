@@ -6,10 +6,11 @@ import { Zap } from "lucide-react"
 function getTimeLeft(endsAt: string) {
   const diff = new Date(endsAt).getTime() - Date.now()
   if (diff <= 0) return null
-  const h = Math.floor(diff / 3600000)
+  const d = Math.floor(diff / 86400000)
+  const h = Math.floor((diff % 86400000) / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
   const s = Math.floor((diff % 60000) / 1000)
-  return { h, m, s }
+  return { d, h, m, s }
 }
 
 export default function FlashSaleCountdown({
@@ -40,26 +41,46 @@ export default function FlashSaleCountdown({
 
   if (compact) {
     return (
-      <span className="inline-flex items-center gap-1 bg-berber-error text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-        <Zap className="w-3 h-3" />
-        {discountLabel} · {pad(timeLeft.h)}:{pad(timeLeft.m)}:{pad(timeLeft.s)}
+      <span className="inline-flex items-center gap-1.5 bg-rose-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full shadow-2xs font-mono">
+        <Zap className="w-3 h-3 fill-amber-300 text-amber-300 animate-pulse" />
+        <span>{discountLabel}</span>
+        <span>·</span>
+        <span>
+          {timeLeft.d > 0 && `${timeLeft.d}d `}
+          {pad(timeLeft.h)}:{pad(timeLeft.m)}:{pad(timeLeft.s)}
+        </span>
       </span>
     )
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-berber-error/10 border border-berber-error/20 rounded-xl">
-      <Zap className="w-5 h-5 text-berber-error shrink-0" />
-      <div className="flex-1">
-        <p className="text-xs font-bold uppercase tracking-widest text-berber-error">{saleName}</p>
-        <p className="text-xs text-berber-text-muted mt-0.5">{discountLabel} — ends in</p>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-rose-950/90 via-zinc-900 to-amber-950/80 border border-rose-500/30 rounded-2xl shadow-sm text-white">
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-rose-600/30 border border-rose-500/40 flex items-center justify-center shrink-0">
+          <Zap className="w-5 h-5 text-rose-400 fill-amber-400" />
+        </div>
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-rose-300 flex items-center gap-1.5">
+            <span>{saleName}</span>
+            <span className="px-1.5 py-0.2 rounded bg-rose-600 text-white text-[9px] font-extrabold">LIVE</span>
+          </p>
+          <p className="text-xs text-zinc-300 mt-0.5 font-medium">{discountLabel} applied automatically at checkout</p>
+        </div>
       </div>
-      <div className="flex items-center gap-1 font-mono font-bold text-berber-error text-sm">
-        <span className="bg-berber-error/10 px-2 py-1 rounded">{pad(timeLeft.h)}</span>
-        <span>:</span>
-        <span className="bg-berber-error/10 px-2 py-1 rounded">{pad(timeLeft.m)}</span>
-        <span>:</span>
-        <span className="bg-berber-error/10 px-2 py-1 rounded">{pad(timeLeft.s)}</span>
+
+      <div className="flex items-center gap-1.5 font-mono font-black text-xs text-white shrink-0 self-end sm:self-auto">
+        <span className="text-[10px] text-zinc-400 uppercase font-sans font-bold mr-1">Ends in:</span>
+        {timeLeft.d > 0 && (
+          <>
+            <span className="bg-zinc-800/90 border border-zinc-700 px-2 py-1 rounded-lg">{timeLeft.d}d</span>
+            <span className="text-zinc-500">:</span>
+          </>
+        )}
+        <span className="bg-zinc-800/90 border border-zinc-700 px-2 py-1 rounded-lg">{pad(timeLeft.h)}h</span>
+        <span className="text-zinc-500">:</span>
+        <span className="bg-zinc-800/90 border border-zinc-700 px-2 py-1 rounded-lg">{pad(timeLeft.m)}m</span>
+        <span className="text-zinc-500">:</span>
+        <span className="bg-rose-600/90 border border-rose-500 px-2 py-1 rounded-lg text-white">{pad(timeLeft.s)}s</span>
       </div>
     </div>
   )
