@@ -262,15 +262,15 @@
 
 | Feature | axionwear | berber-clothing | Gap Level |
 |---|---|---|---|
-| Referral program | Full (code gen, log, checkout) | Missing | 🔴 COMPLETE MISS |
+| Referral program | Full (code gen, log, checkout) | ✅ Completed (link, logs, account tab) | 🟢 DONE |
 | Product Drops | Full (pages, notify, countdown, admin) | Missing | 🔴 COMPLETE MISS |
 | Episodes / Editorial | Full (admin CRUD, store pages) | Basic Lookbook (no DB) | 🟠 PARTIAL |
 | Smart Collections | Full (rule engine, admin, store) | Missing | 🔴 COMPLETE MISS |
 | Frequently Bought Together | Full (admin + PDP widget) | Missing | 🔴 COMPLETE MISS |
 | Email Campaigns | Full (compose, schedule, send, track) | Missing | 🔴 COMPLETE MISS |
-| Meta Pixel tracking | Full (4 event types) | Missing | 🔴 COMPLETE MISS |
+| Meta Pixel tracking | Full (4 event types) | ✅ Completed | 🟢 DONE |
 | Order messaging (admin↔customer) | Full bi-directional | Missing | 🔴 COMPLETE MISS |
-| Contact form persistence (inbox) | Full (DB + admin page) | Missing | 🔴 COMPLETE MISS |
+| Contact form persistence (inbox) | Full (DB + admin page + reply) | ✅ Completed | 🟢 DONE |
 | Product Reviews moderation | Admin panel | Missing | 🔴 COMPLETE MISS |
 | Q&A moderation | Admin panel | Missing | 🔴 COMPLETE MISS |
 | Recently Viewed Products | Tracker + widget | Missing | 🟡 MODERATE |
@@ -290,11 +290,11 @@
 | Order tagging | Admin UI | Missing | 🟡 MODERATE |
 | Draft Orders (customer view) | Full customer page | Missing | 🟡 MODERATE |
 | Abandoned cart email capture | Client tracker | Missing | 🟡 MODERATE |
-| Referral account tab | Yes | Missing | 🔴 COMPLETE MISS |
-| Newsletter signup component | Yes | Missing | 🟡 MODERATE |
+| Referral account tab | Yes | ✅ Completed | 🟢 DONE |
+| Newsletter signup component | Yes | ✅ Completed | 🟢 DONE |
 | Blog tag browsing | `/blog/tag/[tag]` | Missing | 🟢 MINOR |
 | SSLCommerz payment | Full | Missing | 🔴 CRITICAL |
-| UddoktaPay payment | Full | Missing | 🔴 CRITICAL |
+| UddoktaPay payment | Full | ✅ Completed (multi-method aggregator) | 🟢 DONE |
 | Inventory bulk update | API | Missing | 🟡 MODERATE |
 | Customer CSV import | Admin page | Missing | 🟡 MODERATE |
 | Search analytics | DB + admin + tracker | Missing | 🟡 MODERATE |
@@ -309,14 +309,13 @@
 
 ## 8. Prioritised Roadmap
 
-### Tier 1 — Critical / High ROI, Relatively Self-Contained
+### Tier 1 — Critical / High ROI, Relatively Self-Contained (COMPLETED ✅)
 
-1. **SSLCommerz + UddoktaPay payment gateways** — payment options directly affect revenue
-2. **Meta / Facebook Pixel** — 4 tracker components, zero DB changes, major ad attribution impact
-3. **Referral program** — add 3 User fields + `ReferralLog` model + 2 API routes + account tab
-4. **Contact form persistence** — `ContactMessage` model + admin inbox page
-5. **Product Reviews admin** — moderation panel + API routes (users can already submit; admin just can't manage)
-6. **Newsletter signup** — `NewsletterForm` component + `/api/store/newsletter` route
+1. **UddoktaPay payment gateway** — ✅ Automated multi-method payment aggregator (bKash, Nagad, Rocket, Cards) with guest/registered checkout flow
+2. **Meta / Facebook Pixel** — ✅ Base pixel + `PageView`, `ViewContent`, `AddToCart`, `InitiateCheckout`, `Purchase` events
+3. **Referral program** — ✅ Unique user codes, referee 10% discount, ৳100 store credit reward, and `/account` Refer & Earn tab
+4. **Contact form persistence & inbox** — ✅ DB persistence, email notifications, admin master-detail inbox (`/admin/contact`), and direct email reply composer
+5. **Newsletter signup** — ✅ Footer & standalone newsletter subscription API and component
 
 ### Tier 2 — High Impact, Medium Effort
 

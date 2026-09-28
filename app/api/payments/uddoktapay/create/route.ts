@@ -6,15 +6,23 @@ import { APP_URL } from "@/lib/appUrl"
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
   const { orderId } = await req.json()
+  
+  if (!orderId) {
+    return NextResponse.json({ error: "orderId required" }, { status: 400 })
+  }
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { user: true },
   })
-  if (!order || order.userId !== session.user.id) {
+
+  if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 })
+  }
+
+  if (order.userId && session?.user?.id && order.userId !== session.user.id && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
   }
 
   const config = await getUddoktaPayConfig()

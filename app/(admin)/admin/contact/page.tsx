@@ -1,25 +1,34 @@
 import prisma from "@/lib/prisma"
-import ContactInbox from "./ContactInbox"
+import { requireAdmin } from "@/lib/auth"
+import { redirect } from "next/navigation"
+import ContactInboxClient from "./ContactInboxClient"
 
-export default async function ContactInboxPage() {
-  const messages = await prisma.contactMessage.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  })
+export const dynamic = "force-dynamic"
 
-  const unread = messages.filter((m) => !m.isRead).length
+export default async function AdminContactPage() {
+  const session = await requireAdmin()
+  if (!session) redirect("/login")
+
+  const [messages, unreadCount] = await Promise.all([
+    prisma.contactMessage.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    prisma.contactMessage.count({
+      where: { isRead: false },
+    }),
+  ])
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-3xl font-bold tracking-tight">Contact Inbox</h1>
-        {unread > 0 && (
-          <span className="bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-full">
-            {unread} unread
-          </span>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Contact Inbox</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Read and respond to inquiries submitted through the store contact form.
+        </p>
       </div>
-      <ContactInbox messages={messages as any} />
+
+      <ContactInboxClient initialMessages={JSON.parse(JSON.stringify(messages))} initialUnreadCount={unreadCount} />
     </div>
   )
 }

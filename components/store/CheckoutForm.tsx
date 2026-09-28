@@ -22,7 +22,7 @@ type CheckoutField = {
 export default function CheckoutForm({
   freeShippingThreshold = null,
   shippingChargeAmount = 60,
-  enabledPaymentMethods = ["COD", "BKASH", "NAGAD"],
+  enabledPaymentMethods = ["COD", "UDDOKTAPAY", "BKASH", "NAGAD"],
   bkashMerchantNumber = "",
   nagadMerchantNumber = "",
   hasBkashGateway = false,
@@ -320,6 +320,16 @@ export default function CheckoutForm({
         if (!bkashRes.ok) throw new Error(bkashData.error)
         clearCart()
         window.location.href = bkashData.bkashURL
+      } else if (paymentMethod === "UDDOKTAPAY") {
+        const uddoktaRes = await fetch("/api/payments/uddoktapay/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: orderData.orderId }),
+        })
+        const uddoktaData = await uddoktaRes.json()
+        if (!uddoktaRes.ok) throw new Error(uddoktaData.error || "Failed to initialize UddoktaPay")
+        clearCart()
+        window.location.href = uddoktaData.payment_url
       } else if (paymentMethod === "BKASH") {
         const bkashRes = await fetch("/api/payments/bkash/create", {
           method: "POST",
@@ -559,6 +569,18 @@ export default function CheckoutForm({
                           ৳{depositInfo.amount} advance via bKash required. Remaining ৳{(total - depositInfo.amount).toLocaleString()} paid on delivery.
                         </p>
                       )}
+                    </div>
+                  </label>
+                )}
+                {enabledPaymentMethods.includes("UDDOKTAPAY") && (
+                  <label className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all duration-300 ${paymentMethod === "UDDOKTAPAY" ? "border-berber-black bg-berber-muted/20 shadow-sm ring-1 ring-berber-gold/40" : "border-berber-border hover:border-berber-black/30"}`}>
+                    <input type="radio" name="payment" value="UDDOKTAPAY" checked={paymentMethod === "UDDOKTAPAY"} onChange={() => setPaymentMethod("UDDOKTAPAY")} className="w-4 h-4 accent-berber-black" />
+                    <div className="ml-4 flex-1">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-bold block text-sm">Online Payment (bKash / Nagad / Rocket / Cards)</span>
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Instant</span>
+                      </div>
+                      <span className="text-xs text-berber-text-muted">Automated secure payment via UddoktaPay gateway</span>
                     </div>
                   </label>
                 )}

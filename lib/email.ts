@@ -829,3 +829,57 @@ export async function sendOrderMessageNotification({
   })
 }
 
+export async function sendAdminContactMessageAlert({
+  name,
+  email,
+  subject,
+  message,
+}: {
+  name: string
+  email: string
+  subject?: string | null
+  message: string
+}) {
+  const store = await getStoreMeta()
+  const content = `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:12px;color:#111;">New Contact Form Message</h2>
+    <p style="margin-bottom:12px;color:#555;">You received a new inquiry from the website contact form:</p>
+    <div style="background:#f9f8f6;border-left:4px solid #b89b5e;padding:16px;margin-bottom:20px;border-radius:4px;color:#222;">
+      <p style="margin-bottom:6px;"><strong>From:</strong> ${name} &lt;${email}&gt;</p>
+      ${subject ? `<p style="margin-bottom:6px;"><strong>Subject:</strong> ${subject}</p>` : ""}
+      <p style="margin-top:10px;font-style:italic;line-height:1.6;">"${message}"</p>
+    </div>
+    <p style="color:#666;font-size:13px;">You can view and reply to this message directly in the Admin Contact Inbox.</p>
+  `
+  await sendMail(store.email, `New Inquiry: ${subject || name} - ${store.name}`, baseTemplate(store, content)).catch((err) => {
+    console.error("[sendAdminContactMessageAlert] error:", err)
+  })
+}
+
+export async function sendContactReply({
+  to,
+  customerName,
+  subject,
+  replyMessage,
+}: {
+  to: string
+  customerName: string
+  subject?: string | null
+  replyMessage: string
+}) {
+  const store = await getStoreMeta()
+  const content = `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:12px;color:#111;">Response to your inquiry</h2>
+    <p style="margin-bottom:16px;color:#555;">Hello ${customerName || "Customer"},</p>
+    <p style="margin-bottom:20px;color:#555;">Thank you for contacting ${store.name}. Here is a response from our team:</p>
+    <div style="background:#f9f8f6;border-left:4px solid #b89b5e;padding:16px;margin-bottom:24px;border-radius:4px;color:#222;line-height:1.6;white-space:pre-wrap;">
+${replyMessage}
+    </div>
+    <p style="color:#777;font-size:12px;">If you have any further questions, feel free to reply directly to this email.</p>
+  `
+  await sendMail(to, `Re: ${subject || "Your inquiry with " + store.name}`, baseTemplate(store, content)).catch((err) => {
+    console.error("[sendContactReply] error:", err)
+  })
+}
+
+

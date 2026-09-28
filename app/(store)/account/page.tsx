@@ -16,6 +16,7 @@ export default function AccountPage() {
   const [loyaltyBalance, setLoyaltyBalance] = useState(0)
   const [storeCreditBalance, setStoreCreditBalance] = useState(0)
   const [affiliate, setAffiliate] = useState<any>(null)
+  const [referralData, setReferralData] = useState<{ referralCode: string; referralCount: number; logs: any[] } | null>(null)
   const [ordersLoading, setOrdersLoading] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState("")
@@ -36,12 +37,13 @@ export default function AccountPage() {
       .catch(() => setOrdersLoading(false))
   }, [status])
 
-  // Fetch loyalty balance, store credit, affiliate
+  // Fetch loyalty balance, store credit, affiliate, referral
   useEffect(() => {
     if (status !== "authenticated") return
     fetch("/api/account/loyalty").then(r => r.json()).then(d => setLoyaltyBalance(d.balance || 0)).catch(() => {})
     fetch("/api/account/store-credit").then(r => r.json()).then(d => setStoreCreditBalance(d.balance || 0)).catch(() => {})
     fetch("/api/account/affiliate").then(r => r.json()).then(d => setAffiliate(d.affiliate || null)).catch(() => {})
+    fetch("/api/account/referral").then(r => r.json()).then(d => setReferralData(d)).catch(() => {})
   }, [status])
 
   async function handleSignOut() {
@@ -142,6 +144,17 @@ export default function AccountPage() {
               </span>
             </button>
           )}
+          <button
+            onClick={() => setActiveTab("referral")}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === "referral" ? "bg-berber-black text-white" : "hover:bg-berber-muted text-berber-text-muted hover:text-berber-black"
+            }`}
+          >
+            <div className="flex items-center gap-3"><Gift className="w-4 h-4 text-berber-gold" /> Refer & Earn</div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-berber-gold/20 text-berber-gold uppercase">
+              10% Off
+            </span>
+          </button>
           {affiliate && (
             <button
               onClick={() => setActiveTab("affiliate")}
@@ -149,7 +162,7 @@ export default function AccountPage() {
                 activeTab === "affiliate" ? "bg-berber-black text-white" : "hover:bg-berber-muted text-berber-text-muted hover:text-berber-black"
               }`}
             >
-              <Link2 className="w-4 h-4" /> Referral
+              <Link2 className="w-4 h-4" /> Affiliate Partner
             </button>
           )}
           <div className="pt-8 mt-8 border-t border-berber-border">
@@ -303,6 +316,81 @@ export default function AccountPage() {
                     Payouts are processed weekly to your registered bKash number.
                   </p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "referral" && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-heading font-bold">Refer Friends & Earn</h2>
+
+              <div className="bg-gradient-to-br from-berber-black to-zinc-900 text-white rounded-3xl p-8 relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-64 h-64 bg-berber-gold/15 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 space-y-4">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-berber-gold/20 text-berber-gold text-xs font-bold uppercase tracking-wider">
+                    <Gift className="w-3.5 h-3.5" /> Dual Reward
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-heading font-bold text-white max-w-lg">
+                    Give 10% Off, Get ৳100 Store Credit
+                  </h3>
+                  <p className="text-sm text-gray-300 max-w-md leading-relaxed">
+                    Share your unique link or code. When a friend places their first order, they get 10% off, and you receive ৳100 store credit once delivered.
+                  </p>
+
+                  <div className="pt-2 max-w-md space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-berber-gold">Your Shareable Link</label>
+                    <div className="flex gap-2">
+                      <input
+                        readOnly
+                        value={typeof window !== "undefined" && referralData?.referralCode ? `${window.location.origin}?ref=${referralData.referralCode}` : ""}
+                        className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-xs font-mono text-white outline-none"
+                      />
+                      <button
+                        onClick={() => {
+                          if (referralData?.referralCode) {
+                            navigator.clipboard.writeText(`${window.location.origin}?ref=${referralData.referralCode}`)
+                            toast.success("Referral link copied!")
+                          }
+                        }}
+                        className="px-5 py-2.5 bg-berber-gold text-berber-black font-bold rounded-xl text-xs hover:bg-white transition-colors"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Referral Stats & History */}
+              <div className="bg-white border border-berber-border rounded-2xl p-6 space-y-4">
+                <div className="flex items-center justify-between border-b border-berber-border pb-4">
+                  <h4 className="font-bold text-sm">Your Referral Stats</h4>
+                  <span className="text-xs text-berber-text-muted">
+                    Total Referrals: <strong className="text-berber-black font-mono">{referralData?.referralCount || 0}</strong>
+                  </span>
+                </div>
+
+                {referralData?.logs && referralData.logs.length > 0 ? (
+                  <div className="divide-y divide-berber-border">
+                    {referralData.logs.map((log: any) => (
+                      <div key={log.id} className="py-3 flex items-center justify-between text-xs">
+                        <div>
+                          <p className="font-bold text-berber-black">{log.referee?.name || "Friend"}</p>
+                          <p className="text-berber-text-muted">{new Date(log.createdAt).toLocaleDateString("en-BD")}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            +৳{log.creditAmount || 100} Credit
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-berber-text-muted text-center py-6">
+                    No completed referrals yet. Share your link with friends to start earning!
+                  </p>
+                )}
               </div>
             </div>
           )}

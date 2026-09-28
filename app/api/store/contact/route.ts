@@ -1,19 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { checkRateLimit } from "@/lib/rateLimit"
+import { sendAdminContactMessageAlert } from "@/lib/email"
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown"
-  const { allowed } = await checkRateLimit(ip, "contact")
-  if (!allowed) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 })
-  }
+  try {
+    const body = await req.json().catch(() => ({}))
+    const { name, email, subject, message } = body
 
-  const { name, email, subject, message } = await req.json()
-  if (!name || !email || !message) {
-    return NextResponse.json({ error: "name, email, and message are required" }, { status: 400 })
-  }
+    if (!name?.trim() || !email?.trim() || !message?.trim()) {
+      return NextResponse.json({ error: "Name, email, and message are required" }, { status: 400 })
+    }
 
-  await prisma.contactMessage.create({ data: { name, email, subject, message } })
-  return NextResponse.json({ ok: true })
+    const contactMsg = await prisma.contactMessage.create({
+      data: {
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        subject: subject?.trim() || null,
+        message: message.trim(),
+        isRead: false,
+        isReplied: false,
+      },
+    })
+
+    // Notify admin
+    sendAdminContactMessageAlert({
+      name: contactMsg.name,
+      email: contactMsg.email,
+      subject: contactMsg.subject,
+      message: contactMsg.message,
+    }).catch((err) => {
+      console.error("[sendAdminContactMessageAlert] error:", err)
+    })
+
+    return NextResponse.json({ success: true, messageId: contactMsg.id })
+  } catch (err: any) {
+    console.error("[Contact API error]:", err)
+    return NextResponse.json({ error: err.message || "Failed to submit message" }, { status: 500 })
+  }
 }
