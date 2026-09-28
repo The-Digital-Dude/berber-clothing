@@ -1,8 +1,8 @@
 "use client"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { useCallback } from "react"
-import { Search, Filter, X, RotateCcw, Truck, CreditCard } from "lucide-react"
+import { useCallback, useTransition } from "react"
+import { Search, X, Truck, CreditCard, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const STATUS_PILLS = [
@@ -31,6 +31,7 @@ export default function OrdersFilters({
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
   const update = useCallback(
     (key: string, value: string) => {
@@ -38,13 +39,17 @@ export default function OrdersFilters({
       if (value) params.set(key, value)
       else params.delete(key)
       params.delete("page")
-      router.push(`/admin/orders?${params.toString()}`, { scroll: false })
+      startTransition(() => {
+        router.push(`/admin/orders?${params.toString()}`, { scroll: false })
+      })
     },
     [router, searchParams]
   )
 
   const clearAllFilters = () => {
-    router.push("/admin/orders", { scroll: false })
+    startTransition(() => {
+      router.push("/admin/orders", { scroll: false })
+    })
   }
 
   const hasActiveFilters = Boolean(
@@ -52,7 +57,14 @@ export default function OrdersFilters({
   )
 
   return (
-    <div className="p-4 border-b border-zinc-200/80 bg-white space-y-3.5">
+    <div className="p-4 border-b border-zinc-200/80 bg-white space-y-3.5 relative">
+      {/* Pending status progress bar */}
+      {isPending && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-100 overflow-hidden">
+          <div className="h-full bg-amber-500 animate-pulse w-full" />
+        </div>
+      )}
+
       {/* 1. Status Segmented Tabs with Counts */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-zinc-200 text-xs">
         {STATUS_PILLS.map((pill) => {
@@ -62,12 +74,13 @@ export default function OrdersFilters({
           return (
             <button
               key={pill.value}
+              disabled={isPending}
               onClick={() => update("status", pill.value)}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all text-xs group",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all text-xs group cursor-pointer",
                 isActive
                   ? "bg-zinc-900 text-white shadow-xs font-semibold"
-                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 bg-zinc-50 border border-zinc-200/70"
+                  : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 bg-zinc-50 border border-zinc-200/70 disabled:opacity-60"
               )}
             >
               <span>{pill.label}</span>
@@ -94,7 +107,11 @@ export default function OrdersFilters({
       <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
         {/* Search Box */}
         <div className="relative flex-1 min-w-[260px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+          {isPending ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-amber-500 animate-spin" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+          )}
           <input
             type="search"
             defaultValue={currentSearch}
@@ -115,8 +132,9 @@ export default function OrdersFilters({
             <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
             <select
               value={currentPayment || ""}
+              disabled={isPending}
               onChange={(e) => update("paymentMethod", e.target.value)}
-              className="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer disabled:opacity-50"
             >
               <option value="">All Payments</option>
               <option value="COD">Cash on Delivery (COD)</option>
@@ -131,8 +149,9 @@ export default function OrdersFilters({
             <Truck className="w-3.5 h-3.5 text-zinc-400" />
             <select
               value={currentCourier || ""}
+              disabled={isPending}
               onChange={(e) => update("courier", e.target.value)}
-              className="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer disabled:opacity-50"
             >
               <option value="">All Couriers</option>
               <option value="STEADFAST">Steadfast Courier</option>
@@ -147,7 +166,8 @@ export default function OrdersFilters({
           {hasActiveFilters && (
             <button
               onClick={clearAllFilters}
-              className="flex items-center gap-1 h-8 px-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-all text-xs font-medium shadow-2xs"
+              disabled={isPending}
+              className="flex items-center gap-1 h-8 px-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-all text-xs font-medium shadow-2xs cursor-pointer disabled:opacity-50"
             >
               <X className="w-3.5 h-3.5 text-zinc-400" />
               <span>Reset</span>

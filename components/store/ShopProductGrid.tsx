@@ -1,9 +1,10 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useSearchParams } from "next/navigation"
+import { useEffect, useState, useCallback, useTransition } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
+import { Loader2 } from "lucide-react"
 import ProductCard from "./ProductCard"
 
 type Product = {
@@ -20,13 +21,16 @@ type Product = {
 }
 
 export default function ShopProductGrid() {
+  const router = useRouter()
   const sp = useSearchParams()
   const [products, setProducts] = useState<Product[]>([])
   const [total, setTotal] = useState(0)
   const [hasMore, setHasMore] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [isPending, startTransition] = useTransition()
 
   const view = sp.get("view") || "grid"
+  const take = parseInt(sp.get("take") || "12", 10)
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
@@ -47,15 +51,17 @@ export default function ShopProductGrid() {
     fetchProducts()
   }, [fetchProducts])
 
-  const take = parseInt(sp.get("take") || "12")
-
-  function loadMoreUrl() {
+  const handleLoadMore = () => {
     const p = new URLSearchParams(sp.toString())
     p.set("take", String(take + 12))
-    return `/shop?${p.toString()}`
+    startTransition(() => {
+      router.push(`/shop?${p.toString()}`, { scroll: false })
+    })
   }
 
-  if (loading) {
+  const isLoadingActive = loading || isPending
+
+  if (isLoadingActive && products.length === 0) {
     return (
       <div className="flex-1">
         <div className={view === "list" ? "flex flex-col gap-4" : "grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-12"}>
@@ -67,7 +73,7 @@ export default function ShopProductGrid() {
     )
   }
 
-  if (products.length === 0) {
+  if (!isLoadingActive && products.length === 0) {
     return (
       <div className="flex-1">
         <div className="py-20 text-center space-y-4 bg-berber-muted rounded-2xl border border-berber-border">
@@ -84,9 +90,19 @@ export default function ShopProductGrid() {
   }
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 relative">
+      {/* Subtle loading shimmer overlay if re-fetching existing list */}
+      {isLoadingActive && (
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-center p-2 bg-white/70 backdrop-blur-[1px] rounded-xl shadow-xs border border-berber-border/80">
+          <div className="flex items-center gap-2 text-xs font-semibold text-berber-gold">
+            <Loader2 className="w-4 h-4 animate-spin text-berber-gold" />
+            <span>Loading products…</span>
+          </div>
+        </div>
+      )}
+
       {view === "list" ? (
-        <div className="flex flex-col gap-4">
+        <div className={`flex flex-col gap-4 transition-opacity ${isLoadingActive ? "opacity-60" : "opacity-100"}`}>
           {products.map((product) => {
             const displayPrice = product.flashSalePrice ?? Number(product.price)
             const img = product.images?.[0]?.url || "/placeholder.jpg"
@@ -108,13 +124,10 @@ export default function ShopProductGrid() {
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-3">
-                    <span className="font-bold text-berber-black">৳{displayPrice.toLocaleString()}</span>
-                    {product.comparePrice && Number(product.comparePrice) > displayPrice && (
-                      <span className="text-sm text-berber-text-muted line-through">৳{Number(product.comparePrice).toLocaleString()}</span>
-                    )}
-                    {product.flashSaleLabel && (
-                      <span className="text-xs bg-red-100 text-red-600 font-semibold px-2 py-0.5 rounded-full">
-                        {product.flashSaleLabel}
+                    <span className="font-mono font-bold text-lg text-berber-gold">৳{displayPrice.toLocaleString()}</span>
+                    {product.comparePrice && product.comparePrice > displayPrice && (
+                      <span className="font-mono text-sm text-berber-text-muted line-through">
+                        ৳{Number(product.comparePrice).toLocaleString()}
                       </span>
                     )}
                   </div>
@@ -124,7 +137,7 @@ export default function ShopProductGrid() {
           })}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-12">
+        <div className={`grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-10 md:gap-x-8 md:gap-y-12 transition-opacity ${isLoadingActive ? "opacity-60" : "opacity-100"}`}>
           {products.map((product) => (
             <ProductCard
               key={product.id}
@@ -141,13 +154,21 @@ export default function ShopProductGrid() {
           <p className="text-xs text-berber-text-muted mb-4">
             Showing {products.length} of {total}
           </p>
-          <Link
-            href={loadMoreUrl()}
-            scroll={false}
-            className="inline-block px-12 py-3 bg-berber-surface border border-berber-border text-berber-black font-medium hover:border-berber-black rounded-full transition-colors"
+          <button
+            type="button"
+            onClick={handleLoadMore}
+            disabled={isLoadingActive}
+            className="inline-flex items-center gap-2 px-12 py-3 bg-berber-surface border border-berber-border text-berber-black font-medium hover:border-berber-black rounded-full transition-colors cursor-pointer disabled:opacity-50"
           >
-            Load More
-          </Link>
+            {isLoadingActive ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-berber-gold" />
+                <span>Loading more…</span>
+              </>
+            ) : (
+              <span>Load More</span>
+            )}
+          </button>
         </div>
       )}
     </div>

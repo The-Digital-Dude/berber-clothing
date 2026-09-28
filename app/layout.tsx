@@ -128,7 +128,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
-        <NextTopLoader color="#C9A24B" showSpinner={false} />
+        <NextTopLoader
+          color="#F59E0B"
+          height={3}
+          crawl={true}
+          showSpinner={false}
+          shadow="0 0 12px #F59E0B, 0 0 4px #F59E0B"
+          speed={200}
+        />
         <VercelAnalytics />
         <SpeedInsights />
         <Analytics />
