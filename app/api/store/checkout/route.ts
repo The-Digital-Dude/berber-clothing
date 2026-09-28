@@ -236,10 +236,29 @@ export async function POST(req: Request) {
         }
       }
 
+      // Loyalty points are a ledger (balance = SUM of rows), not a single
+      // counter, so there's no single row to guard with an atomic updateMany
+      // the way the coupon check above does. A Postgres advisory lock scoped
+      // to this transaction (auto-released on commit/rollback) serializes
+      // concurrent redemption attempts by the SAME customer, so the second
+      // one always reads the balance *after* the first has already spent it.
+      let pointsUsed = 0
+      if (userId && loyaltyPointsRedeemed > 0) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${userId}))`
+        const loyaltyAgg = await tx.loyaltyPoint.aggregate({ where: { userId }, _sum: { points: true } })
+        const balance = loyaltyAgg._sum.points ?? 0
+        const redemptionRate = Number((await tx.setting.findUnique({ where: { key: "points_redemption_rate" } }))?.value || 10)
+        const maxDiscount = Math.floor(balance / redemptionRate)
+        serverLoyaltyDiscount = Math.min(loyaltyDiscount || 0, maxDiscount)
+        pointsUsed = serverLoyaltyDiscount * redemptionRate
+      }
+
+      serverTotal = Math.max(0, serverSubtotal + serverShippingCharge + serverTaxAmount + serverGiftWrapCharge - autoDiscountAmount - serverLoyaltyDiscount - serverCreditDiscount - serverCouponDiscount)
+
       const orderCount = await tx.order.count()
       const orderNumber = `ORD-${new Date().getFullYear()}-${String(orderCount + 1).padStart(4, "0")}`
 
-      return tx.order.create({
+      const newOrder = await tx.order.create({
         data: {
           orderNumber,
           userId: userId || null,
@@ -279,6 +298,14 @@ export async function POST(req: Request) {
           },
         },
       })
+
+      if (pointsUsed > 0) {
+        await tx.loyaltyPoint.create({
+          data: { userId: userId!, points: -pointsUsed, type: "REDEEMED", description: `Redeemed for order ${newOrder.orderNumber}`, orderId: newOrder.id },
+        })
+      }
+
+      return newOrder
     })
 
     await logAudit({ action: "order.created", entityType: "Order", entityId: order.id, after: { orderNumber: order.orderNumber, total: serverTotal, paymentMethod } })
@@ -312,14 +339,8 @@ export async function POST(req: Request) {
       }).catch(() => {})
     }
 
-    // Deduct loyalty points used
-    if (userId && serverLoyaltyDiscount > 0) {
-      const redemptionRate = Number((await prisma.setting.findUnique({ where: { key: "points_redemption_rate" } }))?.value || 10)
-      const pointsUsed = serverLoyaltyDiscount * redemptionRate
-      prisma.loyaltyPoint.create({
-        data: { userId, points: -pointsUsed, type: "REDEEMED", description: `Redeemed for order ${order.orderNumber}`, orderId: order.id },
-      }).catch(() => {})
-    }
+    // Loyalty point redemption is already recorded inside the order
+    // transaction above (see the advisory-lock comment there).
 
     // Deduct store credit used
     if (userId && serverCreditDiscount > 0) {
