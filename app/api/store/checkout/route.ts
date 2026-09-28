@@ -457,7 +457,9 @@ export async function POST(req: Request) {
     // client-side Pixel Purchase event fired with the same eventID.
     ;(async () => {
       const cookieHeader = req.headers.get("cookie") || ""
-      const getCookie = (name: string) => cookieHeader.match(new RegExp(`${name}=([^;]+)`))?.[1] || null
+      // Anchored so `_fbc=` can't accidentally match inside an unrelated
+      // cookie whose name happens to end the same way (e.g. "xyz_fbc=...")
+      const getCookie = (name: string) => cookieHeader.match(new RegExp(`(?:^|; )${name}=([^;]+)`))?.[1] || null
       const pixelSetting = await prisma.setting.findUnique({ where: { key: "meta_pixel_id" } }).catch(() => null)
       await sendPurchaseEvent({
         eventId: order.id,

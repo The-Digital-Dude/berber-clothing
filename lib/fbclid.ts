@@ -16,7 +16,13 @@ function readCookie(name: string): string | null {
 
 function writeCookie(name: string, value: string, ttlMs: number) {
   const expires = new Date(Date.now() + ttlMs).toUTCString()
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; domain=.${window.location.hostname}; path=/; SameSite=Lax`
+  // No explicit `domain` attribute — defaults to the exact current host.
+  // The site always redirects the bare apex to www, so every visitor ends
+  // up on one consistent host; a leading-dot domain on the full hostname
+  // (e.g. ".www.berber.clothing") is non-standard and some browsers treat
+  // it inconsistently, which can make the cookie invisible on the very
+  // request that's supposed to read it back.
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`
 }
 
 /**
