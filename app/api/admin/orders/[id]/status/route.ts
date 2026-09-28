@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/adminAuth"
 import { sendOrderStatusUpdate, sendShippingDispatched, sendOrderDelivered } from "@/lib/email"
 import { buildWhatsAppMessage, buildWaLink, sendWhatsAppMessage } from "@/lib/whatsapp"
 import { processReferral } from "@/lib/referral"
+import { clawbackPointsForOrder } from "@/lib/loyalty"
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
@@ -40,6 +41,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // can't double-pay even if a gateway order is later re-confirmed here.
     if (status === "CONFIRMED" && order.userId && order.user?.referredByCode) {
       processReferral(order.userId, order.user.referredByCode, order.id).catch(() => {})
+    }
+
+    // Claw back any loyalty points earned on this order once it's cancelled
+    // or returned, so a customer can't order, earn points, cancel, and keep them.
+    if ((status === "CANCELLED" || status === "RETURNED") && order.userId) {
+      clawbackPointsForOrder(order.id).catch(() => {})
     }
 
     // Reseller profit crediting on successful delivery

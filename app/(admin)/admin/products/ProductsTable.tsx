@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -238,6 +238,10 @@ function VariantQuickEditorRow({
 export default function ProductsTable({ products: initialProducts }: { products: any[] }) {
   const router = useRouter()
   const [products, setProducts] = useState(initialProducts)
+
+  useEffect(() => {
+    setProducts(initialProducts)
+  }, [initialProducts])
   const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set())
   const [deleting, setDeleting] = useState<string | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)

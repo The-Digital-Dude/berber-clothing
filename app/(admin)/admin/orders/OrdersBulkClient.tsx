@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -62,6 +62,11 @@ export default function OrdersBulkClient({
 }) {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>(initialOrders)
+
+  useEffect(() => {
+    setOrders(initialOrders)
+    setSelected(new Set())
+  }, [initialOrders])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState("")
   const [loading, setLoading] = useState(false)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
@@ -80,6 +80,14 @@ export default function ReviewsClient({
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [batchLoading, setBatchLoading] = useState(false)
   const [activePhotoModal, setActivePhotoModal] = useState<string | null>(null)
+
+  useEffect(() => {
+    setReviews(initialReviews)
+  }, [initialReviews])
+
+  useEffect(() => {
+    setSearchQuery(currentSearch)
+  }, [currentSearch])
 
   const handleFilterChange = (filter: string) => {
     const params = new URLSearchParams(searchParams.toString())

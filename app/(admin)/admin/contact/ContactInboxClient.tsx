@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { 
   Mail, 
@@ -64,6 +64,11 @@ export default function ContactInboxClient({
   const [messages, setMessages] = useState<ContactMessage[]>(initialMessages)
   const [selectedId, setSelectedId] = useState<string | null>(initialMessages[0]?.id ?? null)
   const [search, setSearch] = useState(currentSearch)
+
+  useEffect(() => {
+    setMessages(initialMessages)
+    setSelectedId(initialMessages[0]?.id ?? null)
+  }, [initialMessages])
 
   // Reply state
   const [replyText, setReplyText] = useState("")

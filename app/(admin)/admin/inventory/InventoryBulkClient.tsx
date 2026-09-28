@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useEffect, useTransition } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { 
@@ -62,11 +62,21 @@ export default function InventoryBulkClient({
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
 
-  const [initialRows] = useState(variants)
+  const [initialRows, setInitialRows] = useState(variants)
   const [rows, setRows] = useState(variants.map((v) => ({ ...v, dirty: false })))
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ succeeded: number; failed: number } | null>(null)
   const [search, setSearch] = useState(currentSearch)
+
+  useEffect(() => {
+    setInitialRows(variants)
+    setRows(variants.map((v) => ({ ...v, dirty: false })))
+    setResult(null)
+  }, [variants])
+
+  useEffect(() => {
+    setSearch(currentSearch)
+  }, [currentSearch])
 
   // Dirty guard modal state
   const [guardModalOpen, setGuardModalOpen] = useState(false)
