@@ -191,15 +191,12 @@ export async function POST(req: Request) {
     const autoDiscount = await getBestAutoDiscount(cartItems, serverSubtotal).catch(() => null)
     const autoDiscountAmount = autoDiscount?.savingAmount || 0
 
-    // Validate loyalty points redemption
+    // Loyalty point redemption is validated and spent inside the order
+    // transaction below (see the advisory-lock comment there) — the balance
+    // check can't safely happen out here since nothing would stop two
+    // concurrent checkouts from both reading the same pre-spend balance.
     let serverLoyaltyDiscount = 0
-    if (userId && loyaltyPointsRedeemed > 0) {
-      const loyaltyAgg = await prisma.loyaltyPoint.aggregate({ where: { userId }, _sum: { points: true } })
-      const balance = loyaltyAgg._sum.points ?? 0
-      const redemptionRate = Number((await prisma.setting.findUnique({ where: { key: "points_redemption_rate" } }))?.value || 10)
-      const maxDiscount = Math.floor(balance / redemptionRate)
-      serverLoyaltyDiscount = Math.min(loyaltyDiscount || 0, maxDiscount)
-    }
+    let serverTotal = 0
 
     // Validate store credit redemption
     let serverCreditDiscount = 0
@@ -207,8 +204,6 @@ export async function POST(req: Request) {
       const credit = await prisma.storeCredit.findUnique({ where: { userId } })
       serverCreditDiscount = Math.min(storeCreditRedeemed, Number(credit?.balance ?? 0))
     }
-
-    const serverTotal = Math.max(0, serverSubtotal + serverShippingCharge + serverTaxAmount + serverGiftWrapCharge - autoDiscountAmount - serverLoyaltyDiscount - serverCreditDiscount - serverCouponDiscount)
 
     const order = await prisma.$transaction(async (tx) => {
       // Re-check stock inside transaction to prevent race conditions

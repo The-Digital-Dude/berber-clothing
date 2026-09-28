@@ -60,6 +60,7 @@ export default async function InventoryPage({
 
   return (
     <InventoryBulkClient
+      key={`inventory-${page}-${limit}-${search}-${status}`}
       variants={JSON.parse(JSON.stringify(variants))}
       stats={{
         totalSKUs,

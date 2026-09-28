@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/auth"
 import { logAudit } from "@/lib/auditLog"
 import { sendReturnUpdate } from "@/lib/email"
+import { clawbackPointsForOrder } from "@/lib/loyalty"
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin()
@@ -25,6 +26,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     entityId: id,
     after: { status, adminNote, refundAmount },
   })
+
+  if (status === "REFUNDED") {
+    clawbackPointsForOrder(updated.orderId).catch(() => {})
+  }
 
   const toEmail = updated.order.user?.email || updated.order.guestEmail
   if (toEmail) {

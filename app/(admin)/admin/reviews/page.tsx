@@ -107,6 +107,7 @@ export default async function ReviewsPage({
       </div>
 
       <ReviewsClient
+        key={`reviews-${page}-${limit}-${search}-${filter}-${rating ?? "all"}`}
         initialReviews={serialize(reviews) as any}
         stats={{
           total: totalCount,

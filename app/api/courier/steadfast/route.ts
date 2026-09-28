@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { createConsignment, getConsignmentStatus } from "@/lib/steadfast"
 import { sendOrderDelivered } from "@/lib/email"
+import { clawbackPointsForOrder } from "@/lib/loyalty"
 
 // POST: create a Steadfast consignment for an order
 export async function POST(req: NextRequest) {
@@ -95,6 +96,9 @@ export async function GET(req: NextRequest) {
         orderNumber: order.orderNumber,
         productName: order.items[0]?.product?.name || "your order",
       }).catch(() => {})
+    }
+    if (internalStatus === "RETURNED") {
+      clawbackPointsForOrder(order.id).catch(() => {})
     }
   }
 

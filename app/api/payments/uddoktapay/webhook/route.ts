@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getUddoktaPayConfig, verifyPayment } from "@/lib/uddoktapay"
 import { processReferral } from "@/lib/referral"
+import { awardPoints } from "@/lib/loyalty"
 
 export async function POST(req: NextRequest) {
   const config = await getUddoktaPayConfig()
@@ -31,11 +32,8 @@ export async function POST(req: NextRequest) {
     data: { status: "COMPLETED", transactionId: invoiceId },
   }).catch(() => {})
 
-  const points = Math.floor(Number(order.total) / 10)
-  if (points > 0 && order.userId) {
-    await prisma.loyaltyPoint.create({
-      data: { userId: order.userId, points, type: "PURCHASE", description: `Order ${order.orderNumber}`, orderId },
-    }).catch(() => {})
+  if (order.userId) {
+    await awardPoints(order.userId, orderId, Number(order.total)).catch(() => {})
   }
 
   if (order.userId) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { trackParcel } from "@/lib/pathao"
 import { sendOrderDelivered } from "@/lib/email"
+import { clawbackPointsForOrder } from "@/lib/loyalty"
 
 export async function GET(req: Request) {
   try {
@@ -62,6 +63,7 @@ export async function GET(req: Request) {
           where: { id: orderId },
           data: { status: "RETURNED" }
         })
+        clawbackPointsForOrder(orderId).catch(() => {})
       }
     }
 

@@ -74,6 +74,7 @@ export default async function AdminContactPage({
       </div>
 
       <ContactInboxClient
+        key={`contact-${page}-${limit}-${search}-${filter}`}
         initialMessages={JSON.parse(JSON.stringify(messages))}
         stats={{
           total: totalCount,

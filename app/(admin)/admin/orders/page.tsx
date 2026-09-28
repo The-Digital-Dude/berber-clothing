@@ -224,7 +224,11 @@ export default async function OrdersPage({
           currentCourier={courier}
           statusCounts={statusCounts}
         />
-        <OrdersBulkClient orders={serializedOrders as any} riskByPhone={riskByPhone} />
+        <OrdersBulkClient
+          key={`orders-${page}-${limit}-${search}-${status}-${paymentMethod}-${courier}`}
+          orders={serializedOrders as any}
+          riskByPhone={riskByPhone}
+        />
         <div className="p-4 border-t border-zinc-100 bg-zinc-50/40">
           <AdminPagination
             page={page}

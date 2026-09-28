@@ -137,7 +137,10 @@ export default async function ProductsPage({
                 <TableHead className="text-right text-xs font-bold text-zinc-700 pr-4">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <ProductsTable products={serializedProducts as any} />
+            <ProductsTable
+              key={`products-${page}-${limit}-${search}-${status}`}
+              products={serializedProducts as any}
+            />
           </Table>
         </div>
         <div className="p-4 border-t border-zinc-100 bg-zinc-50/40">
