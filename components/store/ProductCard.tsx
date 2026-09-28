@@ -1,4 +1,5 @@
 "use client"
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Heart, ShoppingBag, Columns2 } from "lucide-react"
@@ -43,9 +44,23 @@ export default function ProductCard({
     : (flashSalePrice && priceNum > 0)
     ? Math.round(((priceNum - flashSalePrice) / priceNum) * 100)
     : 0
-  const sizes = Array.from(new Set(product.variants?.map((v: any) => v.size) || ["S", "M", "L"]))
+  const sizes = Array.from(new Set((product.variants || []).map((v: any) => v.size))) as string[]
+  const sizeInStock = (size: string) => (product.variants || []).some((v: any) => v.size === size && v.stock > 0)
 
-  const quickAddVariant = product.variants?.find((v: any) => v.stock > 0) || null
+  const [selectedSize, setSelectedSize] = useState<string | null>(null)
+
+  // Prefer a variant matching the size the shopper picked; otherwise fall
+  // back to any in-stock variant so Quick Add still works without a choice.
+  const quickAddVariant = selectedSize
+    ? (product.variants || []).find((v: any) => v.size === selectedSize && v.stock > 0) || null
+    : product.variants?.find((v: any) => v.stock > 0) || null
+
+  const handleSelectSize = (e: React.MouseEvent, size: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!sizeInStock(size)) return
+    setSelectedSize((prev) => (prev === size ? null : size))
+  }
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -152,7 +167,14 @@ export default function ProductCard({
               onClick={handleQuickAdd}
               className="w-full bg-white/90 backdrop-blur-sm text-berber-black font-medium py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-berber-gold hover:text-white transition-colors text-sm shadow-sm"
             >
-              <ShoppingBag className="w-4 h-4" /> Quick Add
+              <ShoppingBag className="w-4 h-4" /> {selectedSize ? `Add Size ${selectedSize}` : "Quick Add"}
+            </button>
+          ) : selectedSize ? (
+            <button
+              disabled
+              className="w-full bg-white/60 backdrop-blur-sm text-berber-text-muted font-medium py-2.5 rounded-full flex items-center justify-center gap-2 text-sm shadow-sm cursor-not-allowed"
+            >
+              Size {selectedSize} out of stock
             </button>
           ) : (
             <Link href={`/shop/${product.slug}`}>
@@ -186,11 +208,28 @@ export default function ProductCard({
           )}
         </div>
         <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          {(sizes as string[]).map((size, i) => (
-            <span key={i} className="text-[10px] border border-berber-border text-berber-text-muted px-1.5 py-0.5 rounded-full">
-              {size}
-            </span>
-          ))}
+          {sizes.map((size, i) => {
+            const inStock = sizeInStock(size)
+            const active = selectedSize === size
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => handleSelectSize(e, size)}
+                disabled={!inStock}
+                title={inStock ? `Select size ${size}` : `${size} — out of stock`}
+                className={`text-[10px] border px-1.5 py-0.5 rounded-full transition-colors ${
+                  active
+                    ? "bg-berber-black text-white border-berber-black"
+                    : inStock
+                    ? "border-berber-border text-berber-text-muted hover:border-berber-black hover:text-berber-black"
+                    : "border-berber-border/50 text-berber-text-muted/40 line-through cursor-not-allowed"
+                }`}
+              >
+                {size}
+              </button>
+            )
+          })}
         </div>
       </div>
     </FadeIn>
