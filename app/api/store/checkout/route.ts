@@ -86,6 +86,7 @@ export async function POST(req: Request) {
     // Validate coupon server-side
     let serverCouponDiscount = 0
     let validatedCouponId: string | null = null
+    let validatedCouponMaxUses: number | null = null
     if (couponId) {
       const coupon = await prisma.coupon.findUnique({
         where: { id: couponId },
@@ -116,7 +117,27 @@ export async function POST(req: Request) {
         }
         // Cap at what the client claimed (prevents double-discount exploitation)
         serverCouponDiscount = Math.min(serverCouponDiscount, clientCouponDiscount || 0)
-        validatedCouponId = coupon.id
+
+        // Per-user usage limit (checked here; the maxUses cap is re-checked
+        // atomically inside the transaction below to guard against a race
+        // between concurrent checkouts)
+        let underPerUserLimit = true
+        if (rule?.usagePerUser && (userId || (isGuest && guestEmail))) {
+          const priorUses = await prisma.order.count({
+            where: {
+              couponId: coupon.id,
+              ...(userId ? { userId } : { guestEmail }),
+            },
+          })
+          underPerUserLimit = priorUses < rule.usagePerUser
+        }
+
+        if (underPerUserLimit) {
+          validatedCouponId = coupon.id
+          validatedCouponMaxUses = coupon.maxUses
+        } else {
+          serverCouponDiscount = 0
+        }
       }
     }
 
@@ -160,6 +181,24 @@ export async function POST(req: Request) {
           where: { id: item.variantId },
           data: { stock: { decrement: item.quantity } },
         })
+      }
+
+      // Atomically re-check and increment coupon usage inside the same
+      // transaction as order creation, so two concurrent checkouts can't
+      // both succeed past maxUses (the `usedCount: { lt: maxUses }` guard
+      // makes the update a no-op — and the affected count 0 — for whichever
+      // request loses the race).
+      if (validatedCouponId) {
+        const result = await tx.coupon.updateMany({
+          where: {
+            id: validatedCouponId,
+            ...(validatedCouponMaxUses ? { usedCount: { lt: validatedCouponMaxUses } } : {}),
+          },
+          data: { usedCount: { increment: 1 } },
+        })
+        if (result.count === 0) {
+          throw new Error("Coupon usage limit reached — please remove it and try again")
+        }
       }
 
       const orderCount = await tx.order.count()
@@ -221,11 +260,6 @@ export async function POST(req: Request) {
           screenshotUrl: manualScreenshotUrl || null,
         },
       }).catch(() => {})
-    }
-
-    // Increment coupon usage count
-    if (validatedCouponId) {
-      prisma.coupon.update({ where: { id: validatedCouponId }, data: { usedCount: { increment: 1 } } }).catch(() => {})
     }
 
     // Deduct gift card balance
@@ -400,7 +434,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ orderId: order.id, depositAmount })
   } catch (error: any) {
     console.error("Checkout error", error)
-    const isStockError = error.message?.includes("stock") || error.message?.includes("available")
-    return NextResponse.json({ error: error.message }, { status: isStockError ? 400 : 500 })
+    const isClientError = error.message?.includes("stock") || error.message?.includes("available") || error.message?.includes("Coupon usage limit")
+    return NextResponse.json({ error: error.message }, { status: isClientError ? 400 : 500 })
   }
 }

@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 
 export async function POST(req: Request) {
   try {
-    const { code, items } = await req.json()
+    const { code, items, userId, guestEmail } = await req.json()
     if (!code) return NextResponse.json({ error: "Coupon code required" }, { status: 400 })
 
     const coupon = await prisma.coupon.findUnique({
@@ -19,6 +19,17 @@ export async function POST(req: Request) {
     }
     if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
       return NextResponse.json({ error: "Coupon usage limit reached" }, { status: 400 })
+    }
+    if (coupon.rule?.usagePerUser && (userId || guestEmail)) {
+      const priorUses = await prisma.order.count({
+        where: {
+          couponId: coupon.id,
+          ...(userId ? { userId } : { guestEmail }),
+        },
+      })
+      if (priorUses >= coupon.rule.usagePerUser) {
+        return NextResponse.json({ error: "You've already used this coupon the maximum number of times" }, { status: 400 })
+      }
     }
 
     const subtotal = (items || []).reduce((sum: number, item: any) => sum + item.price * item.quantity, 0)
