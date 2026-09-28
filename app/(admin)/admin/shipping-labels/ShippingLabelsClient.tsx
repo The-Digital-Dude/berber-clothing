@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Package, Plus, ExternalLink, Truck } from "lucide-react"
 import { toast } from "sonner"
 
@@ -14,6 +14,10 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function ShippingLabelsClient({ labels: initialLabels, pendingOrders }: { labels: any[]; pendingOrders: any[] }) {
   const [labels, setLabels] = useState(initialLabels)
+
+  useEffect(() => {
+    setLabels(initialLabels)
+  }, [initialLabels])
   const [creating, setCreating] = useState<string | null>(null)
   const [courier, setCourier] = useState<Record<string, string>>({})
   const [tab, setTab] = useState<"labels" | "create">("labels")

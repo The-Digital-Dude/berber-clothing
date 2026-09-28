@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Plus, Trash2, Search, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
@@ -9,6 +9,10 @@ type Pair = { id: string; primaryId: string; secondaryId: string; score: number;
 
 export default function FBTClient({ products, initialPairs }: { products: Product[]; initialPairs: Pair[] }) {
   const [pairs, setPairs] = useState<Pair[]>(initialPairs)
+
+  useEffect(() => {
+    setPairs(initialPairs)
+  }, [initialPairs])
   // expanded state per primary: which row has the add-search open
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [search, setSearch] = useState<Record<string, string>>({})

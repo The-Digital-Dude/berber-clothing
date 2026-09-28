@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
@@ -168,6 +168,17 @@ export default function OrderDetailsClient({
 }) {
   const router = useRouter()
   const [order, setOrder] = useState(initialOrder)
+
+  useEffect(() => {
+    setOrder(initialOrder)
+    setCodNote(initialOrder.codCallNote ?? "")
+    setTagsInput((initialOrder.tags ?? "").split(",").filter(Boolean).join(", "))
+    setDeliveryData({
+      courier: initialOrder.delivery?.courier || "STEADFAST",
+      consignmentId: initialOrder.delivery?.consignmentId || "",
+      trackingCode: initialOrder.delivery?.trackingCode || "",
+    })
+  }, [initialOrder])
   const [loading, setLoading] = useState(false)
   const [pendingWaLink, setPendingWaLink] = useState<string | null>(null)
   const [codNote, setCodNote] = useState(order.codCallNote ?? "")

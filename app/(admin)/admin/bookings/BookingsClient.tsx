@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -58,6 +58,11 @@ function ServiceForm({ editing, onSave, onClose }: { editing: Service | null; on
 export default function BookingsClient({ bookings: initialBookings, services: initialServices }: { bookings: Booking[]; services: Service[] }) {
   const [bookings, setBookings] = useState(initialBookings)
   const [services, setServices] = useState(initialServices)
+
+  useEffect(() => {
+    setBookings(initialBookings)
+    setServices(initialServices)
+  }, [initialBookings, initialServices])
   const [serviceDialog, setServiceDialog] = useState(false)
   const [editingService, setEditingService] = useState<Service | null>(null)
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null)

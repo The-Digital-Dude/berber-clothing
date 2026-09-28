@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Check, X, Building, Calendar, ShoppingCart, Loader2 } from "lucide-react"
@@ -17,6 +17,10 @@ const STATUS_CONFIG: Record<string, { badge: string; label: string }> = {
 export default function PurchaseOrderDetailsClient({ initialPO }: { initialPO: any }) {
   const router = useRouter()
   const [po, setPo] = useState(initialPO)
+
+  useEffect(() => {
+    setPo(initialPO)
+  }, [initialPO])
   const [loading, setLoading] = useState(false)
 
   async function updateStatus(status: "RECEIVED" | "CANCELLED") {

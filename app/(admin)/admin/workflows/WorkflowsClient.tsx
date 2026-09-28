@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { 
@@ -69,6 +69,10 @@ function emptyForm() {
 
 export default function WorkflowsClient({ data }: { data: Workflow[] }) {
   const [workflows, setWorkflows] = useState<Workflow[]>(data)
+
+  useEffect(() => {
+    setWorkflows(data)
+  }, [data])
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Workflow | null>(null)
   const [form, setForm] = useState(emptyForm())

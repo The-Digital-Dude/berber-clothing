@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -125,6 +125,10 @@ function RuleBuilder({ rules, onChange }: { rules: Rule[]; onChange: (r: Rule[])
 export default function CollectionsClient({ collections: initial }: { collections: Collection[] }) {
   const router = useRouter()
   const [collections, setCollections] = useState(initial)
+
+  useEffect(() => {
+    setCollections(initial)
+  }, [initial])
   const [creating, setCreating] = useState(false)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [form, setForm] = useState({ name: "", slug: "", description: "", rules: [] as Rule[] })

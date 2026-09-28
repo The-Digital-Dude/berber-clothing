@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Switch } from "@/components/ui/switch"
 import { 
@@ -47,6 +47,10 @@ const emptyForm = () => ({
 
 export default function GiftCardsClient({ data }: { data: GiftCard[] }) {
   const [cards, setCards] = useState<GiftCard[]>(data)
+
+  useEffect(() => {
+    setCards(data)
+  }, [data])
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
