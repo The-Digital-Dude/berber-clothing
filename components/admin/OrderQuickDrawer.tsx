@@ -5,10 +5,11 @@ import Link from "next/link"
 import {
   X, ExternalLink, Phone, MessageSquare, Check, Loader2,
   Package, Truck, CreditCard, User, AlertTriangle, ShieldCheck,
-  Clock, CheckCircle2, ChevronRight, Copy
+  Clock, CheckCircle2, ChevronRight, Copy, Edit
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import OrderItemsEditorModal from "@/components/admin/OrderItemsEditorModal"
 
 const STATUS_OPTIONS = [
   { value: "PENDING", label: "Pending", cls: "bg-amber-50 text-amber-700 border-amber-200" },
@@ -32,6 +33,7 @@ export default function OrderQuickDrawer({
   const [order, setOrder] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const [isEditingItems, setIsEditingItems] = useState(false)
 
   useEffect(() => {
     if (!orderId) {
@@ -230,9 +232,20 @@ export default function OrderQuickDrawer({
 
             {/* Order Items */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-                <Package className="w-3.5 h-3.5" /> Order Items ({order.items?.length || 0})
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5" /> Order Items ({order.items?.length || 0})
+                </h3>
+                {!["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status) && (
+                  <button
+                    onClick={() => setIsEditingItems(true)}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+                  >
+                    <Edit className="w-3 h-3" />
+                    <span>Edit / Swap Items</span>
+                  </button>
+                )}
+              </div>
               <div className="bg-white rounded-xl border border-zinc-200 divide-y divide-zinc-100 overflow-hidden">
                 {order.items?.map((item: any) => {
                   const img = item.product?.images?.[0]?.url || "/placeholder.png"
@@ -316,6 +329,17 @@ export default function OrderQuickDrawer({
             </Link>
           </div>
         )}
+
+        {/* Order Items & Variant Modification Modal */}
+        <OrderItemsEditorModal
+          order={order}
+          isOpen={isEditingItems}
+          onClose={() => setIsEditingItems(false)}
+          onSaved={(updatedOrder) => {
+            setOrder(updatedOrder)
+            if (onStatusChange) onStatusChange(updatedOrder.id, updatedOrder.status)
+          }}
+        />
       </div>
     </div>
   )

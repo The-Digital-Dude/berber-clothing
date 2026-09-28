@@ -4,10 +4,11 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Printer, AlertTriangle, ShieldCheck, MessageCircle, Check, RefreshCw, Truck } from "lucide-react"
+import { Printer, AlertTriangle, ShieldCheck, MessageCircle, Check, RefreshCw, Truck, Edit, Package } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { CustomerRisk } from "@/lib/customerRisk"
+import OrderItemsEditorModal from "@/components/admin/OrderItemsEditorModal"
 
 const RISK_BADGE_CLASS: Record<string, string> = {
   LOW: "bg-green-100 text-green-800 border-green-200",
@@ -104,6 +105,7 @@ export default function OrderDetailsClient({
   const [pendingWaLink, setPendingWaLink] = useState<string | null>(null)
   const [codNote, setCodNote] = useState(order.codCallNote ?? "")
   const [tagsInput, setTagsInput] = useState((order.tags ?? "").split(",").filter(Boolean).join(", "))
+  const [isEditingItems, setIsEditingItems] = useState(false)
   const [deliveryData, setDeliveryData] = useState({
     courier: order.delivery?.courier || "STEADFAST",
     consignmentId: order.delivery?.consignmentId || "",
@@ -252,7 +254,24 @@ export default function OrderDetailsClient({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <Card>
-            <CardHeader><CardTitle>Order Items</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Order Items</CardTitle>
+              {!["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status) ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditingItems(true)}
+                  className="h-8 px-2.5 text-xs font-semibold text-amber-700 bg-amber-50/60 border-amber-200 hover:bg-amber-100 hover:text-amber-800 gap-1.5 shadow-2xs"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Edit Items & Variants</span>
+                </Button>
+              ) : (
+                <span className="text-[11px] font-medium text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded">
+                  Items locked ({order.status})
+                </span>
+              )}
+            </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {order.items.map((item: any) => (
@@ -569,6 +588,17 @@ export default function OrderDetailsClient({
           </Card>
         </div>
       </div>
+
+      {/* Order Items & Variant Modification Modal */}
+      <OrderItemsEditorModal
+        order={order}
+        isOpen={isEditingItems}
+        onClose={() => setIsEditingItems(false)}
+        onSaved={(updatedOrder) => {
+          setOrder(updatedOrder)
+          router.refresh()
+        }}
+      />
     </div>
   )
 }
