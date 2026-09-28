@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
+import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { createAdminClient } from "@/lib/supabase"
 import { brevoSubscribe } from "@/lib/brevo"
 import { sendWelcomeEmail } from "@/lib/email"
+import { linkReferralIfPresent } from "@/lib/referral"
 
 // Called right after a successful supabase.auth.signUp() on the client.
 // Creates the matching Prisma profile row and mirrors the role into
@@ -35,6 +37,10 @@ export async function POST(req: Request) {
     // Fire-and-forget: welcome email + marketing list subscriptions
     sendWelcomeEmail({ to: email, name }).catch(() => {})
     brevoSubscribe(email, name).catch(() => {})
+
+    // Attribute this signup to whoever referred them, if any
+    const refCode = (await cookies()).get("berber_ref")?.value
+    linkReferralIfPresent(user.id, refCode).catch(() => {})
 
     return NextResponse.json({ id: user.id, name: user.name, email: user.email }, { status: 201 })
   } catch (error: any) {

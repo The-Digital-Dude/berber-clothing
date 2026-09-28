@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { queryPayment } from "@/lib/bkash"
 import { awardPoints } from "@/lib/loyalty"
+import { processReferral } from "@/lib/referral"
 import { auth } from "@/lib/auth"
 
 export async function POST(req: Request) {
@@ -53,6 +54,11 @@ export async function POST(req: Request) {
           await awardPoints(order.userId, orderId, Number(order.total))
         } catch (err) {
           console.error("Failed to award points", err)
+        }
+
+        const referredUser = await prisma.user.findUnique({ where: { id: order.userId } })
+        if (referredUser?.referredByCode) {
+          await processReferral(order.userId, referredUser.referredByCode, orderId).catch(() => {})
         }
       }
     }

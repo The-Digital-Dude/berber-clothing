@@ -10,6 +10,7 @@ import { sendOrderConfirmation, sendAdminNewOrder } from "@/lib/email"
 import { brevoOrderPlaced, brevoAddTags } from "@/lib/brevo"
 import { sendPurchaseEvent } from "@/lib/metaConversionsApi"
 import { createAdminClient } from "@/lib/supabase"
+import { linkReferralIfPresent } from "@/lib/referral"
 
 export async function POST(req: Request) {
   try {
@@ -55,6 +56,9 @@ export async function POST(req: Request) {
           userId = newUser.id
           guestEmail = null
           accountJustCreated = true
+
+          const refCode = (await cookies()).get("berber_ref")?.value
+          linkReferralIfPresent(newUser.id, refCode).catch(() => {})
         } catch (e) {
           console.error("Checkout account creation failed, falling back to guest:", e)
           isGuest = true

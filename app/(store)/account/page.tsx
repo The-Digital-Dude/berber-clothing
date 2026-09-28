@@ -273,7 +273,7 @@ export default function AccountPage() {
             { key: "orders", label: "My Orders & Tracking", icon: Package, badge: orders.length },
             { key: "loyalty", label: "Berber Club VIP", icon: Crown, highlight: `${loyaltyBalance} pt` },
             { key: "credit", label: "Store Credit Wallet", icon: Wallet, highlight: storeCreditBalance > 0 ? `৳${storeCreditBalance}` : null },
-            { key: "referral", label: "Refer Friends (10% Off)", icon: Gift, promo: "৳100 Free" },
+            { key: "referral", label: "Refer Friends", icon: Gift, promo: "৳100 Free" },
             { key: "addresses", label: "Saved Delivery Addresses", icon: MapPin },
             { key: "profile", label: "Profile & Security", icon: User },
           ].map((item) => {
@@ -664,10 +664,10 @@ export default function AccountPage() {
                     <Gift className="w-3.5 h-3.5" /> Dual Referral Bonus
                   </div>
                   <h3 className="text-2xl sm:text-3xl font-bold text-white">
-                    Give 10% Off, Get ৳100 Store Credit
+                    Give ৳100, Get 500 Points
                   </h3>
                   <p className="text-xs text-zinc-300 max-w-md leading-relaxed">
-                    Share your personal link. When a friend places their first order, they enjoy 10% off and you receive ৳100 store credit automatically once delivered!
+                    Share your personal link. When a friend places their first order, they get ৳100 store credit and you earn 500 Berber Club points once it's confirmed!
                   </p>
 
                   <div className="pt-2 max-w-md space-y-2">
@@ -705,7 +705,7 @@ export default function AccountPage() {
                       <div className="pt-2">
                         <a
                           href={`https://wa.me/?text=${encodeURIComponent(
-                            `Get 10% off your first luxury order at Berber Clothing with my link: ${window.location.origin}?ref=${referralData.referralCode}`
+                            `Get ৳100 store credit on your first order at Berber Clothing with my link: ${window.location.origin}?ref=${referralData.referralCode}`
                           )}`}
                           target="_blank"
                           rel="noreferrer"

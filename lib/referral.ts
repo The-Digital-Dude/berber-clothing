@@ -9,6 +9,23 @@ export async function generateReferralCode(userId: string): Promise<string> {
   return code
 }
 
+// Attaches a new account to whoever referred them, if the `berber_ref`
+// cookie (set by middleware.ts from ?ref=) actually matches another
+// customer's referral code. Call this once, right when the account is
+// first created — nothing else in the codebase ever sets
+// User.referredByCode, so without this call the entire refer-a-friend
+// reward flow (processReferral, gated on referredByCode) never fires.
+export async function linkReferralIfPresent(newUserId: string, refCookieValue: string | null | undefined): Promise<void> {
+  if (!refCookieValue) return
+  try {
+    const referrer = await prisma.user.findUnique({ where: { referralCode: refCookieValue.toUpperCase() } })
+    if (!referrer || referrer.id === newUserId) return
+    await prisma.user.update({ where: { id: newUserId }, data: { referredByCode: referrer.referralCode } })
+  } catch {
+    // Never let referral attribution break account creation
+  }
+}
+
 export async function processReferral(
   refereeId: string,
   referralCode: string,

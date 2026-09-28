@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { sendOrderStatusUpdate, sendShippingDispatched, sendOrderDelivered } from "@/lib/email"
 import { buildWhatsAppMessage, buildWaLink, sendWhatsAppMessage } from "@/lib/whatsapp"
+import { processReferral } from "@/lib/referral"
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
@@ -25,11 +26,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       where: { id },
       data: updateData,
       include: {
-        user: { select: { email: true, name: true } },
+        user: { select: { email: true, name: true, referredByCode: true } },
         items: { take: 1, include: { product: { select: { name: true } } } },
         reseller: true,
       },
     })
+
+    // Gateway payments trigger the referral reward from their own
+    // success/callback route (payment is the real "this order is genuine"
+    // signal there); COD/manual orders never touch a gateway, so admin
+    // confirmation is the equivalent signal here. processReferral is
+    // idempotent (checks for an existing ReferralLog per order), so this
+    // can't double-pay even if a gateway order is later re-confirmed here.
+    if (status === "CONFIRMED" && order.userId && order.user?.referredByCode) {
+      processReferral(order.userId, order.user.referredByCode, order.id).catch(() => {})
+    }
 
     // Reseller profit crediting on successful delivery
     if (status === "DELIVERED" && order.isResellerOrder && order.resellerId && !order.resellerProfitPaid) {
