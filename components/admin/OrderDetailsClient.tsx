@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Printer, AlertTriangle, ShieldCheck, MessageCircle } from "lucide-react"
+import { Printer, AlertTriangle, ShieldCheck, MessageCircle, Check, RefreshCw, Truck } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import type { CustomerRisk } from "@/lib/customerRisk"
@@ -13,6 +13,82 @@ const RISK_BADGE_CLASS: Record<string, string> = {
   LOW: "bg-green-100 text-green-800 border-green-200",
   MEDIUM: "bg-yellow-100 text-yellow-800 border-yellow-200",
   HIGH: "bg-red-100 text-red-800 border-red-200",
+}
+
+const STEPPER_STAGES = ["PENDING", "CONFIRMED", "PACKED", "SHIPPED", "DELIVERED"] as const
+const EXCEPTION_STATUSES = ["CANCELLED", "RETURNED"]
+
+function OrderStepper({
+  status,
+  loading,
+  onAdvance,
+  onSetException,
+}: {
+  status: string
+  loading: boolean
+  onAdvance: (status: string) => void
+  onSetException: (status: string) => void
+}) {
+  const isException = EXCEPTION_STATUSES.includes(status)
+  const currentIndex = STEPPER_STAGES.indexOf(status as any)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center">
+        {STEPPER_STAGES.map((stage, i) => {
+          const done = !isException && i < currentIndex
+          const active = !isException && i === currentIndex
+          const clickable = !isException && !loading && i === currentIndex + 1
+          return (
+            <div key={stage} className="flex items-center flex-1 last:flex-none">
+              <button
+                type="button"
+                disabled={!clickable}
+                onClick={() => clickable && onAdvance(stage)}
+                title={clickable ? `Mark as ${stage}` : stage}
+                className={`flex items-center justify-center w-8 h-8 rounded-full border-2 text-xs font-bold shrink-0 transition-colors ${
+                  done
+                    ? "bg-green-600 border-green-600 text-white"
+                    : active
+                    ? "bg-indigo-600 border-indigo-600 text-white"
+                    : clickable
+                    ? "border-indigo-300 text-indigo-600 hover:bg-indigo-50 cursor-pointer"
+                    : "border-muted text-muted-foreground"
+                }`}
+              >
+                {done ? <Check className="w-4 h-4" /> : i + 1}
+              </button>
+              {i < STEPPER_STAGES.length - 1 && (
+                <div className={`h-0.5 flex-1 ${done ? "bg-green-600" : "bg-muted"}`} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <div className="flex justify-between text-[10px] uppercase tracking-wide text-muted-foreground font-medium px-1">
+        {STEPPER_STAGES.map((stage) => (
+          <span key={stage} className={stage === status ? "text-foreground font-bold" : ""}>{stage}</span>
+        ))}
+      </div>
+      <div className="flex items-center justify-between pt-1">
+        {isException ? (
+          <Badge variant="destructive">{status}</Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">Click the next circle to advance the order.</span>
+        )}
+        <select
+          value={isException ? status : ""}
+          onChange={(e) => e.target.value && onSetException(e.target.value)}
+          disabled={loading}
+          className="h-7 text-xs rounded-md border border-input bg-transparent px-2 focus:outline-none focus:ring-2 focus:ring-ring"
+        >
+          <option value="">Cancel / Return…</option>
+          <option value="CANCELLED">Cancelled</option>
+          <option value="RETURNED">Returned</option>
+        </select>
+      </div>
+    </div>
+  )
 }
 
 export default function OrderDetailsClient({
@@ -90,6 +166,68 @@ export default function OrderDetailsClient({
     }
   }
 
+  const dispatchToCourier = async () => {
+    setLoading(true)
+    try {
+      const isSteadfast = deliveryData.courier === "STEADFAST"
+      const res = await fetch(isSteadfast ? "/api/courier/steadfast" : "/api/delivery/pathao/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const consignment = isSteadfast ? data.consignment : data
+        setDeliveryData({
+          courier: deliveryData.courier,
+          consignmentId: String(consignment.consignmentId ?? consignment.consignment_id ?? ""),
+          trackingCode: consignment.trackingCode ?? consignment.tracking_code ?? "",
+        })
+        toast.success(`Parcel created with ${isSteadfast ? "Steadfast" : "Pathao"}`)
+        router.refresh()
+      } else {
+        toast.error(data.error || "Failed to create parcel")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const refreshCourierTracking = async () => {
+    setLoading(true)
+    try {
+      const isSteadfast = deliveryData.courier === "STEADFAST"
+      const url = isSteadfast
+        ? `/api/courier/steadfast?consignmentId=${encodeURIComponent(deliveryData.consignmentId)}`
+        : `/api/delivery/pathao/track?orderId=${order.id}`
+      const res = await fetch(url)
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`Latest status: ${data.internalStatus ?? data.status}`)
+        router.refresh()
+      } else {
+        toast.error(data.error || "Failed to refresh tracking")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const verifyCodViaWhatsApp = () => {
+    const itemSummary = order.items
+      .map((item: any) => `- ${item.productName} (${item.size}/${item.color}) x${item.quantity}`)
+      .join("\n")
+    const address = `${order.shippingAddress}, ${order.shippingArea}, ${order.shippingDistrict}, ${order.shippingDivision}`
+    const message =
+      `Hi ${order.shippingName}, this is Berber calling to confirm your Cash on Delivery order *#${order.orderNumber}*:\n\n` +
+      `${itemSummary}\n\n` +
+      `Total due on delivery: ৳${order.total}\n` +
+      `Delivery address: ${address}\n\n` +
+      `Can you confirm this order and address so we can dispatch it? Thank you!`
+    const phone = order.shippingPhone.replace(/\D/g, "").replace(/^0/, "880")
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -164,28 +302,46 @@ export default function OrderDetailsClient({
                   >
                     <option value="PATHAO">Pathao</option>
                     <option value="STEADFAST">Steadfast</option>
+                    <option value="REDX">RedX</option>
+                    <option value="PAPERFLY">Paperfly</option>
                     <option value="SELF">Self Delivery</option>
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Consignment ID</label>
-                  <input 
-                    type="text" 
-                    value={deliveryData.consignmentId} 
+                  <input
+                    type="text"
+                    value={deliveryData.consignmentId}
                     onChange={e => setDeliveryData({...deliveryData, consignmentId: e.target.value})}
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <label className="text-sm font-medium">Tracking Code</label>
-                  <input 
-                    type="text" 
-                    value={deliveryData.trackingCode} 
+                  <input
+                    type="text"
+                    value={deliveryData.trackingCode}
                     onChange={e => setDeliveryData({...deliveryData, trackingCode: e.target.value})}
                     className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
               </div>
+              {order.delivery?.status && (
+                <div className="text-xs text-muted-foreground">Last known courier status: <span className="font-medium text-foreground">{order.delivery.status}</span></div>
+              )}
+              {(deliveryData.courier === "PATHAO" || deliveryData.courier === "STEADFAST") && (
+                <div className="flex gap-2">
+                  {!deliveryData.consignmentId ? (
+                    <Button onClick={dispatchToCourier} disabled={loading} variant="outline" className="flex-1 gap-2">
+                      <Truck className="w-4 h-4" /> {loading ? "Creating…" : `Create ${deliveryData.courier === "PATHAO" ? "Pathao" : "Steadfast"} Parcel`}
+                    </Button>
+                  ) : (
+                    <Button onClick={refreshCourierTracking} disabled={loading} variant="outline" className="flex-1 gap-2">
+                      <RefreshCw className="w-4 h-4" /> {loading ? "Refreshing…" : "Refresh Tracking Status"}
+                    </Button>
+                  )}
+                </div>
+              )}
               <Button onClick={saveDelivery} disabled={loading} className="w-full">
                 {loading ? "Saving..." : "Save Delivery Info"}
               </Button>
@@ -239,6 +395,16 @@ export default function OrderDetailsClient({
                 <p>{order.shippingArea}, {order.shippingDistrict}</p>
                 <p>{order.shippingDivision}</p>
               </div>
+              {order.paymentMethod === "COD" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={verifyCodViaWhatsApp}
+                  className="w-full gap-2 border-green-200 text-green-700 hover:bg-green-50"
+                >
+                  <MessageCircle className="w-4 h-4" /> Verify COD via WhatsApp
+                </Button>
+              )}
               {order.note && (
                 <div className="mt-4 p-3 bg-muted rounded-md text-sm">
                   <strong>Note: </strong> {order.note}
@@ -276,22 +442,14 @@ export default function OrderDetailsClient({
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Order Status</label>
-                <select 
-                  value={order.status} 
-                  onChange={(e) => updateStatus(e.target.value)}
-                  disabled={loading}
-                  className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="PENDING">Pending</option>
-                  <option value="CONFIRMED">Confirmed</option>
-                  <option value="PACKED">Packed</option>
-                  <option value="SHIPPED">Shipped</option>
-                  <option value="DELIVERED">Delivered</option>
-                  <option value="CANCELLED">Cancelled</option>
-                  <option value="RETURNED">Returned</option>
-                </select>
+                <OrderStepper
+                  status={order.status}
+                  loading={loading}
+                  onAdvance={updateStatus}
+                  onSetException={updateStatus}
+                />
               </div>
-              
+
               <div className="space-y-2 pt-2 border-t">
                 <label className="text-sm font-medium">Payment Status</label>
                 <div className="flex justify-between items-center bg-muted p-2 rounded">
