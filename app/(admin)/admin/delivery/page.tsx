@@ -1,14 +1,23 @@
 import prisma from "@/lib/prisma"
+import { requireAdmin } from "@/lib/adminAuth"
+import { redirect } from "next/navigation"
 import { DeliveryClient } from "./DeliveryClient"
 import { startOfMonth, endOfMonth } from "date-fns"
+import { Truck, Send, CheckCircle2, AlertTriangle, Clock } from "lucide-react"
+
+export const dynamic = "force-dynamic"
 
 export default async function DeliveryPage({
   searchParams,
 }: {
-  searchParams: { courier?: string; status?: string }
+  searchParams: Promise<{ courier?: string; status?: string }>
 }) {
-  const courierFilter = searchParams.courier
-  const statusFilter = searchParams.status
+  const { error } = await requireAdmin()
+  if (error) redirect("/admin/login")
+
+  const resolvedParams = await searchParams
+  const courierFilter = resolvedParams?.courier
+  const statusFilter = resolvedParams?.status
 
   const where: any = {}
   if (courierFilter) where.courier = courierFilter
@@ -31,7 +40,7 @@ export default async function DeliveryPage({
   const endMonth = endOfMonth(now)
 
   const monthStats = await prisma.delivery.groupBy({
-    by: ['status'],
+    by: ["status"],
     where: {
       createdAt: {
         gte: startMonth,
@@ -54,14 +63,15 @@ export default async function DeliveryPage({
     stats.totalSent += stat._count._all
     if (stat.status === "IN_TRANSIT") stats.inTransit += stat._count._all
     if (stat.status === "DELIVERED") stats.delivered += stat._count._all
-    if (stat.status === "FAILED") stats.failed += stat._count._all
+    if (stat.status === "FAILED" || stat.status === "RETURNED") stats.failed += stat._count._all
   })
 
-  const formattedData = deliveries.map(d => ({
+  const formattedData = deliveries.map((d) => ({
     id: d.id,
     orderId: d.orderId,
     orderNumber: d.order.orderNumber,
     customerName: d.order.user?.name || d.order.shippingName,
+    shippingPhone: d.order.shippingPhone,
     courier: d.courier,
     consignmentId: d.consignmentId,
     trackingCode: d.trackingCode,
@@ -70,10 +80,24 @@ export default async function DeliveryPage({
   }))
 
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Delivery Management</h2>
+    <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+              <Truck className="w-3.5 h-3.5" />
+              Logistics & Couriers
+            </span>
+            <span className="text-xs text-zinc-600 font-medium">Pathao & Steadfast integration</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900">Delivery & Courier Dispatch</h1>
+          <p className="text-sm text-zinc-600 mt-0.5">
+            Monitor consignment tracking, real-time parcel transit states, failed attempts, and automatic courier sync.
+          </p>
+        </div>
       </div>
+
       <DeliveryClient data={formattedData} stats={stats} />
     </div>
   )
