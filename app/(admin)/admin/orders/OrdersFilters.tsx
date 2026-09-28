@@ -2,27 +2,32 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
-import { Search, X, Filter } from "lucide-react"
+import { Search, Filter, X, RotateCcw, Truck, CreditCard } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const STATUS_PILLS = [
   { value: "", label: "All Orders" },
-  { value: "PENDING", label: "Pending" },
+  { value: "PENDING", label: "Pending", alert: true },
   { value: "CONFIRMED", label: "Confirmed" },
   { value: "PACKED", label: "Packed" },
   { value: "SHIPPED", label: "Shipped" },
   { value: "DELIVERED", label: "Delivered" },
   { value: "CANCELLED", label: "Cancelled" },
+  { value: "RETURNED", label: "Returned" },
 ]
 
 export default function OrdersFilters({
   currentSearch,
   currentStatus,
   currentPayment,
+  currentCourier,
+  statusCounts = {},
 }: {
   currentSearch: string
   currentStatus: string
   currentPayment: string
+  currentCourier?: string
+  statusCounts?: Record<string, number>
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -33,42 +38,67 @@ export default function OrdersFilters({
       if (value) params.set(key, value)
       else params.delete(key)
       params.delete("page")
-      router.push(`/admin/orders?${params.toString()}`)
+      router.push(`/admin/orders?${params.toString()}`, { scroll: false })
     },
     [router, searchParams]
   )
 
+  const clearAllFilters = () => {
+    router.push("/admin/orders", { scroll: false })
+  }
+
+  const hasActiveFilters = Boolean(
+    currentSearch || currentStatus || currentPayment || currentCourier
+  )
+
   return (
-    <div className="p-4 border-b border-zinc-200/80 bg-white space-y-3">
-      {/* Preset Status Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+    <div className="p-4 border-b border-zinc-200/80 bg-white space-y-3.5">
+      {/* 1. Status Segmented Tabs with Counts */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-zinc-200 text-xs">
         {STATUS_PILLS.map((pill) => {
           const isActive = currentStatus === pill.value
+          const count = pill.value === "" ? statusCounts.ALL : statusCounts[pill.value]
+
           return (
             <button
               key={pill.value}
               onClick={() => update("status", pill.value)}
               className={cn(
-                "px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all text-xs",
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-all text-xs group",
                 isActive
-                  ? "bg-zinc-900 text-white shadow-2xs font-semibold"
+                  ? "bg-zinc-900 text-white shadow-xs font-semibold"
                   : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 bg-zinc-50 border border-zinc-200/70"
               )}
             >
-              {pill.label}
+              <span>{pill.label}</span>
+              {count !== undefined && count > 0 && (
+                <span
+                  className={cn(
+                    "text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold",
+                    isActive
+                      ? "bg-zinc-800 text-amber-400"
+                      : pill.alert && pill.value === "PENDING"
+                      ? "bg-amber-100 text-amber-800 border border-amber-200"
+                      : "bg-zinc-200/80 text-zinc-600"
+                  )}
+                >
+                  {count}
+                </span>
+              )}
             </button>
           )
         })}
       </div>
 
-      {/* Search Input & Payment Selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+      {/* 2. Multi-Filter Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+        {/* Search Box */}
         <div className="relative flex-1 min-w-[260px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
           <input
             type="search"
             defaultValue={currentSearch}
-            placeholder="Filter by order number, customer name, phone…"
+            placeholder="Search order #, customer, phone, area…"
             onChange={(e) => {
               const v = e.target.value
               clearTimeout((window as any)._orderSearchTimer)
@@ -78,22 +108,51 @@ export default function OrdersFilters({
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-            <Filter className="w-3.5 h-3.5" />
-            <span>Payment:</span>
+        {/* Dropdown Filters */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {/* Payment Method */}
+          <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-1 shadow-2xs">
+            <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
+            <select
+              value={currentPayment || ""}
+              onChange={(e) => update("paymentMethod", e.target.value)}
+              className="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer"
+            >
+              <option value="">All Payments</option>
+              <option value="COD">Cash on Delivery (COD)</option>
+              <option value="BKASH">bKash Gateway</option>
+              <option value="NAGAD">Nagad Gateway</option>
+              <option value="UDDOKTAPAY">UddoktaPay</option>
+            </select>
           </div>
-          <select
-            defaultValue={currentPayment}
-            onChange={(e) => update("paymentMethod", e.target.value)}
-            className="flex h-9 rounded-xl border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-amber-500"
-          >
-            <option value="">All Gateways</option>
-            <option value="COD">Cash on Delivery (COD)</option>
-            <option value="BKASH">bKash Gateway</option>
-            <option value="NAGAD">Nagad Gateway</option>
-            <option value="UDDOKTAPAY">UddoktaPay</option>
-          </select>
+
+          {/* Courier Method */}
+          <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-1 shadow-2xs">
+            <Truck className="w-3.5 h-3.5 text-zinc-400" />
+            <select
+              value={currentCourier || ""}
+              onChange={(e) => update("courier", e.target.value)}
+              className="bg-transparent text-xs font-semibold text-zinc-800 focus:outline-none cursor-pointer"
+            >
+              <option value="">All Couriers</option>
+              <option value="STEADFAST">Steadfast Courier</option>
+              <option value="PATHAO">Pathao Courier</option>
+              <option value="REDX">RedX Delivery</option>
+              <option value="PAPERFLY">Paperfly</option>
+              <option value="SELF">Self Delivery</option>
+            </select>
+          </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="flex items-center gap-1 h-8 px-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-all text-xs font-medium shadow-2xs"
+            >
+              <X className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
       </div>
     </div>
