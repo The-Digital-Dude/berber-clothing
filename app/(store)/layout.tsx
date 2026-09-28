@@ -36,12 +36,12 @@ export default async function StoreLayout({
       where: { isActive: true, showOnNavbar: true, parentId: null },
       orderBy: { sortOrder: "asc" },
       select: {
-        id: true, name: true, slug: true,
+        id: true, name: true, slug: true, image: true, description: true,
         children: {
           where: { isActive: true },
           orderBy: { sortOrder: "asc" },
-          select: { id: true, name: true, slug: true }
-        }
+          select: { id: true, name: true, slug: true, image: true, description: true },
+        },
       },
     }),
     prisma.flashSale.findFirst({

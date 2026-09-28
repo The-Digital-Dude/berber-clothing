@@ -4,7 +4,14 @@ import { useState, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Filter, X } from "lucide-react"
 
-type Category = { id: string; name: string; slug: string }
+type Category = {
+  id: string
+  name: string
+  slug: string
+  parentId?: string | null
+  parent?: { id: string; name: string; slug: string } | null
+  children?: { id: string; name: string; slug: string }[]
+}
 type Brand = { id: string; name: string }
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"]
@@ -37,6 +44,9 @@ export default function ShopFilters({ categories, brands }: { categories: Catego
   const [maxPrice, setMaxPrice] = useState(maxPriceParam)
 
   const hasActiveFilters = !!(category || brandId || size || color || minPriceParam || maxPriceParam || sale)
+
+  // Top level categories
+  const topCategories = categories.filter((c) => !c.parentId)
 
   function buildUrl(overrides: Record<string, string>) {
     const p = new URLSearchParams(sp.toString())
@@ -71,36 +81,70 @@ export default function ShopFilters({ categories, brands }: { categories: Catego
       {hasActiveFilters && (
         <button
           onClick={clearAll}
-          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-500 hover:text-red-700 transition-colors cursor-pointer"
         >
           <X className="w-3 h-3" /> Clear All Filters
         </button>
       )}
 
-      {/* Category */}
+      {/* Category Hierarchy */}
       <div className="space-y-3">
-        <h4 className="font-bold text-xs uppercase tracking-widest text-berber-text-muted">Category</h4>
-        <ul className="space-y-2.5 text-sm">
+        <h4 className="font-bold text-xs uppercase tracking-widest text-berber-text-muted">Categories</h4>
+        <ul className="space-y-2 text-sm">
           <li>
             <button
               onClick={() => navigate({ category: "" })}
-              className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${!category ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
+              className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors cursor-pointer ${!category ? "text-berber-black font-bold" : "text-berber-text-muted"}`}
             >
-              <div className={`w-4 h-4 rounded border shrink-0 ${!category ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
-              All Products
+              <div className={`w-3.5 h-3.5 rounded-full border shrink-0 ${!category ? "bg-amber-600 border-amber-600 ring-2 ring-amber-100" : "border-berber-border"}`} />
+              <span>All Collections</span>
             </button>
           </li>
-          {categories.map((cat) => (
-            <li key={cat.id}>
-              <button
-                onClick={() => navigate({ category: category === cat.slug ? "" : cat.slug })}
-                className={`flex items-center gap-3 w-full text-left hover:text-berber-gold transition-colors ${category === cat.slug ? "text-berber-black font-semibold" : "text-berber-text-muted"}`}
-              >
-                <div className={`w-4 h-4 rounded border shrink-0 ${category === cat.slug ? "bg-berber-gold border-berber-gold" : "border-berber-border"}`} />
-                {cat.name}
-              </button>
-            </li>
-          ))}
+          {topCategories.map((cat) => {
+            const isDirectActive = category === cat.slug
+            const childList = categories.filter((ch) => ch.parentId === cat.id)
+            const hasActiveChild = childList.some((ch) => ch.slug === category)
+            const isExpanded = isDirectActive || hasActiveChild
+
+            return (
+              <li key={cat.id} className="space-y-1.5">
+                <button
+                  onClick={() => navigate({ category: isDirectActive ? "" : cat.slug })}
+                  className={`flex items-center justify-between w-full text-left hover:text-berber-gold transition-colors cursor-pointer ${isDirectActive ? "text-berber-black font-bold" : "text-zinc-700 font-medium"}`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-3.5 h-3.5 rounded border shrink-0 ${isDirectActive ? "bg-amber-600 border-amber-600" : "border-berber-border"}`} />
+                    <span>{cat.name}</span>
+                  </div>
+                  {childList.length > 0 && (
+                    <span className="text-[10px] text-zinc-400 font-mono">
+                      {childList.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Indented Subcategories */}
+                {childList.length > 0 && (
+                  <ul className="pl-6 space-y-1.5 border-l-2 border-zinc-100 ml-1.5 py-1">
+                    {childList.map((sub) => {
+                      const isSubActive = category === sub.slug
+                      return (
+                        <li key={sub.id}>
+                          <button
+                            onClick={() => navigate({ category: isSubActive ? "" : sub.slug })}
+                            className={`flex items-center gap-2 w-full text-left text-xs hover:text-amber-700 transition-colors cursor-pointer ${isSubActive ? "text-amber-700 font-bold" : "text-zinc-500 hover:text-zinc-800"}`}
+                          >
+                            <span className="text-zinc-300">↳</span>
+                            <span>{sub.name}</span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </div>
 

@@ -6,7 +6,9 @@ import { notFound } from "next/navigation"
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const categories = await prisma.category.findMany().catch(() => [])
+  const categories = await prisma.category.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  }).catch(() => [])
 
   const product = await prisma.product.findUnique({
     where: { id },

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useCallback, useEffect, useMemo } from "react"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation"
 import {
   PlusCircle, Trash2, X, Upload, Link as LinkIcon, Loader2,
   Package, Tag, Image as ImageIcon, Search, ChevronDown, Layers, FileText,
-  Save, ArrowLeft, Eye, EyeOff, Star, StarOff
+  Save, ArrowLeft, Eye, EyeOff, Star, StarOff, CornerDownRight
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -240,6 +240,40 @@ export default function ProductForm({ initialData, categories }: { initialData?:
       variants: [{ size: "M", color: "Black", sku: "", stock: 0 }]
     }
   })
+
+  // Category & Subcategory resolution
+  const topCategories = useMemo(() => categories.filter((c: any) => !c.parentId), [categories])
+  const initialCategory = useMemo(() => categories.find((c: any) => c.id === (initialData?.categoryId || "")), [categories, initialData])
+  
+  const [selectedParentId, setSelectedParentId] = useState<string>(() => {
+    if (!initialCategory) return ""
+    return initialCategory.parentId || initialCategory.id
+  })
+
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>(() => {
+    if (!initialCategory) return ""
+    return initialCategory.parentId ? initialCategory.id : ""
+  })
+
+  const availableSubcategories = useMemo(() => {
+    if (!selectedParentId) return []
+    return categories.filter((c: any) => c.parentId === selectedParentId)
+  }, [categories, selectedParentId])
+
+  const selectedParentName = useMemo(() => {
+    return topCategories.find((c: any) => c.id === selectedParentId)?.name || ""
+  }, [topCategories, selectedParentId])
+
+  const handleParentSelect = (parentId: string) => {
+    setSelectedParentId(parentId)
+    setSelectedSubcategoryId("")
+    setValue("categoryId", parentId, { shouldValidate: true })
+  }
+
+  const handleSubcategorySelect = (subId: string) => {
+    setSelectedSubcategoryId(subId)
+    setValue("categoryId", subId || selectedParentId, { shouldValidate: true })
+  }
 
   const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({ control, name: "variants" })
 
@@ -593,18 +627,56 @@ export default function ProductForm({ initialData, categories }: { initialData?:
               </Field>
             </div>
 
-            {/* Category */}
+            {/* Category & Subcategory */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
               <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">Organisation</h3>
-              <Field label="Category" error={errors.categoryId?.message as string}>
+              
+              {/* Parent Category */}
+              <Field label="Parent Category" error={errors.categoryId?.message as string}>
                 <div className="relative">
-                  <select {...register("categoryId")} className={`${inputCls} appearance-none pr-8 ${errors.categoryId ? "border-red-400 ring-1 ring-red-400" : ""}`}>
-                    <option value="">Select category…</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  <select
+                    value={selectedParentId}
+                    onChange={(e) => handleParentSelect(e.target.value)}
+                    className={`${inputCls} appearance-none pr-8 font-medium ${errors.categoryId ? "border-red-400 ring-1 ring-red-400" : ""}`}
+                  >
+                    <option value="">Select main category…</option>
+                    {topCategories.map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </Field>
+
+              {/* Subcategory (Chained if parent has subcategories) */}
+              {selectedParentId && availableSubcategories.length > 0 && (
+                <div className="animate-in fade-in duration-200 pl-3 border-l-2 border-amber-300">
+                  <Field
+                    label="Subcategory (Optional)"
+                    hint={`Specific section inside ${selectedParentName || "category"}`}
+                  >
+                    <div className="relative">
+                      <select
+                        value={selectedSubcategoryId}
+                        onChange={(e) => handleSubcategorySelect(e.target.value)}
+                        className={`${inputCls} appearance-none pr-8 bg-zinc-50/50 font-medium`}
+                      >
+                        <option value="">
+                          Directly in {selectedParentName} (No Subcategory)
+                        </option>
+                        {availableSubcategories.map((sub: any) => (
+                          <option key={sub.id} value={sub.id}>
+                            ↳ {sub.name}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </Field>
+                </div>
+              )}
             </div>
 
             {/* Status cards */}

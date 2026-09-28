@@ -3,8 +3,18 @@ import { CategoryClient } from "./CategoryClient"
 
 export default async function CategoriesPage() {
   const categories = await prisma.category.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: { attributeConfig: true, _count: { select: { products: true } } },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: {
+      parent: { select: { id: true, name: true, slug: true } },
+      children: {
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        include: {
+          _count: { select: { products: true } },
+        },
+      },
+      attributeConfig: true,
+      _count: { select: { products: true, children: true } },
+    },
   })
 
   const formatted = categories.map((c) => ({
@@ -13,12 +23,29 @@ export default async function CategoriesPage() {
     slug: c.slug,
     description: c.description || "",
     image: c.image || "",
+    parentId: c.parentId || null,
+    parent: c.parent ? { id: c.parent.id, name: c.parent.name, slug: c.parent.slug } : null,
     isActive: c.isActive,
     showOnNavbar: c.showOnNavbar,
     showOnHomepage: c.showOnHomepage,
     sortOrder: c.sortOrder,
     productCount: c._count.products,
+    childrenCount: c._count.children,
+    children: (c.children || []).map((ch) => ({
+      id: ch.id,
+      name: ch.name,
+      slug: ch.slug,
+      description: ch.description || "",
+      image: ch.image || "",
+      parentId: ch.parentId || c.id,
+      isActive: ch.isActive,
+      showOnNavbar: ch.showOnNavbar,
+      showOnHomepage: ch.showOnHomepage,
+      sortOrder: ch.sortOrder,
+      productCount: ch._count?.products || 0,
+    })),
   }))
+
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">

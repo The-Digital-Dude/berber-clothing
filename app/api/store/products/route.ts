@@ -29,8 +29,17 @@ export async function GET(req: NextRequest) {
     ]
   }
   if (category) {
-    const cat = await prisma.category.findUnique({ where: { slug: category } }).catch(() => null)
-    if (cat) where.categoryId = cat.id
+    const cat = await prisma.category.findUnique({
+      where: { slug: category },
+      include: { children: { select: { id: true } } },
+    }).catch(() => null)
+    if (cat) {
+      if (cat.children && cat.children.length > 0) {
+        where.categoryId = { in: [cat.id, ...cat.children.map((c) => c.id)] }
+      } else {
+        where.categoryId = cat.id
+      }
+    }
   }
   if (brandId)  where.brandId = brandId
   if (saleOnly) where.comparePrice = { not: null }

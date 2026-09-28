@@ -9,7 +9,20 @@ import CartDrawer from "@/components/store/CartDrawer"
 import SearchModal from "@/components/store/SearchModal"
 import { cn } from "@/lib/utils"
 
-type NavCategory = { id: string; name: string; slug: string; children?: { id: string; name: string; slug: string }[] }
+type NavCategory = {
+  id: string
+  name: string
+  slug: string
+  image?: string | null
+  description?: string | null
+  children?: {
+    id: string
+    name: string
+    slug: string
+    image?: string | null
+    description?: string | null
+  }[]
+}
 type NavFlashSale = { name: string; discountType: string; discountValue: number; endsAt: string }
 
 function useCountdown(endsAt: string) {
@@ -47,9 +60,10 @@ export default function Navbar({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  const [activeHoverCategory, setActiveHoverCategory] = useState<string | null>(null)
   const itemCount = useCartStore((s) => s.items.reduce((acc, i) => acc + i.quantity, 0))
   const wishlistCount = useWishlistStore((s) => s.items.length)
-  const navCategories = categories.slice(0, 4)
+  const navCategories = categories.slice(0, 5)
   const flashCountdown = useCountdown(activeFlashSale?.endsAt || "")
   const flashLabel = activeFlashSale
     ? activeFlashSale.discountType === "PERCENTAGE"
@@ -97,67 +111,128 @@ export default function Navbar({
         )}
       </div>
 
-      <header className="sticky top-0 z-50 w-full border-b border-berber-border bg-berber-surface/80 backdrop-blur-md">
-        <div className="container mx-auto px-4 md:px-8 min-h-[6rem] flex items-center justify-between py-4">
+      <header className="sticky top-0 z-50 w-full border-b border-berber-border bg-berber-surface/90 backdrop-blur-md">
+        <div className="container mx-auto px-4 md:px-8 min-h-[5.5rem] flex items-center justify-between py-3">
 
           {/* Mobile Menu & Logo */}
-          <div className="flex items-center gap-4 md:w-1/3">
+          <div className="flex items-center gap-4 md:w-1/4">
             <button
-              className="md:hidden p-3 -ml-3 text-berber-text"
+              className="md:hidden p-2.5 -ml-2.5 text-berber-text hover:text-berber-gold transition-colors"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <Link href="/">
-              <img src="/logo-icon.png" alt={storeName} className="h-14 w-14 md:h-16 md:w-16 object-contain" />
+            <Link href="/" className="flex items-center gap-2">
+              <img src="/logo-icon.png" alt={storeName} className="h-12 w-12 md:h-14 md:w-14 object-contain" />
             </Link>
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center justify-center gap-8 w-1/3">
-            <Link href="/" className="text-sm font-medium hover:text-berber-gold transition-colors">Home</Link>
-            <Link href="/shop" className="text-sm font-medium hover:text-berber-gold transition-colors">Shop</Link>
-            {navCategories.map((cat) => (
-              <div key={cat.id} className="relative group">
-                <Link
-                  href={`/shop?category=${cat.slug}`}
-                  className="text-sm font-medium hover:text-berber-gold transition-colors flex items-center gap-1"
+          <nav className="hidden md:flex items-center justify-center gap-7 lg:gap-8 flex-1">
+            <Link href="/" className="text-sm font-semibold text-berber-text/80 hover:text-berber-gold transition-colors">
+              Home
+            </Link>
+            <Link href="/shop" className="text-sm font-semibold text-berber-text/80 hover:text-berber-gold transition-colors">
+              Shop All
+            </Link>
+
+            {navCategories.map((cat) => {
+              const hasSubs = cat.children && cat.children.length > 0
+              return (
+                <div
+                  key={cat.id}
+                  className="relative group py-4"
+                  onMouseEnter={() => setActiveHoverCategory(cat.id)}
+                  onMouseLeave={() => setActiveHoverCategory(null)}
                 >
-                  {cat.name}
-                  {cat.children && cat.children.length > 0 && (
-                    <span className="text-[10px] transition-transform group-hover:rotate-180">▼</span>
-                  )}
-                </Link>
-                {cat.children && cat.children.length > 0 && (
-                  <div className="absolute left-0 top-full pt-4 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300">
-                    <div className="bg-berber-surface text-berber-text border border-berber-border shadow-lg rounded-xl py-2 min-w-[160px] flex flex-col">
-                      {cat.children.map((sub) => (
-                        <Link key={sub.id} href={`/shop?category=${sub.slug}`} className="px-4 py-2 text-sm hover:bg-berber-muted hover:text-berber-gold transition-colors">
-                          {sub.name}
-                        </Link>
-                      ))}
+                  <Link
+                    href={`/shop?category=${cat.slug}`}
+                    className="text-sm font-semibold text-berber-text/80 hover:text-berber-gold transition-colors flex items-center gap-1"
+                  >
+                    <span>{cat.name}</span>
+                    {hasSubs && (
+                      <span className="text-[9px] transition-transform duration-200 group-hover:rotate-180 opacity-60">
+                        ▼
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* Luxury Megamenu Dropdown */}
+                  {hasSubs && (
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full pt-1 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                      <div className="bg-white/95 backdrop-blur-md text-zinc-900 border border-zinc-200 shadow-2xl rounded-2xl p-5 min-w-[340px] max-w-[420px] flex gap-5">
+                        {/* Subcategory Links */}
+                        <div className="flex-1 space-y-1">
+                          <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-400 mb-2 px-3">
+                            {cat.name} Catalog
+                          </p>
+                          <Link
+                            href={`/shop?category=${cat.slug}`}
+                            className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-zinc-900 hover:bg-zinc-100 hover:text-amber-700 transition-colors"
+                          >
+                            <span>All {cat.name}</span>
+                            <span className="text-zinc-400 font-mono text-[11px]">→</span>
+                          </Link>
+                          {cat.children!.map((sub) => (
+                            <Link
+                              key={sub.id}
+                              href={`/shop?category=${sub.slug}`}
+                              className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-zinc-600 hover:bg-amber-50/80 hover:text-amber-900 transition-colors"
+                            >
+                              <span>{sub.name}</span>
+                              <span className="text-zinc-300 group-hover:text-amber-600 text-[10px]">↳</span>
+                            </Link>
+                          ))}
+                        </div>
+
+                        {/* Thumbnail Featured Card */}
+                        {cat.image && (
+                          <div className="w-28 shrink-0 rounded-xl overflow-hidden border border-zinc-200/80 bg-zinc-50 flex flex-col justify-end p-2 relative group/card">
+                            <img
+                              src={cat.image}
+                              alt={cat.name}
+                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover/card:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            <div className="relative z-10 text-white text-center">
+                              <p className="text-[10px] font-bold line-clamp-1">{cat.name}</p>
+                              <Link
+                                href={`/shop?category=${cat.slug}`}
+                                className="text-[9px] text-amber-200 underline font-semibold hover:text-white"
+                              >
+                                View all
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-            <Link href="/shop?sort=newest" className="text-sm font-medium hover:text-berber-gold transition-colors">New Arrivals</Link>
-            <Link href="/shop?sale=true" className="text-sm font-medium text-berber-error hover:text-berber-error/80 transition-colors">Sale</Link>
+                  )}
+                </div>
+              )
+            })}
+
+            <Link href="/shop?sort=newest" className="text-sm font-semibold text-berber-text/80 hover:text-berber-gold transition-colors">
+              New Arrivals
+            </Link>
+            <Link href="/shop?sale=true" className="text-sm font-bold text-berber-error hover:text-berber-error/80 transition-colors">
+              Sale
+            </Link>
           </nav>
 
           {/* Icons */}
-          <div className="flex items-center justify-end gap-3 md:gap-5 w-1/3">
+          <div className="flex items-center justify-end gap-3 md:gap-5 md:w-1/4">
             <button
               onClick={() => setSearchOpen(true)}
-              className="p-2 text-berber-text hover:text-berber-gold transition-colors"
+              className="p-2 text-berber-text hover:text-berber-gold transition-colors cursor-pointer"
               aria-label="Search"
             >
-              <Search className="w-5 h-5 md:w-6 md:h-6" />
+              <Search className="w-5 h-5 md:w-5 md:h-5" />
             </button>
 
             <Link href="/wishlist" className="p-2 hidden md:block relative text-berber-text hover:text-berber-gold transition-colors" aria-label="Wishlist">
-              <Heart className="w-5 h-5 md:w-6 md:h-6" />
+              <Heart className="w-5 h-5 md:w-5 md:h-5" />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-berber-error text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {wishlistCount}
@@ -165,8 +240,8 @@ export default function Navbar({
               )}
             </Link>
 
-            <Link href="/login" className="p-2 hidden md:block text-berber-text hover:text-berber-gold transition-colors" aria-label="Account">
-              <User className="w-5 h-5 md:w-6 md:h-6" />
+            <Link href="/account" className="p-2 hidden md:block text-berber-text hover:text-berber-gold transition-colors" aria-label="Account">
+              <User className="w-5 h-5 md:w-5 md:h-5" />
             </Link>
 
             <CartDrawer itemCount={itemCount} freeShippingThreshold={freeShippingThreshold} />
@@ -182,31 +257,52 @@ export default function Navbar({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setMobileOpen(false)}>
           <div
-            className="absolute left-0 top-0 bottom-0 w-72 bg-berber-surface p-8 flex flex-col gap-8"
+            className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white text-zinc-900 p-6 flex flex-col gap-6 overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
               <img src="/logo-icon.png" alt={storeName} className="h-10 w-10 object-contain" />
-              <button onClick={() => setMobileOpen(false)} className="p-2 -mr-2 hover:text-berber-gold transition-colors" aria-label="Close menu">
-                <X className="w-6 h-6" />
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-2 -mr-2 text-zinc-400 hover:text-zinc-900 transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <nav className="flex flex-col gap-6 text-lg font-medium">
-              <Link href="/" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors">Home</Link>
-              <Link href="/shop" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors">Shop</Link>
+
+            <nav className="flex flex-col gap-5 text-sm font-semibold">
+              <Link href="/" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors py-1">
+                Home
+              </Link>
+              <Link href="/shop" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors py-1">
+                Shop All
+              </Link>
+
               {navCategories.map((cat) => (
                 <div key={cat.id} className="flex flex-col">
                   {cat.children && cat.children.length > 0 ? (
                     <details className="group [&_summary::-webkit-details-marker]:hidden">
-                      <summary className="flex items-center justify-between cursor-pointer hover:text-berber-gold transition-colors list-none text-lg font-medium">
-                        {cat.name}
-                        <span className="transition group-open:rotate-180 text-sm">▼</span>
+                      <summary className="flex items-center justify-between cursor-pointer hover:text-berber-gold transition-colors list-none py-1">
+                        <span>{cat.name}</span>
+                        <span className="transition duration-200 group-open:rotate-180 text-xs text-zinc-400">▼</span>
                       </summary>
-                      <div className="flex flex-col gap-4 mt-4 pl-4 border-l border-berber-border">
-                        <Link href={`/shop?category=${cat.slug}`} onClick={() => setMobileOpen(false)} className="text-base hover:text-berber-gold transition-colors">All {cat.name}</Link>
+                      <div className="flex flex-col gap-2.5 mt-2 pl-3 border-l-2 border-amber-200">
+                        <Link
+                          href={`/shop?category=${cat.slug}`}
+                          onClick={() => setMobileOpen(false)}
+                          className="text-xs font-bold text-zinc-900 hover:text-amber-700 transition-colors"
+                        >
+                          All {cat.name}
+                        </Link>
                         {cat.children.map((sub) => (
-                          <Link key={sub.id} href={`/shop?category=${sub.slug}`} onClick={() => setMobileOpen(false)} className="text-base hover:text-berber-gold transition-colors">
-                            {sub.name}
+                          <Link
+                            key={sub.id}
+                            href={`/shop?category=${sub.slug}`}
+                            onClick={() => setMobileOpen(false)}
+                            className="text-xs font-medium text-zinc-600 hover:text-amber-700 transition-colors"
+                          >
+                            ↳ {sub.name}
                           </Link>
                         ))}
                       </div>
@@ -215,20 +311,33 @@ export default function Navbar({
                     <Link
                       href={`/shop?category=${cat.slug}`}
                       onClick={() => setMobileOpen(false)}
-                      className="hover:text-berber-gold transition-colors text-lg font-medium"
+                      className="hover:text-berber-gold transition-colors py-1"
                     >
                       {cat.name}
                     </Link>
                   )}
                 </div>
               ))}
-              <Link href="/shop?sort=newest" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors">New Arrivals</Link>
-              <Link href="/shop?sale=true" onClick={() => setMobileOpen(false)} className="text-berber-error">Sale</Link>
-              <Link href="/wishlist" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors flex items-center gap-2">
-                Wishlist {wishlistCount > 0 && <span className="bg-berber-error text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{wishlistCount}</span>}
+
+              <Link href="/shop?sort=newest" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors py-1">
+                New Arrivals
               </Link>
-              <Link href="/account" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors">My Account</Link>
-              <Link href="/cart" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors">Cart ({itemCount})</Link>
+              <Link href="/shop?sale=true" onClick={() => setMobileOpen(false)} className="text-rose-600 font-bold py-1">
+                Sale 🔥
+              </Link>
+              
+              <div className="pt-4 border-t border-zinc-100 flex flex-col gap-3 text-xs">
+                <Link href="/wishlist" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors flex items-center justify-between py-1 text-zinc-700">
+                  <span>Wishlist</span>
+                  {wishlistCount > 0 && <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{wishlistCount}</span>}
+                </Link>
+                <Link href="/account" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors py-1 text-zinc-700">
+                  My Account
+                </Link>
+                <Link href="/cart" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors py-1 text-zinc-700">
+                  Shopping Bag ({itemCount})
+                </Link>
+              </div>
             </nav>
           </div>
         </div>

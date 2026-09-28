@@ -7,7 +7,18 @@ import { Suspense } from "react"
 
 export default async function ShopPage() {
   const [categories, brands] = await Promise.all([
-    prisma.category.findMany({ where: { isActive: true } }).catch(() => []),
+    prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      include: {
+        parent: { select: { id: true, name: true, slug: true } },
+        children: {
+          where: { isActive: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          select: { id: true, name: true, slug: true },
+        },
+      },
+    }).catch(() => []),
     prisma.brand.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }).catch(() => []),
   ])
 
@@ -16,7 +27,7 @@ export default async function ShopPage() {
       {/* Top Bar */}
       <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-berber-border pb-6 mb-8 gap-4">
         <Suspense fallback={<div className="h-16 bg-berber-muted rounded-xl animate-pulse w-48" />}>
-          <ShopHeading />
+          <ShopHeading categories={categories as any} />
         </Suspense>
         <Suspense fallback={null}>
           <ShopTopControls />
