@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { 
   Boxes, 
   Search, 
@@ -9,15 +10,18 @@ import {
   CheckCircle2, 
   Save, 
   RotateCcw, 
-  ExternalLink,
-  Package,
-  Layers,
-  Filter,
-  Check,
+  ExternalLink, 
+  Package, 
+  Layers, 
+  Filter, 
+  Warehouse, 
   TrendingDown,
-  Warehouse,
-  ShoppingBag
+  X,
+  Loader2
 } from "lucide-react"
+import AdminPagination from "@/components/admin/AdminPagination"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 interface Variant {
   id: string
@@ -29,21 +33,46 @@ interface Variant {
   product: { name: string; slug: string }
 }
 
-export default function InventoryBulkClient({ variants }: { variants: Variant[] }) {
+interface InventoryBulkClientProps {
+  variants: Variant[]
+  stats: {
+    totalSKUs: number
+    totalUnits: number
+    lowStock: number
+    outOfStock: number
+  }
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  currentSearch: string
+  currentStatus: string
+}
+
+export default function InventoryBulkClient({
+  variants,
+  stats,
+  pagination,
+  currentSearch,
+  currentStatus,
+}: InventoryBulkClientProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
+
   const [initialRows] = useState(variants)
   const [rows, setRows] = useState(variants.map((v) => ({ ...v, dirty: false })))
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<{ succeeded: number; failed: number } | null>(null)
-  const [search, setSearch] = useState("")
-  const [stockFilter, setStockFilter] = useState<"all" | "out" | "low" | "in">("all")
+  const [search, setSearch] = useState(currentSearch)
 
-  const stats = useMemo(() => {
-    const totalSKUs = rows.length
-    const outOfStock = rows.filter((r) => r.stock === 0).length
-    const lowStock = rows.filter((r) => r.stock > 0 && r.stock < 5).length
-    const totalUnits = rows.reduce((sum, r) => sum + (Number(r.stock) || 0), 0)
-    return { totalSKUs, outOfStock, lowStock, totalUnits }
-  }, [rows])
+  // Dirty guard modal state
+  const [guardModalOpen, setGuardModalOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+
+  const dirtyCount = rows.filter((r) => r.dirty).length
 
   const update = (id: string, field: "stock" | "price", value: number) => {
     setRows((prev) =>
@@ -62,9 +91,12 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
     setResult(null)
   }
 
-  const save = async () => {
+  const save = async (onSuccess?: () => void) => {
     const dirty = rows.filter((r) => r.dirty)
-    if (dirty.length === 0) return
+    if (dirty.length === 0) {
+      if (onSuccess) onSuccess()
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch("/api/admin/inventory/bulk", {
@@ -81,6 +113,8 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
       const data = await res.json()
       setResult(data)
       setRows((prev) => prev.map((r) => ({ ...r, dirty: false })))
+      if (onSuccess) onSuccess()
+      router.refresh()
     } catch (e) {
       console.error(e)
     } finally {
@@ -88,25 +122,63 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
     }
   }
 
-  const filtered = useMemo(() => {
-    return rows.filter((r) => {
-      const q = search.toLowerCase()
-      const matchSearch =
-        r.product.name.toLowerCase().includes(q) ||
-        (r.size ?? "").toLowerCase().includes(q) ||
-        (r.color ?? "").toLowerCase().includes(q) ||
-        (r.sku ?? "").toLowerCase().includes(q)
+  // Safe navigation wrapper: checks if dirty rows exist before proceeding
+  const performGuardedAction = (action: () => void) => {
+    if (dirtyCount > 0) {
+      setPendingAction(() => action)
+      setGuardModalOpen(true)
+    } else {
+      action()
+    }
+  }
 
-      if (!matchSearch) return false
-
-      if (stockFilter === "out") return r.stock === 0
-      if (stockFilter === "low") return r.stock > 0 && r.stock < 5
-      if (stockFilter === "in") return r.stock >= 5
-      return true
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    performGuardedAction(() => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (search.trim()) {
+        params.set("search", search.trim())
+      } else {
+        params.delete("search")
+      }
+      params.set("page", "1")
+      startTransition(() => {
+        router.push(`/admin/inventory?${params.toString()}`, { scroll: false })
+      })
     })
-  }, [rows, search, stockFilter])
+  }
 
-  const dirtyCount = rows.filter((r) => r.dirty).length
+  const handleStatusFilter = (status: string) => {
+    performGuardedAction(() => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (status && status !== "all") {
+        params.set("status", status)
+      } else {
+        params.delete("status")
+      }
+      params.set("page", "1")
+      startTransition(() => {
+        router.push(`/admin/inventory?${params.toString()}`, { scroll: false })
+      })
+    })
+  }
+
+  const handleBeforePageChange = (targetPage: number, targetSize?: number): Promise<boolean> => {
+    if (dirtyCount === 0) return Promise.resolve(true)
+
+    return new Promise((resolve) => {
+      setPendingAction(() => () => {
+        const params = new URLSearchParams(searchParams.toString())
+        params.set("page", targetPage.toString())
+        if (targetSize) params.set("limit", targetSize.toString())
+        startTransition(() => {
+          router.push(`/admin/inventory?${params.toString()}`, { scroll: false })
+        })
+        resolve(false) // handled inside callback
+      })
+      setGuardModalOpen(true)
+    })
+  }
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">
@@ -118,7 +190,7 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
               <Boxes className="w-3.5 h-3.5" />
               Stock Operations
             </span>
-            <span className="text-xs text-zinc-600 font-medium">Auto-dispatch stock alerts on replenish</span>
+            <span className="text-xs text-zinc-600 font-medium">Server-paginated stock management</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-900">Inventory & Stock Manager</h1>
           <p className="text-sm text-zinc-600 mt-0.5">
@@ -138,11 +210,11 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
             </button>
           )}
           <button
-            onClick={save}
+            onClick={() => save()}
             disabled={saving || dirtyCount === 0}
             className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 disabled:hover:bg-zinc-900 rounded-xl shadow-2xs transition"
           >
-            <Save className="w-3.5 h-3.5" />
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             {saving ? "Saving Changes…" : `Save Changes ${dirtyCount > 0 ? `(${dirtyCount})` : ""}`}
           </button>
         </div>
@@ -153,7 +225,7 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Total Active SKUs</p>
-            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{stats.totalSKUs}</h3>
+            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{stats.totalSKUs.toLocaleString()}</h3>
             <span className="text-xs text-zinc-600 font-medium mt-1 block">Configured variants</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-700">
@@ -173,14 +245,14 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
         </div>
 
         <div 
-          onClick={() => setStockFilter(stockFilter === "low" ? "all" : "low")}
+          onClick={() => handleStatusFilter(currentStatus === "low" ? "all" : "low")}
           className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer shadow-2xs flex items-center justify-between ${
-            stockFilter === "low" ? "border-amber-400 bg-amber-50/50" : "border-zinc-200/90 bg-white hover:border-amber-300"
+            currentStatus === "low" ? "border-amber-400 bg-amber-50/50" : "border-zinc-200/90 bg-white hover:border-amber-300"
           }`}
         >
           <div>
             <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Low Stock (&lt;5 units)</p>
-            <h3 className="text-2xl font-bold text-amber-900 mt-1">{stats.lowStock}</h3>
+            <h3 className="text-2xl font-bold text-amber-900 mt-1">{stats.lowStock.toLocaleString()}</h3>
             <span className="text-xs text-amber-700/80 font-medium mt-1 block">Requires purchase restock</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -189,14 +261,14 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
         </div>
 
         <div 
-          onClick={() => setStockFilter(stockFilter === "out" ? "all" : "out")}
+          onClick={() => handleStatusFilter(currentStatus === "out" ? "all" : "out")}
           className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer shadow-2xs flex items-center justify-between ${
-            stockFilter === "out" ? "border-rose-400 bg-rose-50/50" : "border-zinc-200/90 bg-white hover:border-rose-300"
+            currentStatus === "out" ? "border-rose-400 bg-rose-50/50" : "border-zinc-200/90 bg-white hover:border-rose-300"
           }`}
         >
           <div>
             <p className="text-xs font-semibold text-rose-700 uppercase tracking-wider">Out of Stock</p>
-            <h3 className="text-2xl font-bold text-rose-900 mt-1">{stats.outOfStock}</h3>
+            <h3 className="text-2xl font-bold text-rose-900 mt-1">{stats.outOfStock.toLocaleString()}</h3>
             <span className="text-xs text-rose-700/80 font-medium mt-1 block">Sales currently blocked</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
@@ -218,7 +290,7 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
 
       {/* Filter and Search Bar */}
       <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="search"
@@ -227,7 +299,7 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-zinc-200 bg-zinc-50/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition"
           />
-        </div>
+        </form>
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
           <span className="text-xs font-semibold text-zinc-600 flex items-center gap-1 shrink-0">
@@ -235,33 +307,33 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
             Stock:
           </span>
           <button
-            onClick={() => setStockFilter("all")}
+            onClick={() => handleStatusFilter("all")}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-              stockFilter === "all" ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              currentStatus === "all" || !currentStatus ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
             }`}
           >
-            All ({rows.length})
+            All Variants
           </button>
           <button
-            onClick={() => setStockFilter("low")}
+            onClick={() => handleStatusFilter("low")}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-              stockFilter === "low" ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+              currentStatus === "low" ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-700 hover:bg-amber-100"
             }`}
           >
             Low Stock ({stats.lowStock})
           </button>
           <button
-            onClick={() => setStockFilter("out")}
+            onClick={() => handleStatusFilter("out")}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-              stockFilter === "out" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700 hover:bg-rose-100"
+              currentStatus === "out" ? "bg-rose-600 text-white" : "bg-rose-50 text-rose-700 hover:bg-rose-100"
             }`}
           >
             Out of Stock ({stats.outOfStock})
           </button>
           <button
-            onClick={() => setStockFilter("in")}
+            onClick={() => handleStatusFilter("in")}
             className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-              stockFilter === "in" ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              currentStatus === "in" ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
             }`}
           >
             Healthy Stock
@@ -269,9 +341,18 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
         </div>
       </div>
 
-      {/* Inventory Table */}
+      {/* Inventory Table Container */}
       <div className="rounded-2xl border border-zinc-200/90 bg-white shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto relative">
+          {isPending && (
+            <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 text-white text-xs font-semibold rounded-lg shadow-lg">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading inventory...
+              </div>
+            </div>
+          )}
+
           <table className="w-full text-left text-xs">
             <thead className="bg-zinc-50/60 border-b border-zinc-200 text-zinc-700 font-bold uppercase tracking-wider">
               <tr>
@@ -285,7 +366,7 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 text-zinc-700">
-              {filtered.length === 0 ? (
+              {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-zinc-400">
                     <Package className="w-8 h-8 mx-auto mb-2 opacity-40 text-zinc-400" />
@@ -294,7 +375,7 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
                   </td>
                 </tr>
               ) : (
-                filtered.map((r) => {
+                rows.map((r) => {
                   const isOut = r.stock === 0
                   const isLow = r.stock > 0 && r.stock < 5
 
@@ -398,19 +479,68 @@ export default function InventoryBulkClient({ variants }: { variants: Variant[] 
           </table>
         </div>
 
-        {/* Footer pagination info */}
-        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600 font-medium">
-          <span>
-            Showing <strong>{filtered.length}</strong> of <strong>{rows.length}</strong> total variants
-          </span>
-          {dirtyCount > 0 && (
-            <span className="text-amber-700 font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              {dirtyCount} unsaved variant modification{dirtyCount > 1 ? "s" : ""}
-            </span>
-          )}
+        {/* Footer with AdminPagination */}
+        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60">
+          <AdminPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            basePath="/admin/inventory"
+            onBeforeChange={handleBeforePageChange}
+          />
         </div>
       </div>
+
+      {/* Unsaved Changes Guard Dialog */}
+      <Dialog open={guardModalOpen} onOpenChange={setGuardModalOpen}>
+        <DialogContent className="max-w-md bg-white p-6 rounded-2xl border border-zinc-200 shadow-xl">
+          <DialogHeader>
+            <div className="w-10 h-10 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mb-2">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <DialogTitle className="text-lg font-bold text-zinc-900">Unsaved Inventory Changes</DialogTitle>
+            <DialogDescription className="text-xs text-zinc-600 mt-1">
+              You have <strong className="text-amber-700">{dirtyCount} modified variant(s)</strong> on this page. Leaving will discard these changes unless saved first.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex items-center justify-end gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setGuardModalOpen(false)}
+              className="text-xs rounded-xl"
+            >
+              Stay on Page
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                revertAll()
+                setGuardModalOpen(false)
+                if (pendingAction) pendingAction()
+              }}
+              className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 rounded-xl"
+            >
+              Discard & Leave
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                save(() => {
+                  setGuardModalOpen(false)
+                  if (pendingAction) pendingAction()
+                })
+              }}
+              className="text-xs bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl"
+            >
+              Save & Leave
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

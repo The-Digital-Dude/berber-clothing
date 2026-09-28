@@ -1,15 +1,19 @@
 import prisma from "@/lib/prisma"
 import { CustomerClient } from "./CustomerClient"
-import { Users, UserCheck, ShoppingBag, DollarSign, ArrowUpRight } from "lucide-react"
+import { Users, UserCheck, ShoppingBag, DollarSign } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
 export default async function CustomersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string }>
+  searchParams: Promise<{ search?: string; filter?: string; page?: string; limit?: string }>
 }) {
-  const { search = "" } = await searchParams
+  const params = await searchParams
+  const search = (params.search || "").trim()
+  const filter = (params.filter || "ALL").trim()
+  const page = Math.max(1, parseInt(params.page || "1", 10))
+  const limit = Math.max(10, Math.min(100, parseInt(params.limit || "25", 10)))
 
   const searchWhere = search
     ? {
@@ -110,12 +114,24 @@ export default async function CustomersPage({
   })
 
   // Merge and sort by most recent activity
-  const customers = [...registeredCustomers, ...guestCustomers].sort(
+  const allCustomers = [...registeredCustomers, ...guestCustomers].sort(
     (a, b) => new Date(b.lastOrderAt).getTime() - new Date(a.lastOrderAt).getTime()
   )
 
-  const totalLTV = customers.reduce((sum, c) => sum + c.totalSpent, 0)
-  const totalOrdersCount = customers.reduce((sum, c) => sum + c.totalOrders, 0)
+  const totalLTV = allCustomers.reduce((sum, c) => sum + c.totalSpent, 0)
+  const totalOrdersCount = allCustomers.reduce((sum, c) => sum + c.totalOrders, 0)
+
+  // Apply tab filter
+  const filteredCustomers = allCustomers.filter((c) => {
+    if (filter === "REGISTERED") return c.role !== "GUEST"
+    if (filter === "GUEST") return c.role === "GUEST"
+    if (filter === "VIP") return c.totalSpent >= 10000 || c.totalOrders >= 3
+    return true
+  })
+
+  const totalCount = filteredCustomers.length
+  const totalPages = Math.ceil(totalCount / limit) || 1
+  const paginatedCustomers = filteredCustomers.slice((page - 1) * limit, page * limit)
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">
@@ -141,7 +157,7 @@ export default async function CustomersPage({
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Total Unique Shoppers</p>
-            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{customers.length}</h3>
+            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{allCustomers.length.toLocaleString()}</h3>
             <span className="text-xs text-zinc-600 font-medium mt-1 block">Registered & Guest unified</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center">
@@ -152,9 +168,9 @@ export default async function CustomersPage({
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Registered Accounts</p>
-            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{registeredCustomers.length}</h3>
+            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{registeredCustomers.length.toLocaleString()}</h3>
             <span className="text-xs text-zinc-600 font-medium mt-1 block">
-              {customers.length > 0 ? Math.round((registeredCustomers.length / customers.length) * 100) : 0}% of total shoppers
+              {allCustomers.length > 0 ? Math.round((registeredCustomers.length / allCustomers.length) * 100) : 0}% of total shoppers
             </span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -167,7 +183,7 @@ export default async function CustomersPage({
             <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Total Lifetime Value</p>
             <h3 className="text-2xl font-bold text-zinc-900 mt-1">৳{totalLTV.toLocaleString()}</h3>
             <span className="text-xs text-zinc-600 font-medium mt-1 block">
-              Avg ৳{customers.length > 0 ? Math.round(totalLTV / customers.length).toLocaleString() : 0} / customer
+              Avg ৳{allCustomers.length > 0 ? Math.round(totalLTV / allCustomers.length).toLocaleString() : 0} / customer
             </span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -178,7 +194,7 @@ export default async function CustomersPage({
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Completed Orders</p>
-            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{totalOrdersCount}</h3>
+            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{totalOrdersCount.toLocaleString()}</h3>
             <span className="text-xs text-zinc-600 font-medium mt-1 block">Lifetime purchases</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
@@ -188,7 +204,23 @@ export default async function CustomersPage({
       </div>
 
       {/* Customer Client & Table */}
-      <CustomerClient data={customers} />
+      <CustomerClient
+        data={paginatedCustomers}
+        allCounts={{
+          all: allCustomers.length,
+          registered: registeredCustomers.length,
+          guest: guestCustomers.length,
+          vip: allCustomers.filter((c) => c.totalSpent >= 10000 || c.totalOrders >= 3).length,
+        }}
+        pagination={{
+          page,
+          limit,
+          total: totalCount,
+          totalPages,
+        }}
+        currentSearch={search}
+        currentFilter={filter}
+      />
     </div>
   )
 }

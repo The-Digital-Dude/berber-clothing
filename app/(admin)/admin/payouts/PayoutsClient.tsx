@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,7 @@ import {
   Building2,
   Loader2,
 } from "lucide-react"
+import AdminPagination from "@/components/admin/AdminPagination"
 
 type Payout = {
   id: string
@@ -43,14 +44,61 @@ type Payout = {
   }
 }
 
-export default function PayoutsClient({ data }: { data: Payout[] }) {
+interface PayoutsClientProps {
+  data: Payout[]
+  counts: {
+    all: number
+    pending: number
+    paid: number
+  }
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  currentSearch: string
+  currentStatus: string
+}
+
+export default function PayoutsClient({
+  data,
+  counts,
+  pagination,
+  currentSearch,
+  currentStatus,
+}: PayoutsClientProps) {
   const router = useRouter()
-  const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>("ALL")
+  const searchParams = useSearchParams()
+
+  const [search, setSearch] = useState(currentSearch)
   const [processingPayout, setProcessingPayout] = useState<Payout | null>(null)
   const [transactionId, setTransactionId] = useState("")
   const [adminNote, setAdminNote] = useState("")
   const [loading, setLoading] = useState(false)
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const params = new URLSearchParams(searchParams.toString())
+    if (search.trim()) {
+      params.set("search", search.trim())
+    } else {
+      params.delete("search")
+    }
+    params.set("page", "1")
+    router.push(`/admin/payouts?${params.toString()}`, { scroll: false })
+  }
+
+  const handleStatusFilter = (status: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (status && status !== "ALL") {
+      params.set("status", status)
+    } else {
+      params.delete("status")
+    }
+    params.set("page", "1")
+    router.push(`/admin/payouts?${params.toString()}`, { scroll: false })
+  }
 
   const handleApprovePaid = async () => {
     if (!processingPayout) return
@@ -61,180 +109,203 @@ export default function PayoutsClient({ data }: { data: Payout[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: "PAID",
-          transactionId: transactionId.trim(),
-          adminNote: adminNote.trim(),
+          transactionId,
+          adminNote,
         }),
       })
-      if (!res.ok) throw new Error("Failed to process payout")
-      toast.success("Payout marked as PAID")
+
+      if (!res.ok) {
+        const d = await res.json()
+        throw new Error(d.error || "Failed to update payout")
+      }
+
+      toast.success("Payout marked as PAID and transaction details recorded!")
       setProcessingPayout(null)
       setTransactionId("")
       setAdminNote("")
       router.refresh()
-    } catch {
-      toast.error("Failed to update payout")
+    } catch (err: any) {
+      toast.error(err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleReject = async (p: Payout) => {
-    const reason = prompt(`Reject payout request for ${p.affiliate.name} (৳${p.amount})? Amount will be refunded to their wallet balance.\n\nEnter reason:`)
+  const handleReject = async (payout: Payout) => {
+    const reason = prompt("Please provide a reason for rejection (balance will be refunded to partner):")
     if (reason === null) return
+
     try {
-      const res = await fetch(`/api/admin/payouts/${p.id}`, {
+      const res = await fetch(`/api/admin/payouts/${payout.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           status: "REJECTED",
-          adminNote: reason.trim() || "Rejected by admin",
+          adminNote: reason || "Rejected by administrator",
         }),
       })
+
       if (!res.ok) throw new Error("Failed to reject payout")
-      toast.success("Payout rejected and funds refunded to partner wallet")
+      toast.success("Payout rejected and balance returned to partner wallet")
       router.refresh()
-    } catch {
-      toast.error("Failed to reject payout")
+    } catch (err: any) {
+      toast.error(err.message)
     }
   }
 
-  const filtered = useMemo(() => {
-    return data.filter((p) => {
-      const matchStatus = statusFilter === "ALL" || p.status === statusFilter
-      const q = search.toLowerCase()
-      const matchSearch =
-        !search.trim() ||
-        p.affiliate.name.toLowerCase().includes(q) ||
-        p.affiliate.email.toLowerCase().includes(q) ||
-        p.accountDetails.toLowerCase().includes(q) ||
-        (p.transactionId && p.transactionId.toLowerCase().includes(q))
-      return matchStatus && matchSearch
-    })
-  }, [data, statusFilter, search])
-
   return (
     <div className="space-y-4">
-      {/* Controls & Filter Pills */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+      {/* Search & Status Filters */}
+      <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <Input
+            placeholder="Search partner, shop, phone, trxID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search partner, bKash, TrxID…"
-            className="pl-9 h-9 text-xs rounded-xl bg-white border-zinc-200"
+            className="pl-9 h-9 text-xs rounded-xl bg-zinc-50/60 focus:bg-white"
           />
-        </div>
+        </form>
 
-        {/* Status Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-zinc-100 rounded-xl">
-          {["ALL", "PENDING", "PAID", "REJECTED"].map((st) => (
+        <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
+          {[
+            { key: "ALL", label: `All (${counts.all})` },
+            { key: "PENDING", label: `Pending (${counts.pending})` },
+            { key: "PAID", label: `Paid (${counts.paid})` },
+            { key: "REJECTED", label: "Rejected" },
+          ].map((tab) => (
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                statusFilter === st
-                  ? "bg-white text-zinc-900 shadow-xs"
-                  : "text-zinc-500 hover:text-zinc-900"
+              key={tab.key}
+              type="button"
+              onClick={() => handleStatusFilter(tab.key)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all whitespace-nowrap ${
+                currentStatus === tab.key || (!currentStatus && tab.key === "ALL")
+                  ? "bg-white text-zinc-900 shadow-2xs"
+                  : "text-zinc-600 hover:text-zinc-900"
               }`}
             >
-              {st === "ALL" ? "All Payouts" : st}
+              {tab.label}
             </button>
           ))}
         </div>
       </div>
 
       {/* Disburse Modal */}
-      <Dialog open={!!processingPayout} onOpenChange={(v) => !v && setProcessingPayout(null)}>
-        <DialogContent className="sm:max-w-md w-[94vw] p-0 rounded-2xl bg-white border border-zinc-200 shadow-2xl gap-0">
-          <DialogHeader className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/80">
+      <Dialog open={Boolean(processingPayout)} onOpenChange={(open) => !open && setProcessingPayout(null)}>
+        <DialogContent className="max-w-md bg-white p-6 rounded-2xl border border-zinc-200 shadow-xl">
+          <DialogHeader>
             <DialogTitle className="text-base font-bold text-zinc-900 flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-emerald-600" />
+              <Wallet className="w-5 h-5 text-emerald-600" />
               <span>Confirm Payout Disbursement</span>
             </DialogTitle>
           </DialogHeader>
 
           {processingPayout && (
-            <div className="p-6 space-y-4 text-xs">
-              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-2">
+            <div className="space-y-4 pt-2 text-xs">
+              <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200 space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500 font-medium">Partner:</span>
-                  <span className="font-bold text-zinc-900">{processingPayout.affiliate.name} ({processingPayout.affiliate.email})</span>
+                  <span className="text-zinc-500">Partner:</span>
+                  <span className="font-bold text-zinc-900">
+                    {processingPayout.affiliate?.name}{" "}
+                    {processingPayout.affiliate?.shopName && `(${processingPayout.affiliate.shopName})`}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500 font-medium">Method & Target:</span>
-                  <span className="font-mono font-bold text-zinc-800">{processingPayout.method} — {processingPayout.accountDetails}</span>
+                  <span className="text-zinc-500">Withdrawal Amount:</span>
+                  <span className="font-mono font-bold text-emerald-700 text-sm">
+                    ৳{Number(processingPayout.amount).toLocaleString()}
+                  </span>
                 </div>
-                <div className="flex justify-between pt-1 border-t border-zinc-200">
-                  <span className="text-zinc-700 font-bold">Withdrawal Amount:</span>
-                  <span className="font-mono font-extrabold text-emerald-700 text-sm">৳{Number(processingPayout.amount).toLocaleString()}</span>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Payment Gateway:</span>
+                  <span className="font-bold text-zinc-800">{processingPayout.method}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">Recipient Account:</span>
+                  <span className="font-mono font-bold text-zinc-900">{processingPayout.accountDetails}</span>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-bold uppercase tracking-wider text-zinc-600 text-[10px]">Transaction ID / TrxID *</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700">Bank / MFS Transaction Reference ID</label>
                 <Input
                   required
+                  placeholder="e.g. bKash TrxID: 9J38FKL2"
                   value={transactionId}
                   onChange={(e) => setTransactionId(e.target.value)}
-                  placeholder="e.g. BL88XX99 or Bank Ref"
-                  className="h-9 text-xs rounded-xl font-mono font-bold"
+                  className="h-9 text-xs font-mono rounded-xl"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="font-bold uppercase tracking-wider text-zinc-600 text-[10px]">Admin Note (Optional)</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700">Internal Admin Note (Optional)</label>
                 <Input
+                  placeholder="e.g. Sent via agent counter"
                   value={adminNote}
                   onChange={(e) => setAdminNote(e.target.value)}
-                  placeholder="e.g. Sent via bKash Merchant"
                   className="h-9 text-xs rounded-xl"
                 />
               </div>
 
-              <Button
-                onClick={handleApprovePaid}
-                disabled={loading || !transactionId.trim()}
-                className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Payment & Mark PAID"}
-              </Button>
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-zinc-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setProcessingPayout(null)}
+                  className="text-xs rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={loading}
+                  onClick={handleApprovePaid}
+                  className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl cursor-pointer"
+                >
+                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Confirm Payment"}
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Table */}
+      {/* Table Container */}
       <div className="rounded-2xl border border-zinc-200/90 bg-white shadow-2xs overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-zinc-50/60 border-zinc-200 text-xs font-bold">
-              <TableHead className="pl-5 text-zinc-700 font-bold">Partner Details</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Amount</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Method</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Account / Number</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Status</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Transaction ID</TableHead>
-              <TableHead className="text-right pr-5 text-zinc-700 font-bold">Actions</TableHead>
+            <TableRow className="bg-zinc-50/50 hover:bg-zinc-50/50 border-zinc-200/80">
+              <TableHead className="text-xs font-bold text-zinc-700 pl-5">Partner / Shop</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Amount</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Method</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Account Details</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Status</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Transaction ID</TableHead>
+              <TableHead className="text-right text-xs font-bold text-zinc-700 pr-5">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="text-xs">
-            {filtered.length === 0 ? (
+            {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-zinc-400 text-xs">
-                  No payout requests found matching your filter.
+                <TableCell colSpan={7} className="h-32 text-center text-zinc-400">
+                  <Wallet className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="font-semibold text-zinc-600">No payout requests found</p>
+                  <p className="text-zinc-400 text-[11px] mt-0.5">Requests submitted by affiliates or resellers will appear here</p>
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((p) => (
+              data.map((p) => (
                 <TableRow key={p.id} className="hover:bg-zinc-50/80 transition-colors">
                   <TableCell className="pl-5 py-3.5">
                     <div>
-                      <span className="font-bold text-zinc-900 text-sm block">{p.affiliate.name}</span>
-                      <span className="text-zinc-400 text-[11px] block">{p.affiliate.email}</span>
-                      {p.affiliate.shopName && (
-                        <span className="text-[10px] text-zinc-500 font-mono">Shop: {p.affiliate.shopName}</span>
-                      )}
+                      <span className="font-bold text-zinc-900 block text-xs">
+                        {p.affiliate?.shopName || p.affiliate?.name}
+                      </span>
+                      <span className="text-zinc-500 text-[11px]">
+                        {p.affiliate?.name} • {p.affiliate?.email}
+                      </span>
                     </div>
                   </TableCell>
 
@@ -301,6 +372,17 @@ export default function PayoutsClient({ data }: { data: Payout[] }) {
             )}
           </TableBody>
         </Table>
+
+        {/* AdminPagination at table bottom */}
+        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60">
+          <AdminPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            basePath="/admin/payouts"
+          />
+        </div>
       </div>
     </div>
   )

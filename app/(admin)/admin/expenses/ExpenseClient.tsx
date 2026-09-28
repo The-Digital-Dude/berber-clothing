@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
@@ -17,9 +17,9 @@ import {
   PieChart, 
   Tag,
   Save,
-  Check
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import AdminPagination from "@/components/admin/AdminPagination"
 
 const CATEGORIES = ["Rent", "Utilities", "Salaries", "Marketing", "Packaging", "Delivery", "Other"]
 
@@ -31,8 +31,34 @@ type Expense = {
   note: string | null
 }
 
-export function ExpenseClient({ data }: { data: Expense[] }) {
+interface ExpenseClientProps {
+  data: Expense[]
+  stats: {
+    total: number
+    count: number
+    topCategory: { name: string; amount: number } | null
+    avg: number
+  }
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  currentSearch: string
+  currentCategory: string
+}
+
+export function ExpenseClient({
+  data,
+  stats,
+  pagination,
+  currentSearch,
+  currentCategory,
+}: ExpenseClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
   const [category, setCategory] = useState("Rent")
@@ -40,25 +66,32 @@ export function ExpenseClient({ data }: { data: Expense[] }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState<string>("ALL")
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(currentSearch)
 
-  const stats = useMemo(() => {
-    const total = data.reduce((s, e) => s + Number(e.amount), 0)
-    const categoryTotals: Record<string, number> = {}
-    data.forEach((e) => {
-      categoryTotals[e.category] = (categoryTotals[e.category] || 0) + Number(e.amount)
-    })
-    const topCategory = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]
-    return {
-      total,
-      count: data.length,
-      topCategory: topCategory ? { name: topCategory[0], amount: topCategory[1] } : null,
-      avg: data.length > 0 ? Math.round(total / data.length) : 0,
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const params = new URLSearchParams(searchParams.toString())
+    if (search.trim()) {
+      params.set("search", search.trim())
+    } else {
+      params.delete("search")
     }
-  }, [data])
+    params.set("page", "1")
+    router.push(`/admin/expenses?${params.toString()}`, { scroll: false })
+  }
 
-  function openCreate() {
+  const handleCategoryFilter = (cat: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (cat && cat !== "ALL") {
+      params.set("category", cat)
+    } else {
+      params.delete("category")
+    }
+    params.set("page", "1")
+    router.push(`/admin/expenses?${params.toString()}`, { scroll: false })
+  }
+
+  const handleOpenCreate = () => {
     setEditing(null)
     setCategory("Rent")
     setAmount("")
@@ -67,104 +100,104 @@ export function ExpenseClient({ data }: { data: Expense[] }) {
     setIsDialogOpen(true)
   }
 
-  function openEdit(e: Expense) {
-    setEditing(e)
-    setCategory(e.category)
-    setAmount(String(e.amount))
-    setDate(e.date.slice(0, 10))
-    setNote(e.note || "")
+  const handleOpenEdit = (exp: Expense) => {
+    setEditing(exp)
+    setCategory(exp.category)
+    setAmount(String(exp.amount))
+    setDate(new Date(exp.date).toISOString().slice(0, 10))
+    setNote(exp.note || "")
     setIsDialogOpen(true)
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!amount || isNaN(Number(amount))) {
+      toast.error("Please enter a valid amount")
+      return
+    }
+
     setSaving(true)
     try {
-      const url = editing ? `/api/admin/expenses/${editing.id}` : "/api/admin/expenses"
-      const method = editing ? "PATCH" : "POST"
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, amount: parseFloat(amount), date, note }),
-      })
-      if (res.ok) {
-        toast.success(editing ? "Expense record updated" : "Expense record logged")
-        setIsDialogOpen(false)
-        router.refresh()
-      } else {
-        const d = await res.json()
-        toast.error(d.error || "Failed to save expense")
+      const payload = {
+        category,
+        amount: Number(amount),
+        date: new Date(date).toISOString(),
+        note: note.trim() || null,
       }
+
+      if (editing) {
+        const res = await fetch(`/api/admin/expenses/${editing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error("Failed to update expense")
+        toast.success("Expense updated successfully")
+      } else {
+        const res = await fetch("/api/admin/expenses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error("Failed to record expense")
+        toast.success("Expense logged successfully")
+      }
+
+      setIsDialogOpen(false)
+      router.refresh()
     } catch {
-      toast.error("Error saving expense")
+      toast.error("An error occurred while saving.")
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDelete(id: string) {
+  const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this expense record?")) return
+
     try {
       const res = await fetch(`/api/admin/expenses/${id}`, { method: "DELETE" })
-      if (res.ok) {
-        toast.success("Expense record deleted")
-        router.refresh()
-      } else {
-        toast.error("Failed to delete expense")
-      }
+      if (!res.ok) throw new Error("Failed to delete")
+      toast.success("Expense removed")
+      router.refresh()
     } catch {
-      toast.error("Error deleting expense")
+      toast.error("Failed to delete expense record")
     }
   }
 
-  const filtered = useMemo(() => {
-    return data.filter((e) => {
-      if (selectedCategory !== "ALL" && e.category !== selectedCategory) return false
-      if (search) {
-        const q = search.toLowerCase()
-        const matchCategory = e.category.toLowerCase().includes(q)
-        const matchNote = (e.note || "").toLowerCase().includes(q)
-        if (!matchCategory && !matchNote) return false
-      }
-      return true
-    })
-  }, [data, selectedCategory, search])
-
   return (
     <div className="space-y-6">
-      {/* KPI Stats */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Total Outflows</p>
-            <h3 className="text-2xl font-bold text-rose-700 mt-1">৳{stats.total.toLocaleString()}</h3>
-            <span className="text-xs text-zinc-600 font-medium mt-1 block">Recorded expenses</span>
+            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Total Lifetime Outflow</p>
+            <h3 className="text-2xl font-bold text-zinc-900 mt-1">৳{stats.total.toLocaleString()}</h3>
+            <span className="text-xs text-zinc-600 font-medium mt-1 block">Across {stats.count} records</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-            <Receipt className="w-5 h-5" />
+            <TrendingDown className="w-5 h-5" />
           </div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Top Spend Category</p>
-            <h3 className="text-xl font-bold text-zinc-900 mt-1 truncate max-w-[150px]">
-              {stats.topCategory ? stats.topCategory.name : "—"}
-            </h3>
+            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Top Expense Category</p>
+            <h3 className="text-2xl font-bold text-zinc-900 mt-1">{stats.topCategory?.name || "None"}</h3>
             <span className="text-xs text-zinc-600 font-medium mt-1 block">
-              {stats.topCategory ? `৳${stats.topCategory.amount.toLocaleString()}` : "No entries"}
+              {stats.topCategory ? `৳${stats.topCategory.amount.toLocaleString()}` : "No data"}
             </span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-zinc-100 text-zinc-700 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <PieChart className="w-5 h-5" />
           </div>
         </div>
 
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Average / Entry</p>
+            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Avg. Expense Cost</p>
             <h3 className="text-2xl font-bold text-zinc-900 mt-1">৳{stats.avg.toLocaleString()}</h3>
-            <span className="text-xs text-zinc-600 font-medium mt-1 block">Per expense item</span>
+            <span className="text-xs text-zinc-600 font-medium mt-1 block">Per recorded receipt</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
             <DollarSign className="w-5 h-5" />
@@ -173,49 +206,64 @@ export function ExpenseClient({ data }: { data: Expense[] }) {
 
         <div className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Logged Entries</p>
+            <p className="text-xs font-semibold text-zinc-700 uppercase tracking-wider">Expense Logs</p>
             <h3 className="text-2xl font-bold text-zinc-900 mt-1">{stats.count}</h3>
-            <span className="text-xs text-zinc-600 font-medium mt-1 block">Audit transactions</span>
+            <span className="text-xs text-zinc-600 font-medium mt-1 block">Lifetime disbursements</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-            <Tag className="w-5 h-5" />
+            <Receipt className="w-5 h-5" />
           </div>
         </div>
       </div>
 
-      {/* Action and Filter Bar */}
+      {/* Action and Filter Controls */}
       <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
             type="search"
-            placeholder="Search category or note…"
+            placeholder="Search expense note or category…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-zinc-200 bg-zinc-50/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 transition"
           />
-        </div>
+        </form>
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-zinc-200 text-xs font-semibold text-zinc-700 bg-zinc-50/60 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-900/10 transition"
+          <span className="text-xs font-semibold text-zinc-600 flex items-center gap-1 shrink-0">
+            <Filter className="w-3.5 h-3.5" /> Category:
+          </span>
+          <button
+            onClick={() => handleCategoryFilter("ALL")}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition",
+              currentCategory === "ALL" || !currentCategory
+                ? "bg-zinc-900 text-white shadow-2xs"
+                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+            )}
           >
-            <option value="ALL">All Categories</option>
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            All Categories
+          </button>
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => handleCategoryFilter(cat)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition",
+                currentCategory === cat
+                  ? "bg-zinc-900 text-white shadow-2xs"
+                  : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
 
           <button
-            onClick={openCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl shadow-2xs transition whitespace-nowrap shrink-0"
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-semibold shadow-2xs transition shrink-0 ml-1"
           >
-            <Plus className="w-3.5 h-3.5" />
-            Add Expense
+            <Plus className="w-3.5 h-3.5" /> Log Expense
           </button>
         </div>
       </div>
@@ -226,62 +274,62 @@ export function ExpenseClient({ data }: { data: Expense[] }) {
           <table className="w-full text-left text-xs">
             <thead className="bg-zinc-50/60 border-b border-zinc-200 text-zinc-700 font-bold uppercase tracking-wider">
               <tr>
-                <th className="px-5 py-3.5">Date</th>
-                <th className="px-4 py-3.5">Category</th>
+                <th className="px-5 py-3.5">Category</th>
+                <th className="px-4 py-3.5">Reference / Memo</th>
+                <th className="px-4 py-3.5">Disbursement Date</th>
                 <th className="px-4 py-3.5">Amount (৳)</th>
-                <th className="px-4 py-3.5">Description / Note</th>
                 <th className="px-4 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 text-zinc-700">
-              {filtered.length === 0 ? (
+              {data.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-zinc-400">
                     <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40 text-zinc-400" />
                     <p className="text-sm font-semibold text-zinc-700">No expense records found</p>
-                    <p className="text-xs text-zinc-600 mt-0.5">Click &ldquo;Add Expense&rdquo; above to record a disbursement.</p>
+                    <p className="text-xs text-zinc-600 mt-0.5">Click "Log Expense" to record an outflow.</p>
                   </td>
                 </tr>
               ) : (
-                filtered.map((e) => (
+                data.map((e) => (
                   <tr key={e.id} className="hover:bg-zinc-50/80 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-zinc-900">
-                      {new Date(e.date).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-
-                    <td className="px-4 py-3.5">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200">
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-semibold text-xs bg-zinc-100 text-zinc-800 border border-zinc-200/80">
+                        <Tag className="w-3 h-3 text-zinc-500" />
                         {e.category}
                       </span>
                     </td>
-
-                    <td className="px-4 py-3.5">
-                      <span className="font-mono font-bold text-rose-700 text-xs">
-                        -৳{Number(e.amount).toLocaleString()}
-                      </span>
+                    <td className="px-4 py-3.5 font-medium text-zinc-900 max-w-xs truncate">
+                      {e.note || <span className="text-zinc-400 italic">No memo</span>}
                     </td>
-
                     <td className="px-4 py-3.5 text-zinc-600">
-                      {e.note || <span className="text-zinc-400">—</span>}
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>
+                          {new Date(e.date).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
                     </td>
-
+                    <td className="px-4 py-3.5 font-bold font-mono text-rose-700 text-xs">
+                      -৳{Number(e.amount).toLocaleString()}
+                    </td>
                     <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => openEdit(e)}
+                          onClick={() => handleOpenEdit(e)}
                           className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition"
-                          title="Edit expense"
+                          title="Edit"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(e.id)}
-                          className="p-1.5 text-zinc-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                          title="Delete expense"
+                          className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                          title="Delete"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -294,13 +342,15 @@ export function ExpenseClient({ data }: { data: Expense[] }) {
           </table>
         </div>
 
-        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600 font-medium">
-          <span>
-            Showing <strong>{filtered.length}</strong> of <strong>{data.length}</strong> recorded expenses
-          </span>
-          <span className="font-bold text-zinc-900">
-            Total Filtered: ৳{filtered.reduce((s, e) => s + Number(e.amount), 0).toLocaleString()}
-          </span>
+        {/* AdminPagination at table bottom */}
+        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60">
+          <AdminPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            basePath="/admin/expenses"
+          />
         </div>
       </div>
 

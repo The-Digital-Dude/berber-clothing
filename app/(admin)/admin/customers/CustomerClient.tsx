@@ -30,6 +30,7 @@ import {
   Tag
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import AdminPagination from "@/components/admin/AdminPagination"
 
 type Order = {
   id: string
@@ -53,11 +54,34 @@ type Customer = {
   lastOrderAt?: string
 }
 
-export function CustomerClient({ data }: { data: Customer[] }) {
+interface CustomerClientProps {
+  data: Customer[]
+  allCounts: {
+    all: number
+    registered: number
+    guest: number
+    vip: number
+  }
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  currentSearch: string
+  currentFilter: string
+}
+
+export function CustomerClient({
+  data,
+  allCounts,
+  pagination,
+  currentSearch,
+  currentFilter,
+}: CustomerClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "")
-  const [filterType, setFilterType] = useState<"ALL" | "REGISTERED" | "GUEST" | "VIP">("ALL")
+  const [searchTerm, setSearchTerm] = useState(currentSearch)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [lockLoading, setLockLoading] = useState(false)
 
@@ -76,19 +100,26 @@ export function CustomerClient({ data }: { data: Customer[] }) {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
+    const params = new URLSearchParams(searchParams.toString())
     if (searchTerm.trim()) {
-      router.push(`/admin/customers?search=${encodeURIComponent(searchTerm.trim())}`, { scroll: false })
+      params.set("search", searchTerm.trim())
     } else {
-      router.push(`/admin/customers`, { scroll: false })
+      params.delete("search")
     }
+    params.set("page", "1")
+    router.push(`/admin/customers?${params.toString()}`, { scroll: false })
   }
 
-  const filteredData = data.filter((c) => {
-    if (filterType === "REGISTERED") return c.role !== "GUEST"
-    if (filterType === "GUEST") return c.role === "GUEST"
-    if (filterType === "VIP") return c.totalSpent >= 10000 || c.totalOrders >= 3
-    return true
-  })
+  const handleFilterChange = (filterType: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (filterType && filterType !== "ALL") {
+      params.set("filter", filterType)
+    } else {
+      params.delete("filter")
+    }
+    params.set("page", "1")
+    router.push(`/admin/customers?${params.toString()}`, { scroll: false })
+  }
 
   return (
     <div className="space-y-4">
@@ -106,24 +137,23 @@ export function CustomerClient({ data }: { data: Customer[] }) {
         </form>
 
         <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          {(["ALL", "REGISTERED", "GUEST", "VIP"] as const).map((t) => (
+          {[
+            { key: "ALL", label: `All (${allCounts.all})` },
+            { key: "REGISTERED", label: `Registered (${allCounts.registered})` },
+            { key: "GUEST", label: `Guest Shoppers (${allCounts.guest})` },
+            { key: "VIP", label: `VIP High LTV (${allCounts.vip})` },
+          ].map((tab) => (
             <button
-              key={t}
-              onClick={() => setFilterType(t)}
+              key={tab.key}
+              onClick={() => handleFilterChange(tab.key)}
               className={cn(
                 "px-3 py-1.5 rounded-lg font-semibold transition-all text-xs whitespace-nowrap",
-                filterType === t
+                currentFilter === tab.key || (!currentFilter && tab.key === "ALL")
                   ? "bg-zinc-900 text-white shadow-2xs"
                   : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 bg-zinc-50 border border-zinc-200/70"
               )}
             >
-              {t === "ALL"
-                ? `All (${data.length})`
-                : t === "REGISTERED"
-                ? `Registered (${data.filter((c) => c.role !== "GUEST").length})`
-                : t === "GUEST"
-                ? `Guest Shoppers (${data.filter((c) => c.role === "GUEST").length})`
-                : `VIP High LTV (${data.filter((c) => c.totalSpent >= 10000 || c.totalOrders >= 3).length})`}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -140,121 +170,131 @@ export function CustomerClient({ data }: { data: Customer[] }) {
                 <TableHead className="text-xs font-bold text-zinc-700">Type & Status</TableHead>
                 <TableHead className="text-xs font-bold text-zinc-700">Orders</TableHead>
                 <TableHead className="text-xs font-bold text-zinc-700">Lifetime Spent (LTV)</TableHead>
-                <TableHead className="text-xs font-bold text-zinc-700">Last Active</TableHead>
+                <TableHead className="text-xs font-bold text-zinc-700">Recent Activity</TableHead>
                 <TableHead className="text-right text-xs font-bold text-zinc-700 pr-5">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {filteredData.length === 0 ? (
+            <TableBody className="divide-y divide-zinc-100">
+              {data.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-xs text-zinc-400">
+                  <TableCell colSpan={7} className="h-40 text-center text-zinc-400">
                     <User className="w-8 h-8 mx-auto mb-2 opacity-40 text-zinc-400" />
                     <p className="text-sm font-semibold text-zinc-700">No customers found</p>
-                    <p className="text-xs text-zinc-600 mt-0.5">Try searching with a different keyword or filter.</p>
+                    <p className="text-xs text-zinc-600 mt-0.5">Try refining your search query or filter category.</p>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredData.map((customer) => {
-                  const isGuest = customer.role === "GUEST"
-                  const isVIP = customer.totalSpent >= 10000 || customer.totalOrders >= 3
+                data.map((c) => {
+                  const isGuest = c.role === "GUEST"
+                  const isVip = c.totalSpent >= 10000 || c.totalOrders >= 3
 
                   return (
-                    <TableRow
-                      key={customer.id}
-                      className="text-xs hover:bg-zinc-50/80 transition-colors cursor-pointer group"
-                      onClick={() => setSelectedCustomer(customer)}
-                    >
-                      <TableCell className="py-3 pl-5">
+                    <TableRow key={c.id} className="hover:bg-zinc-50/80 transition-colors">
+                      <TableCell className="pl-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-800 font-bold text-xs flex items-center justify-center shrink-0 group-hover:border-zinc-400 transition-colors shadow-2xs">
-                            {customer.name && customer.name !== "—"
-                              ? customer.name.charAt(0).toUpperCase()
-                              : "C"}
+                          <div className="w-9 h-9 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-zinc-700 text-xs shrink-0">
+                            {c.name.charAt(0).toUpperCase()}
                           </div>
-                          <div className="min-w-0">
+                          <div>
                             <div className="flex items-center gap-1.5">
-                              <p className="font-bold text-zinc-900 group-hover:text-amber-600 transition-colors truncate">
-                                {customer.name}
-                              </p>
-                              {isVIP && (
-                                <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                              <p className="font-semibold text-zinc-900 text-xs">{c.name}</p>
+                              {isVip && (
+                                <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                   VIP
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-zinc-600 font-mono mt-0.5 truncate">
-                              {customer.email}
-                            </p>
+                            <span className="text-[11px] text-zinc-600 block mt-0.5">
+                              Joined {new Date(c.joinedDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
+                            </span>
                           </div>
                         </div>
                       </TableCell>
 
-                      <TableCell>
-                        <div className="flex flex-col text-zinc-600">
-                          <span className="font-mono text-xs text-zinc-900 font-medium">{customer.phone}</span>
+                      <TableCell className="py-3.5 text-xs text-zinc-600">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 text-zinc-700">
+                            <Mail className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                            <span className="truncate max-w-[180px]">{c.email}</span>
+                          </div>
+                          {c.phone && c.phone !== "—" && (
+                            <div className="flex items-center gap-1.5 text-zinc-600 font-mono text-[11px]">
+                              <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                              <span>{c.phone}</span>
+                            </div>
+                          )}
                         </div>
                       </TableCell>
 
-                      <TableCell>
+                      <TableCell className="py-3.5 text-xs">
                         <div className="flex items-center gap-1.5">
-                          <span
-                            className={cn(
-                              "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
-                              isGuest
-                                ? "bg-zinc-100 text-zinc-600 border-zinc-200"
-                                : customer.role === "ADMIN"
-                                ? "bg-amber-50 text-amber-700 border-amber-200"
-                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            )}
-                          >
-                            {customer.role}
-                          </span>
-                          {customer.isLocked && (
-                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                              Locked
+                          {isGuest ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-700 border border-zinc-200">
+                              Guest Checkout
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/60">
+                              Registered
+                            </span>
+                          )}
+                          {c.isLocked && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                              <Lock className="w-3 h-3" /> Locked
                             </span>
                           )}
                         </div>
                       </TableCell>
 
-                      <TableCell className="font-bold text-zinc-900 font-mono">
-                        {customer.totalOrders} order{customer.totalOrders !== 1 ? "s" : ""}
+                      <TableCell className="py-3.5 text-xs font-semibold text-zinc-900 font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <ShoppingCart className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>{c.totalOrders} {c.totalOrders === 1 ? "order" : "orders"}</span>
+                        </div>
                       </TableCell>
 
-                      <TableCell className="font-bold text-zinc-900 font-mono text-xs">
-                        ৳{customer.totalSpent.toLocaleString()}
+                      <TableCell className="py-3.5 text-xs font-bold text-zinc-900 font-mono">
+                        <span className={c.totalSpent > 0 ? "text-emerald-700" : "text-zinc-600"}>
+                          ৳{c.totalSpent.toLocaleString()}
+                        </span>
                       </TableCell>
 
-                      <TableCell className="text-zinc-600 text-[11px]">
-                        {new Date(customer.lastOrderAt || customer.joinedDate).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
+                      <TableCell className="py-3.5 text-xs text-zinc-600">
+                        {c.lastOrderAt ? (
+                          <span className="text-[11px]">
+                            {new Date(c.lastOrderAt).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
 
-                      <TableCell className="text-right pr-5" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
+                      <TableCell className="pr-5 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => setSelectedCustomer(customer)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 hover:text-zinc-900 rounded-lg transition"
+                            onClick={() => setSelectedCustomer(c)}
+                            className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition text-xs font-semibold flex items-center gap-1"
+                            title="View Customer Profile & Orders"
                           >
-                            Profile
-                            <ChevronRight className="w-3 h-3" />
+                            <span>Profile</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                           {!isGuest && (
                             <button
-                              onClick={() => toggleLock(customer)}
+                              onClick={() => toggleLock(c)}
                               disabled={lockLoading}
-                              title={customer.isLocked ? "Unlock Account" : "Lock Account"}
                               className={cn(
-                                "p-1.5 text-xs rounded-lg border transition",
-                                customer.isLocked
-                                  ? "text-rose-600 bg-rose-50 border-rose-200 hover:bg-rose-100"
-                                  : "text-zinc-600 bg-white border-zinc-200 hover:text-zinc-900 hover:bg-zinc-50"
+                                "p-1.5 rounded-lg transition",
+                                c.isLocked
+                                  ? "text-rose-600 hover:bg-rose-50"
+                                  : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
                               )}
+                              title={c.isLocked ? "Unlock account access" : "Lock account access"}
                             >
-                              {customer.isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                              {c.isLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                             </button>
                           )}
                         </div>
@@ -267,34 +307,46 @@ export function CustomerClient({ data }: { data: Customer[] }) {
           </Table>
         </div>
 
-        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60 flex items-center justify-between text-xs text-zinc-600 font-medium">
-          <span>
-            Showing <strong>{filteredData.length}</strong> of <strong>{data.length}</strong> total customers
-          </span>
+        {/* AdminPagination at the bottom */}
+        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60">
+          <AdminPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            basePath="/admin/customers"
+          />
         </div>
       </div>
 
-      {/* Customer Profile & History Dialog */}
+      {/* Profile & History Drawer Dialog */}
       <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
-        <DialogContent className="max-w-xl rounded-2xl p-6 bg-white border border-zinc-200 shadow-2xl">
-          <DialogHeader className="pb-3 border-b border-zinc-100">
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-zinc-900">
-              <User className="w-4 h-4 text-zinc-900" />
-              <span>Customer Profile & Purchase History</span>
-            </DialogTitle>
+        <DialogContent className="max-w-xl bg-white p-6 rounded-2xl border border-zinc-200 shadow-xl">
+          <DialogHeader>
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-sm">
+                  {selectedCustomer?.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <DialogTitle className="text-base font-bold text-zinc-900">
+                    {selectedCustomer?.name}
+                  </DialogTitle>
+                  <p className="text-xs text-zinc-600 mt-0.5">
+                    {selectedCustomer?.role === "GUEST" ? "Guest Shopper Profile" : "Registered Berber Account"}
+                  </p>
+                </div>
+              </div>
+            </div>
           </DialogHeader>
 
           {selectedCustomer && (
-            <div className="space-y-5 pt-2 text-xs">
-              {/* Profile Card */}
-              <div className="bg-zinc-50/80 rounded-2xl p-4 border border-zinc-200/80 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-zinc-600 font-medium">Customer Name:</span>
-                  <span className="font-bold text-zinc-900 text-sm">{selectedCustomer.name}</span>
-                </div>
+            <div className="space-y-5 pt-2">
+              {/* Overview Details */}
+              <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-600 font-medium">Email Address:</span>
-                  <span className="font-mono text-zinc-800">{selectedCustomer.email}</span>
+                  <span className="font-semibold text-zinc-800">{selectedCustomer.email}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-600 font-medium">Phone Number:</span>

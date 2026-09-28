@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,16 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   ShoppingBag,
-  Plus,
   Search,
   Pencil,
-  Trash2,
   Truck,
   CheckCircle2,
   Clock,
   Wallet,
   ExternalLink,
 } from "lucide-react"
+import AdminPagination from "@/components/admin/AdminPagination"
 
 type Reseller = {
   id: string
@@ -48,9 +47,26 @@ type Reseller = {
   }[]
 }
 
-export default function ResellersClient({ data }: { data: Reseller[] }) {
+interface ResellersClientProps {
+  data: Reseller[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  currentSearch: string
+}
+
+export default function ResellersClient({
+  data,
+  pagination,
+  currentSearch,
+}: ResellersClientProps) {
   const router = useRouter()
-  const [search, setSearch] = useState("")
+  const searchParams = useSearchParams()
+
+  const [search, setSearch] = useState(currentSearch)
   const [editingReseller, setEditingReseller] = useState<Reseller | null>(null)
   const [discountPct, setDiscountPct] = useState("15")
   const [shopName, setShopName] = useState("")
@@ -58,154 +74,179 @@ export default function ResellersClient({ data }: { data: Reseller[] }) {
 
   function openEdit(r: Reseller) {
     setEditingReseller(r)
-    setDiscountPct(String(r.resellerDiscountPct || 15))
+    setDiscountPct(r.resellerDiscountPct?.toString() || "15")
     setShopName(r.shopName || "")
   }
 
-  async function handleSave(e: React.FormEvent) {
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const params = new URLSearchParams(searchParams.toString())
+    if (search.trim()) {
+      params.set("search", search.trim())
+    } else {
+      params.delete("search")
+    }
+    params.set("page", "1")
+    router.push(`/admin/resellers?${params.toString()}`, { scroll: false })
+  }
+
+  async function handleUpdate(e: React.FormEvent) {
     e.preventDefault()
     if (!editingReseller) return
     setSaving(true)
+
     try {
       const res = await fetch(`/api/admin/affiliates/${editingReseller.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          resellerDiscountPct: Number(discountPct),
-          shopName: shopName.trim(),
+          resellerDiscountPct: parseFloat(discountPct) || 15,
+          shopName,
         }),
       })
-      if (!res.ok) throw new Error("Failed to save")
-      toast.success("Reseller details updated")
+
+      if (!res.ok) throw new Error("Failed to update reseller settings")
+      toast.success("Reseller settings updated successfully")
       setEditingReseller(null)
       router.refresh()
-    } catch {
-      toast.error("Failed to update reseller")
+    } catch (err: any) {
+      toast.error(err.message)
     } finally {
       setSaving(false)
     }
   }
 
-  async function toggleActive(id: string, isActive: boolean) {
-    const res = await fetch(`/api/admin/affiliates/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive }),
-    })
-    if (res.ok) {
+  async function toggleActive(id: string, current: boolean) {
+    try {
+      const res = await fetch(`/api/admin/affiliates/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: current }),
+      })
+      if (!res.ok) throw new Error("Failed to update status")
       toast.success("Reseller status updated")
       router.refresh()
-    } else {
-      toast.error("Failed to update")
+    } catch (err: any) {
+      toast.error(err.message)
     }
   }
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return data
-    const q = search.toLowerCase()
-    return data.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        (r.shopName && r.shopName.toLowerCase().includes(q))
-    )
-  }, [data, search])
-
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+      {/* Top Search Bar */}
+      <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
           <Input
+            placeholder="Search shop name, owner, phone, email…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by shop name, owner, email…"
-            className="pl-9 h-9 text-xs rounded-xl bg-white border-zinc-200"
+            className="pl-9 h-9 text-xs rounded-xl bg-zinc-50/60 focus:bg-white"
           />
-        </div>
+        </form>
+
+        <span className="text-xs text-zinc-500">
+          Default Dropship Wholesale Tier: <strong className="text-zinc-900 font-mono">15% off</strong> retail
+        </span>
       </div>
 
-      {/* Edit Modal */}
-      <Dialog open={!!editingReseller} onOpenChange={(v) => !v && setEditingReseller(null)}>
-        <DialogContent className="sm:max-w-md w-[94vw] p-0 rounded-2xl bg-white border border-zinc-200 shadow-2xl gap-0">
-          <DialogHeader className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/80">
-            <DialogTitle className="text-base font-bold text-zinc-900 flex items-center gap-2">
-              <ShoppingBag className="w-4 h-4 text-indigo-600" />
-              <span>Edit Reseller Profile</span>
+      {/* Edit Drawer Dialog */}
+      <Dialog open={Boolean(editingReseller)} onOpenChange={(open) => !open && setEditingReseller(null)}>
+        <DialogContent className="max-w-md bg-white p-6 rounded-2xl border border-zinc-200 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-zinc-900">
+              Edit Reseller: {editingReseller?.name}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSave} className="p-6 space-y-4 text-xs">
-            <div className="space-y-1">
-              <label className="font-bold uppercase tracking-wider text-zinc-600 text-[10px]">Shop / Brand Name</label>
-              <Input
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                placeholder="e.g. Trendy Outfit BD"
-                className="h-9 text-xs rounded-xl"
-              />
-            </div>
+          {editingReseller && (
+            <form onSubmit={handleUpdate} className="space-y-4 pt-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700">Shop / Brand Name</label>
+                <Input
+                  placeholder="e.g. Trendy Outfit BD"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  className="h-9 text-xs rounded-xl"
+                />
+              </div>
 
-            <div className="space-y-1">
-              <label className="font-bold uppercase tracking-wider text-zinc-600 text-[10px]">Wholesale Discount Margin (%)</label>
-              <Input
-                type="number"
-                min={0}
-                max={50}
-                value={discountPct}
-                onChange={(e) => setDiscountPct(e.target.value)}
-                className="h-9 text-xs rounded-xl font-mono font-bold"
-              />
-              <p className="text-[11px] text-zinc-400">
-                Reseller gets this discount off all retail prices for dropship orders.
-              </p>
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-700">
+                  Wholesale Discount Percentage (% off regular price)
+                </label>
+                <Input
+                  required
+                  type="number"
+                  min="0"
+                  max="80"
+                  step="0.5"
+                  value={discountPct}
+                  onChange={(e) => setDiscountPct(e.target.value)}
+                  className="h-9 text-xs font-mono rounded-xl"
+                />
+                <p className="text-[11px] text-zinc-500">
+                  Defines the reseller's wholesale base purchase price. Their profit is: (Customer Retail Price - Wholesale Base Price).
+                </p>
+              </div>
 
-            <Button
-              type="submit"
-              disabled={saving}
-              className="w-full h-10 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs rounded-xl"
-            >
-              {saving ? "Saving…" : "Save Reseller Settings"}
-            </Button>
-          </form>
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-zinc-100">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingReseller(null)}
+                  className="text-xs rounded-xl"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={saving}
+                  className="text-xs bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl cursor-pointer"
+                >
+                  {saving ? "Saving…" : "Save Changes"}
+                </Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
 
-      {/* Table */}
+      {/* Reseller Table */}
       <div className="rounded-2xl border border-zinc-200/90 bg-white shadow-2xs overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-zinc-50/60 border-zinc-200 text-xs font-bold">
-              <TableHead className="pl-5 text-zinc-700 font-bold">Reseller Shop</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Wholesale Discount</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Dropship Orders</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Wallet Balance</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Total Earned</TableHead>
-              <TableHead className="text-zinc-700 font-bold">Active</TableHead>
-              <TableHead className="text-right pr-5 text-zinc-700 font-bold">Actions</TableHead>
+            <TableRow className="bg-zinc-50/50 hover:bg-zinc-50/50 border-zinc-200/80">
+              <TableHead className="text-xs font-bold text-zinc-700 pl-5">Reseller Shop</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Wholesale Tier</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Dropship Orders</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Wallet Balance</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Total Settled Profit</TableHead>
+              <TableHead className="text-xs font-bold text-zinc-700">Active</TableHead>
+              <TableHead className="text-right text-xs font-bold text-zinc-700 pr-5">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="text-xs">
-            {filtered.length === 0 ? (
+            {data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-32 text-center text-zinc-400 text-xs">
                   No resellers found matching your search.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((r) => (
+              data.map((r) => (
                 <TableRow key={r.id} className="hover:bg-zinc-50/80 transition-colors">
                   <TableCell className="pl-5 py-3.5">
                     <div>
                       <span className="font-bold text-zinc-900 text-sm block">
                         {r.shopName || r.name}
                       </span>
-                      <span className="text-zinc-400 text-[11px]">
+                      <span className="text-zinc-500 text-[11px]">
                         Owner: {r.name} ({r.email})
                       </span>
-                      {r.phone && <span className="text-zinc-500 font-mono text-[10px] block">{r.phone}</span>}
+                      {r.phone && <span className="text-zinc-400 font-mono text-[10px] block">{r.phone}</span>}
                     </div>
                   </TableCell>
 
@@ -257,6 +298,17 @@ export default function ResellersClient({ data }: { data: Reseller[] }) {
             )}
           </TableBody>
         </Table>
+
+        {/* AdminPagination at table bottom */}
+        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60">
+          <AdminPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            basePath="/admin/resellers"
+          />
+        </div>
       </div>
     </div>
   )

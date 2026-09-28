@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import {
   Table,
@@ -32,17 +32,15 @@ import {
   Plus,
   Trash2,
   Copy,
-  Check,
   Sparkles,
   Link as LinkIcon,
   TrendingUp,
-  Percent,
-  Calendar,
-  Gift,
-  HelpCircle,
-  ExternalLink,
+  Search,
+  Filter,
+  Check,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import AdminPagination from "@/components/admin/AdminPagination"
 
 type Coupon = {
   id: string
@@ -57,8 +55,27 @@ type Coupon = {
   createdAt: string
 }
 
-export function CouponClient({ data }: { data: Coupon[] }) {
+interface CouponClientProps {
+  data: Coupon[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
+  currentSearch: string
+  currentStatus: string
+}
+
+export function CouponClient({
+  data,
+  pagination,
+  currentSearch,
+  currentStatus,
+}: CouponClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [code, setCode] = useState("")
   const [type, setType] = useState("PERCENTAGE")
@@ -69,6 +86,30 @@ export function CouponClient({ data }: { data: Coupon[] }) {
     new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   )
   const [submitting, setSubmitting] = useState(false)
+  const [search, setSearch] = useState(currentSearch)
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const params = new URLSearchParams(searchParams.toString())
+    if (search.trim()) {
+      params.set("search", search.trim())
+    } else {
+      params.delete("search")
+    }
+    params.set("page", "1")
+    router.push(`/admin/coupons?${params.toString()}`, { scroll: false })
+  }
+
+  const handleStatusFilter = (status: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (status && status !== "ALL") {
+      params.set("status", status)
+    } else {
+      params.delete("status")
+    }
+    params.set("page", "1")
+    router.push(`/admin/coupons?${params.toString()}`, { scroll: false })
+  }
 
   // Copy helper
   const copyShareLink = (couponCode: string) => {
@@ -87,12 +128,6 @@ export function CouponClient({ data }: { data: Coupon[] }) {
   const generateRandomCode = (prefix = "BERBER") => {
     const randomChars = Math.random().toString(36).substring(2, 6).toUpperCase()
     setCode(`${prefix}-${randomChars}`)
-  }
-
-  const setExpiryPreset = (days: number) => {
-    const targetDate = new Date(Date.now() + days * 24 * 3600 * 1000)
-    setExpiresAt(targetDate.toISOString().slice(0, 10))
-    toast.success(`Set expiry to +${days} days`)
   }
 
   // Handle coupon creation
@@ -172,257 +207,181 @@ export function CouponClient({ data }: { data: Coupon[] }) {
     }
   }
 
-  // KPIs
-  const activeCount = data.filter((c) => c.isActive).length
-  const totalUses = data.reduce((sum, c) => sum + (c.usedCount || 0), 0)
-  const topCoupon = [...data].sort((a, b) => (b.usedCount || 0) - (a.usedCount || 0))[0]
-
   return (
     <div className="space-y-6">
-      {/* Top Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs space-y-1">
-          <div className="flex items-center justify-between text-zinc-500 text-xs font-semibold">
-            <span>Active Promo Codes</span>
-            <Tag className="w-4 h-4 text-emerald-600" />
+      {/* Top Search & Filter & Create Row */}
+      <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <Input
+            placeholder="Search promo code…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9 text-xs rounded-xl bg-zinc-50/60 focus:bg-white"
+          />
+        </form>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-1 bg-zinc-100 p-1 rounded-xl shrink-0">
+            {[
+              { key: "ALL", label: "All Codes" },
+              { key: "ACTIVE", label: "Active" },
+              { key: "EXPIRED", label: "Expired" },
+              { key: "DISABLED", label: "Disabled" },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => handleStatusFilter(tab.key)}
+                className={cn(
+                  "px-3 py-1 text-xs font-semibold rounded-lg transition-all whitespace-nowrap",
+                  currentStatus === tab.key || (!currentStatus && tab.key === "ALL")
+                    ? "bg-white text-zinc-900 shadow-2xs"
+                    : "text-zinc-600 hover:text-zinc-900"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          <p className="text-2xl font-black text-zinc-900 font-mono">
-            {activeCount}{" "}
-            <span className="text-xs font-normal text-zinc-400">/ {data.length} total</span>
-          </p>
-        </div>
 
-        <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs space-y-1">
-          <div className="flex items-center justify-between text-zinc-500 text-xs font-semibold">
-            <span>Total Redemptions</span>
-            <TrendingUp className="w-4 h-4 text-indigo-600" />
-          </div>
-          <p className="text-2xl font-black text-zinc-900 font-mono">
-            {totalUses}{" "}
-            <span className="text-xs font-normal text-zinc-400">orders</span>
-          </p>
-        </div>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger render={<Button className="gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs cursor-pointer shrink-0"><Plus className="w-3.5 h-3.5" /> Create Coupon</Button>} />
+            <DialogContent className="sm:max-w-xl w-[94vw] max-h-[90vh] overflow-y-auto p-0 rounded-2xl bg-white border border-zinc-200 shadow-2xl gap-0">
+              <DialogHeader className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/80">
+                <DialogTitle className="text-base font-bold text-zinc-900 flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-amber-600" />
+                  <span>Create New Coupon Code</span>
+                </DialogTitle>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Generate shareable promo codes with min-spend rules
+                </p>
+              </DialogHeader>
 
-        <div className="p-4 rounded-2xl border border-zinc-200/90 bg-white shadow-2xs space-y-1">
-          <div className="flex items-center justify-between text-zinc-500 text-xs font-semibold">
-            <span>Most Popular Code</span>
-            <Sparkles className="w-4 h-4 text-amber-500" />
-          </div>
-          <p className="text-lg font-black text-zinc-900 font-mono truncate">
-            {topCoupon && topCoupon.usedCount > 0 ? (
-              <>
-                {topCoupon.code}{" "}
-                <span className="text-xs font-semibold text-emerald-600">({topCoupon.usedCount} uses)</span>
-              </>
-            ) : (
-              <span className="text-zinc-400 font-sans text-xs">No redemptions yet</span>
-            )}
-          </p>
-        </div>
-      </div>
-
-      {/* Creation Modal Trigger */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-bold text-zinc-900">Configured Promotion Codes</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">Manage cart discounts, spend thresholds, and single-click share links</p>
-        </div>
-
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger render={<Button className="gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-xs cursor-pointer"><Plus className="w-3.5 h-3.5" /> Create Coupon Code</Button>} />
-          <DialogContent className="sm:max-w-xl w-[94vw] max-h-[90vh] overflow-y-auto p-0 rounded-2xl bg-white border border-zinc-200 shadow-2xl gap-0">
-            <DialogHeader className="px-6 py-4 border-b border-zinc-100 bg-zinc-50/80">
-              <DialogTitle className="text-base font-bold text-zinc-900 flex items-center gap-2">
-                <Tag className="w-4 h-4 text-amber-600" />
-                <span>Create New Coupon Code</span>
-              </DialogTitle>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Generate shareable promo codes with min-spend rules
-              </p>
-            </DialogHeader>
-
-            <form onSubmit={handleCreate} className="p-6 space-y-4 text-xs">
-              {/* Code input with quick generator */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold uppercase tracking-wider text-zinc-600">
-                    Coupon Code
-                  </label>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => generateRandomCode("BERBER")}
-                      className="text-[10px] font-bold text-indigo-600 hover:underline flex items-center gap-0.5"
-                    >
-                      <Sparkles className="w-2.5 h-2.5" />
-                      <span>Random</span>
-                    </button>
-                    <span className="text-zinc-300">·</span>
-                    <button
-                      type="button"
-                      onClick={() => setCode("WELCOME10")}
-                      className="text-[10px] text-zinc-500 hover:text-zinc-900"
-                    >
-                      WELCOME10
-                    </button>
-                    <span className="text-zinc-300">·</span>
-                    <button
-                      type="button"
-                      onClick={() => setCode("EID20")}
-                      className="text-[10px] text-zinc-500 hover:text-zinc-900"
-                    >
-                      EID20
-                    </button>
+              <form onSubmit={handleCreate} className="p-6 space-y-4 text-xs">
+                {/* Code input with quick generator */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold uppercase tracking-wider text-zinc-600">
+                      Coupon Code
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => generateRandomCode("BERBER")}
+                        className="text-[10px] font-bold text-indigo-600 hover:underline flex items-center gap-0.5"
+                      >
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>Random</span>
+                      </button>
+                      <span className="text-zinc-300">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setCode("WELCOME10")}
+                        className="text-[10px] text-zinc-500 hover:text-zinc-900"
+                      >
+                        WELCOME10
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <Input
-                  required
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. SUMMER25"
-                  className="h-9 font-mono font-bold text-xs uppercase tracking-wider rounded-xl border-zinc-300 shadow-2xs"
-                />
-              </div>
-
-              {/* Discount Type & Value */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="font-bold uppercase tracking-wider text-zinc-600">
-                    Discount Type
-                  </label>
-                  <Select value={type} onValueChange={(v) => setType(v || "PERCENTAGE")}>
-                    <SelectTrigger className="h-9 rounded-xl border-zinc-300 font-bold text-xs shadow-2xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PERCENTAGE">Percentage (%) Off</SelectItem>
-                      <SelectItem value="FLAT">Flat Cash (৳) Off</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    required
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. SUMMER25"
+                    className="h-9 font-mono font-bold text-xs uppercase tracking-wider rounded-xl border-zinc-300 shadow-2xs"
+                  />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-bold uppercase tracking-wider text-zinc-600">
-                    Discount Value
-                  </label>
-                  <div className="relative flex items-center">
-                    <span className="absolute left-3 text-zinc-400 font-bold font-mono">
-                      {type === "PERCENTAGE" ? "%" : "৳"}
-                    </span>
+                {/* Discount Type & Value */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="font-bold uppercase tracking-wider text-zinc-600">
+                      Discount Type
+                    </label>
+                    <Select value={type} onValueChange={(v) => setType(v || "PERCENTAGE")}>
+                      <SelectTrigger className="h-9 rounded-xl border-zinc-300 font-bold text-xs shadow-2xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PERCENTAGE">Percentage (%) Off</SelectItem>
+                        <SelectItem value="FLAT">Flat Cash (৳) Off</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold uppercase tracking-wider text-zinc-600">
+                      Discount Value
+                    </label>
                     <Input
                       required
                       type="number"
                       min="1"
+                      step="0.1"
                       value={value}
                       onChange={(e) => setValue(e.target.value)}
-                      placeholder={type === "PERCENTAGE" ? "20" : "300"}
-                      className="h-9 pl-7 rounded-xl border-zinc-300 font-bold font-mono text-xs shadow-2xs"
+                      placeholder={type === "PERCENTAGE" ? "e.g. 15 (for 15%)" : "e.g. 300 (for ৳300)"}
+                      className="h-9 rounded-xl border-zinc-300 font-bold text-xs shadow-2xs"
                     />
                   </div>
                 </div>
-              </div>
 
-              {/* Minimum Order Spend & Max Redemptions */}
-              <div className="grid grid-cols-2 gap-3">
+                {/* Min Order & Max Uses */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="font-bold uppercase tracking-wider text-zinc-600">
+                      Min. Cart Spend (৳)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={minOrder}
+                      onChange={(e) => setMinOrder(e.target.value)}
+                      placeholder="Optional, e.g. 1500"
+                      className="h-9 rounded-xl border-zinc-300 text-xs shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-bold uppercase tracking-wider text-zinc-600">
+                      Total Usage Cap
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={maxUses}
+                      onChange={(e) => setMaxUses(e.target.value)}
+                      placeholder="Optional, e.g. 100"
+                      className="h-9 rounded-xl border-zinc-300 text-xs shadow-2xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Expiry Date */}
                 <div className="space-y-1.5">
                   <label className="font-bold uppercase tracking-wider text-zinc-600">
-                    Min Order Spend (৳)
+                    Expiry Date
                   </label>
                   <Input
-                    type="number"
-                    min="0"
-                    value={minOrder}
-                    onChange={(e) => setMinOrder(e.target.value)}
-                    placeholder="Optional (e.g. 2000)"
-                    className="h-9 rounded-xl border-zinc-300 font-mono text-xs shadow-2xs"
+                    type="date"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    className="h-9 rounded-xl border-zinc-300 text-xs shadow-2xs"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="font-bold uppercase tracking-wider text-zinc-600">
-                    Usage Cap (Max Uses)
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={maxUses}
-                    onChange={(e) => setMaxUses(e.target.value)}
-                    placeholder="Optional (e.g. 100)"
-                    className="h-9 rounded-xl border-zinc-300 font-mono text-xs shadow-2xs"
-                  />
-                </div>
-              </div>
-
-              {/* Expiry Date with presets */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between">
-                  <label className="font-bold uppercase tracking-wider text-zinc-600 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-zinc-400" />
-                    <span>Expiration Date</span>
-                  </label>
-                  <div className="flex items-center gap-1 text-[10px]">
-                    <span className="text-zinc-400 mr-0.5">Presets:</span>
-                    <button
-                      type="button"
-                      onClick={() => setExpiryPreset(7)}
-                      className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold"
-                    >
-                      +7d
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExpiryPreset(30)}
-                      className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold"
-                    >
-                      +30d
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setExpiresAt("")}
-                      className="px-2 py-0.5 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold"
-                    >
-                      No Expiry
-                    </button>
-                  </div>
-                </div>
-                <Input
-                  type="date"
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  className="h-9 rounded-xl border-zinc-300 font-mono text-xs shadow-2xs"
-                />
-              </div>
-
-              {/* Live Preview Pill */}
-              <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200/80 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800 font-mono font-black text-xs">
-                    {code || "PROMO-CODE"}
-                  </span>
-                  <div>
-                    <p className="font-bold text-zinc-900 text-xs">
-                      {value ? (type === "PERCENTAGE" ? `${value}% OFF` : `৳${value} OFF`) : "Discount Value"}
-                    </p>
-                    <p className="text-[10px] text-zinc-400">
-                      {minOrder ? `Min cart ৳${Number(minOrder).toLocaleString()}` : "No minimum spend required"}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                  Ready to Publish
-                </span>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-10 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs shadow-sm"
-                disabled={submitting}
-              >
-                {submitting ? "Saving Coupon…" : "Create & Activate Coupon"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <Button
+                  type="submit"
+                  className="w-full h-10 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs shadow-sm cursor-pointer"
+                  disabled={submitting}
+                >
+                  {submitting ? "Saving Coupon…" : "Create & Activate Coupon"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Coupons Table */}
@@ -442,7 +401,7 @@ export function CouponClient({ data }: { data: Coupon[] }) {
             {data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-32 text-center text-zinc-400 text-xs">
-                  No coupons found. Click "Create Coupon Code" to set up your first promo campaign.
+                  No coupons found. Click "Create Coupon" to set up your first promo campaign.
                 </TableCell>
               </TableRow>
             ) : (
@@ -468,7 +427,7 @@ export function CouponClient({ data }: { data: Coupon[] }) {
                           type="button"
                           onClick={() => copyShareLink(c.code)}
                           className="p-1 rounded-md text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                          title="Copy shareable shop link with auto-applied coupon"
+                          title="Copy direct share link"
                         >
                           <LinkIcon className="w-3.5 h-3.5" />
                         </button>
@@ -476,27 +435,25 @@ export function CouponClient({ data }: { data: Coupon[] }) {
                     </TableCell>
 
                     {/* Discount Value */}
-                    <TableCell className="font-mono font-bold text-zinc-900">
-                      {c.type === "PERCENTAGE" ? `${c.value}% OFF` : `৳${Number(c.value).toLocaleString()} OFF`}
+                    <TableCell>
+                      <span className="font-bold text-zinc-900 font-mono text-xs">
+                        {c.type === "PERCENTAGE" ? `${c.value}% OFF` : `৳${c.value} OFF`}
+                      </span>
                     </TableCell>
 
                     {/* Conditions */}
-                    <TableCell className="text-zinc-600">
-                      {c.minOrderAmount ? (
-                        <span className="font-mono text-[11px]">
-                          Min spend: <strong>৳{Number(c.minOrderAmount).toLocaleString()}</strong>
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-zinc-400">No minimum</span>
-                      )}
+                    <TableCell>
+                      <span className="text-zinc-600 text-[11px]">
+                        {c.minOrderAmount ? `Min. ৳${c.minOrderAmount.toLocaleString()}` : "No min. spend"}
+                      </span>
                     </TableCell>
 
-                    {/* Redemptions progress */}
+                    {/* Usage */}
                     <TableCell>
-                      <div className="space-y-1 w-32">
-                        <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500">
-                          <span>{c.usedCount} used</span>
-                          <span>{c.maxUses ? `/ ${c.maxUses}` : "(∞)"}</span>
+                      <div className="space-y-1 max-w-[120px]">
+                        <div className="flex items-center justify-between text-[11px] font-mono">
+                          <span className="font-bold text-zinc-900">{c.usedCount}</span>
+                          <span className="text-zinc-400">/ {c.maxUses ?? "∞"}</span>
                         </div>
                         {c.maxUses ? (
                           <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
@@ -567,6 +524,17 @@ export function CouponClient({ data }: { data: Coupon[] }) {
             )}
           </TableBody>
         </Table>
+
+        {/* AdminPagination at table bottom */}
+        <div className="p-4 border-t border-zinc-200 bg-zinc-50/60">
+          <AdminPagination
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            pageSize={pagination.limit}
+            basePath="/admin/coupons"
+          />
+        </div>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { PlusCircle, Download, Upload, Package } from "lucide-react"
+import { PlusCircle, Download, Upload } from "lucide-react"
 import Link from "next/link"
 import prisma from "@/lib/prisma"
 import ProductsFilters from "./ProductsFilters"
@@ -8,18 +8,19 @@ import AdminPagination from "@/components/admin/AdminPagination"
 import ProductsTable from "./ProductsTable"
 import { serialize } from "@/lib/utils"
 
-const PAGE_SIZE = 20
+export const dynamic = "force-dynamic"
 
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; status?: string; page?: string }>
+  searchParams: Promise<{ search?: string; status?: string; page?: string; limit?: string }>
 }) {
   const params = await searchParams
   const search = params.search || ""
   const status = params.status || ""
-  const page = Math.max(1, parseInt(params.page || "1"))
-  const skip = (page - 1) * PAGE_SIZE
+  const page = Math.max(1, parseInt(params.page || "1", 10))
+  const limit = Math.max(10, Math.min(100, parseInt(params.limit || "20", 10)))
+  const skip = (page - 1) * limit
 
   const where: any = {
     ...(search
@@ -64,12 +65,12 @@ export default async function ProductsPage({
       },
       orderBy: { createdAt: "desc" },
       skip,
-      take: PAGE_SIZE,
+      take: limit,
     }).catch(() => []),
     prisma.product.count({ where }).catch(() => 0),
   ])
 
-  const totalPages = Math.ceil(total / PAGE_SIZE)
+  const totalPages = Math.ceil(total / limit) || 1
   const serializedProducts = serialize(products)
 
   return (
@@ -80,7 +81,7 @@ export default async function ProductsPage({
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Products</h1>
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200">
-              {total} total
+              {total.toLocaleString()} total
             </span>
           </div>
           <p className="text-xs text-zinc-500 mt-0.5">
@@ -140,7 +141,14 @@ export default async function ProductsPage({
           </Table>
         </div>
         <div className="p-4 border-t border-zinc-100 bg-zinc-50/40">
-          <AdminPagination page={page} totalPages={totalPages} basePath="/admin/products" />
+          <AdminPagination
+            page={page}
+            totalPages={totalPages}
+            totalItems={total}
+            pageSize={limit}
+            pageSizeOptions={[10, 20, 50, 100]}
+            basePath="/admin/products"
+          />
         </div>
       </div>
     </div>

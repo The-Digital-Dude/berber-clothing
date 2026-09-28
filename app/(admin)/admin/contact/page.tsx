@@ -2,23 +2,57 @@ import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { redirect } from "next/navigation"
 import ContactInboxClient from "./ContactInboxClient"
-import { Mail, MessageSquare, Clock, CheckCircle2 } from "lucide-react"
+import { Mail } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
-export default async function AdminContactPage() {
+export default async function AdminContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string; filter?: string; page?: string; limit?: string }>
+}) {
   const { error } = await requireAdmin()
   if (error) redirect("/admin/login")
 
-  const [messages, unreadCount] = await Promise.all([
+  const params = await searchParams
+  const search = (params.search || "").trim()
+  const filter = (params.filter || "all").trim()
+  const page = Math.max(1, parseInt(params.page || "1", 10))
+  const limit = Math.max(10, Math.min(100, parseInt(params.limit || "25", 10)))
+  const skip = (page - 1) * limit
+
+  const where: any = {
+    ...(filter === "unread"
+      ? { isRead: false }
+      : filter === "replied"
+      ? { isReplied: true }
+      : {}),
+    ...(search
+      ? {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { subject: { contains: search, mode: "insensitive" } },
+            { message: { contains: search, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  }
+
+  const [messages, totalFiltered, totalCount, unreadCount, repliedCount] = await Promise.all([
     prisma.contactMessage.findMany({
+      where,
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip,
+      take: limit,
     }),
-    prisma.contactMessage.count({
-      where: { isRead: false },
-    }),
+    prisma.contactMessage.count({ where }),
+    prisma.contactMessage.count(),
+    prisma.contactMessage.count({ where: { isRead: false } }),
+    prisma.contactMessage.count({ where: { isReplied: true } }),
   ])
+
+  const totalPages = Math.ceil(totalFiltered / limit) || 1
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto w-full pb-16">
@@ -41,7 +75,20 @@ export default async function AdminContactPage() {
 
       <ContactInboxClient
         initialMessages={JSON.parse(JSON.stringify(messages))}
-        initialUnreadCount={unreadCount}
+        stats={{
+          total: totalCount,
+          unread: unreadCount,
+          replied: repliedCount,
+          rate: totalCount > 0 ? Math.round((repliedCount / totalCount) * 100) : 0,
+        }}
+        pagination={{
+          page,
+          limit,
+          total: totalFiltered,
+          totalPages,
+        }}
+        currentSearch={search}
+        currentFilter={filter}
       />
     </div>
   )
