@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { Resend } from "resend"
 
-// Called by Vercel Cron (set in vercel.json) or a cron service
+// Called by Supabase pg_cron (Vercel Cron was removed from vercel.json to
+// avoid duplicate/triple firing — see abandoned-cart route for the same note)
 // Sends "How was your order?" emails 3 days after delivery
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization")
