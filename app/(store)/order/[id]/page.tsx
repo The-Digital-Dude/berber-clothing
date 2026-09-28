@@ -262,12 +262,10 @@ export default async function OrderConfirmationPage({
       </div>
       
       {/* Order Messages */}
-      {order.userId && (
-        <div className="mt-12">
-          <h2 className="text-lg font-heading font-bold mb-4">Messages</h2>
-          <OrderMessages orderId={order.id} />
-        </div>
-      )}
+      <div className="mt-12">
+        <h2 className="text-lg font-heading font-bold mb-4">Messages & Order Support</h2>
+        <OrderMessages orderId={order.id} />
+      </div>
 
       {payment !== "failed" && <PostPurchaseUpsell orderId={order.id} />}
       <PurchaseTracker order={serialize(order) as any} />

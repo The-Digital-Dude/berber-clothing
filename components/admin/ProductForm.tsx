@@ -28,6 +28,7 @@ const productSchema = z.object({
   seoTitle: z.string().nullish(),
   seoDescription: z.string().nullish(),
   seoKeywords: z.string().nullish(),
+  ogImage: z.string().nullish(),
   videoUrl: z.string().nullish(),
   sizeChartImage: z.string().nullish(),
   variants: z.array(z.object({
@@ -200,6 +201,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
   const [newImageUrl, setNewImageUrl] = useState("")
   const [uploading, setUploading] = useState(false)
   const [uploadingChartImage, setUploadingChartImage] = useState(false)
+  const [uploadingOgImage, setUploadingOgImage] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [dragImageIdx, setDragImageIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
@@ -510,6 +512,34 @@ export default function ProductForm({ initialData, categories }: { initialData?:
                 </Field>
                 <Field label="Product Video" hint="YouTube link or direct MP4 URL">
                   <input {...register("videoUrl")} className={inputCls} placeholder="https://youtube.com/watch?v=..." />
+                </Field>
+                <Field label="Social Share Image (OpenGraph / Twitter)" hint="Custom banner image displayed when sharing the link on WhatsApp, Facebook, or Twitter. Defaults to cover image.">
+                  {watch("ogImage") && (
+                    <div className="relative w-48 h-28 rounded-xl overflow-hidden border border-gray-200 mb-2 group">
+                      <img src={watch("ogImage")} alt="Social share preview" className="w-full h-full object-cover bg-gray-50" />
+                      <button type="button" onClick={() => setValue("ogImage", "")}
+                        className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                  <label className={`flex items-center gap-2 h-10 px-4 rounded-lg border border-dashed border-gray-300 text-sm text-gray-500 cursor-pointer hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors w-fit ${uploadingOgImage ? "opacity-50 pointer-events-none" : ""}`}>
+                    {uploadingOgImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {uploadingOgImage ? "Uploading…" : "Upload social share image"}
+                    <input type="file" accept="image/*" disabled={uploadingOgImage} className="hidden"
+                      onChange={async e => {
+                        const file = e.target.files?.[0]; if (!file) return
+                        setUploadingOgImage(true)
+                        try {
+                          const fd = new FormData(); fd.append("file", file)
+                          const res = await fetch("/api/admin/upload", { method: "POST", body: fd })
+                          const data = await res.json()
+                          if (!res.ok) throw new Error(data.error)
+                          setValue("ogImage", data.url)
+                        } catch (err: any) { toast.error(err.message || "Upload failed") }
+                        finally { setUploadingOgImage(false); e.target.value = "" }
+                      }} />
+                  </label>
                 </Field>
                 <Field label="Size Chart Image" hint="Shown in the Size Guide modal — overrides the category chart">
                   {watch("sizeChartImage") && (

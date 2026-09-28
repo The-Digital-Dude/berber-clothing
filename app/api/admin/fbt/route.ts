@@ -22,13 +22,15 @@ export async function POST(req: NextRequest) {
   const { error } = await requireAdmin()
   if (error) return error
 
-  const { primaryId, secondaryId, score } = await req.json()
+  const { primaryId, secondaryId, score, discountPct } = await req.json()
   if (!primaryId || !secondaryId) return NextResponse.json({ error: "primaryId and secondaryId required" }, { status: 400 })
+
+  const parsedDiscount = discountPct !== undefined ? Number(discountPct) : 0
 
   const pair = await prisma.frequentlyBoughtTogether.upsert({
     where: { primaryId_secondaryId: { primaryId, secondaryId } },
-    create: { primaryId, secondaryId, score: score ?? 1 },
-    update: { score: score ?? 1 },
+    create: { primaryId, secondaryId, score: score ?? 1, discountPct: parsedDiscount },
+    update: { score: score ?? 1, discountPct: parsedDiscount },
   })
 
   return NextResponse.json({ pair })

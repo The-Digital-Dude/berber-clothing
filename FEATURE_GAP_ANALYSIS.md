@@ -277,6 +277,14 @@
 | "X people viewing this" counter | Yes | Missing | 🟡 MODERATE |
 | Size Quiz | Interactive widget | Missing | 🟡 MODERATE |
 | Post-Purchase Upsell modal | Yes | Missing | 🟡 MODERATE |
+| Steadfast courier | API + webhook | ✅ Completed | 🟢 DONE |
+| Google Shopping XML feed | Yes | ✅ Completed | 🟢 DONE |
+| Order messaging | OrderMessage model + API + UI | ✅ Completed | 🟢 DONE |
+| Frequently Bought Together | Full bundle config + PDP widget | ✅ Completed | 🟢 DONE |
+| Recently Viewed Products | Client tracker + PDP carousel | ✅ Completed | 🟢 DONE |
+| Smart Collections | Rules + Admin + Store route | ✅ Completed | 🟢 DONE |
+| SEO meta fields on Product | `metaTitle`, `metaDescription`, `ogImage` | ✅ Completed | 🟢 DONE |
+| Variant-level comparePrice | Yes | ✅ Completed | 🟢 DONE |
 | Customer Lock/Unlock | Admin action | Missing | 🟡 MODERATE |
 | COD call verification note | Order field + UI | Missing | 🟡 MODERATE |
 | Order tagging | Admin UI | Missing | 🟡 MODERATE |
@@ -287,8 +295,6 @@
 | Blog tag browsing | `/blog/tag/[tag]` | Missing | 🟢 MINOR |
 | SSLCommerz payment | Full | Missing | 🔴 CRITICAL |
 | UddoktaPay payment | Full | Missing | 🔴 CRITICAL |
-| Steadfast courier | API + webhook | Missing | 🟡 MODERATE |
-| Google Shopping XML feed | Yes | Missing | 🟡 MODERATE |
 | Inventory bulk update | API | Missing | 🟡 MODERATE |
 | Customer CSV import | Admin page | Missing | 🟡 MODERATE |
 | Search analytics | DB + admin + tracker | Missing | 🟡 MODERATE |
@@ -297,8 +303,6 @@
 | Bundle create/edit forms | Full CRUD | Partial (list only) | 🟠 PARTIAL |
 | Warranty page | Static page | Missing | 🟢 MINOR |
 | About page | Static page | Missing | 🟢 MINOR |
-| SEO meta fields on Product | `metaTitle`, `metaDescription`, `ogImage` | Missing | 🟡 MODERATE |
-| Variant-level comparePrice | Yes | Missing | 🟡 MODERATE |
 | Unsubscribe landing page | Yes | Missing | 🟢 MINOR |
 
 ---

@@ -797,3 +797,35 @@ export async function sendTemplatePreviewTo(key: EmailTemplateKey, to: string): 
   const { subject, html } = await renderTemplatePreview(key)
   await sendMail(to, `[Test] ${subject}`, html)
 }
+
+export async function sendOrderMessageNotification({
+  to,
+  customerName,
+  orderNumber,
+  orderId,
+  message,
+}: {
+  to: string
+  customerName: string
+  orderNumber: string
+  orderId: string
+  message: string
+}) {
+  const store = await getStoreMeta()
+  const orderUrl = `${store.url}/account/orders/${orderId}`
+  const content = `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:12px;color:#111;">Update on your Order #${orderNumber}</h2>
+    <p style="margin-bottom:16px;color:#555;">Hello ${customerName || "Customer"},</p>
+    <p style="margin-bottom:20px;color:#555;">Our customer care team has left a message regarding your order:</p>
+    <div style="background:#f9f8f6;border-left:4px solid #b89b5e;padding:16px;margin-bottom:24px;border-radius:4px;color:#222;font-style:italic;line-height:1.6;">
+      "${message}"
+    </div>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="${orderUrl}" style="background:#111;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">View Order & Reply</a>
+    </div>
+  `
+  await sendMail(to, `Update on Order #${orderNumber} - ${store.name}`, baseTemplate(store, content)).catch((err) => {
+    console.error("[sendOrderMessageNotification] error:", err)
+  })
+}
+

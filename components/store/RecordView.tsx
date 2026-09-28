@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect } from "react"
-import { recordView } from "./RecentlyViewed"
+import { recordView, type ViewedProduct } from "./RecentlyViewed"
 
 interface Props {
-  product: { id: string; name: string; slug: string; price: number; image?: string }
+  product: ViewedProduct
 }
 
 export default function RecordView({ product }: Props) {
@@ -15,6 +15,6 @@ export default function RecordView({ product }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productId: product.id }),
     }).catch(() => {})
-  }, [product.id])
+  }, [product.id, product])
   return null
 }

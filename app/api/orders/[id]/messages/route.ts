@@ -4,12 +4,21 @@ import { auth } from "@/lib/auth"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
   const { id: orderId } = await params
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { userId: true } })
-  if (!order || order.userId !== session.user.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  // Fetch order to verify ownership if logged in or guest
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, userId: true, guestEmail: true },
+  })
+
+  if (!order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 })
+  }
+
+  // If logged in, verify order belongs to user or admin
+  if (session?.user && order.userId && session.user.id !== order.userId && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
   }
 
   const messages = await prisma.orderMessage.findMany({
@@ -17,31 +26,44 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     orderBy: { createdAt: "asc" },
   })
 
-  // Mark customer messages as read
-  await prisma.orderMessage.updateMany({
-    where: { orderId, senderRole: "ADMIN", isRead: false },
-    data: { isRead: true },
-  })
-
   return NextResponse.json({ messages })
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
   const { id: orderId } = await params
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { userId: true } })
-  if (!order || order.userId !== session.user.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  const body = await req.json().catch(() => ({}))
+  const message = body.message?.trim()
+
+  if (!message) {
+    return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 })
   }
 
-  const { message } = await req.json()
-  if (!message?.trim()) return NextResponse.json({ error: "Message required" }, { status: 400 })
-
-  const msg = await prisma.orderMessage.create({
-    data: { orderId, senderId: session.user.id, senderRole: "CUSTOMER", message: message.trim() },
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, userId: true, orderNumber: true },
   })
 
-  return NextResponse.json({ message: msg })
+  if (!order) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 })
+  }
+
+  if (session?.user && order.userId && session.user.id !== order.userId && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+  }
+
+  const senderId = session?.user?.id || "GUEST_CUSTOMER"
+  const senderRole = session?.user?.role === "ADMIN" ? "ADMIN" : "CUSTOMER"
+
+  const createdMessage = await prisma.orderMessage.create({
+    data: {
+      orderId,
+      senderId,
+      senderRole,
+      message,
+      isRead: false,
+    },
+  })
+
+  return NextResponse.json({ message: createdMessage })
 }

@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!product) return { title: "Product Not Found" }
 
-  const image = product.images[0]?.url
+  const image = (product as any).ogImage || product.images[0]?.url
   const price = Number(product.price).toLocaleString()
   const title = (product as any).seoTitle || `${product.name} — ৳${price}`
   const description = (product as any).seoDescription || product.description || `Shop ${product.name} at Berber. Premium quality fashion from Bangladesh.`
@@ -222,7 +222,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     <div className="bg-berber-bg animate-in fade-in duration-500">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
-      <RecordView product={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, image: product.images[0]?.url }} />
+      <RecordView product={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, comparePrice: product.comparePrice ? Number(product.comparePrice) : undefined, image: product.images[0]?.url }} />
       <TrackPageView productId={product.id} />
       <ViewContentTracker product={{ id: product.id, name: product.name, price: displayPrice, category: product.category?.name }} />
 
@@ -397,8 +397,35 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         {/* Frequently Bought Together */}
         {fbtPairs.length > 0 && (
           <FrequentlyBoughtTogether
-            primary={{ id: product.id, name: product.name, slug: product.slug, price: displayPrice, images: serialize(product.images).map((img: any) => ({ url: img.url, alt: img.alt ?? undefined })), variants: serialize(product.variants) }}
-            suggestions={fbtPairs.map((p: any) => ({ id: p.secondary.id, name: p.secondary.name, slug: p.secondary.slug, price: Number(p.secondary.price), images: serialize(p.secondary.images), variants: serialize(p.secondary.variants) }))}
+            primary={{
+              id: product.id,
+              name: product.name,
+              slug: product.slug,
+              price: displayPrice,
+              images: serialize(product.images).map((img: any) => ({ url: img.url, alt: img.alt ?? undefined })),
+              variants: product.variants.map((v: any) => ({
+                id: v.id,
+                size: v.size,
+                color: v.color,
+                stock: v.stock,
+                price: v.price ? Number(v.price) : null,
+              })),
+            }}
+            suggestions={fbtPairs.map((p: any) => ({
+              id: p.secondary.id,
+              name: p.secondary.name,
+              slug: p.secondary.slug,
+              price: Number(p.secondary.price),
+              images: serialize(p.secondary.images),
+              variants: p.secondary.variants.map((v: any) => ({
+                id: v.id,
+                size: v.size,
+                color: v.color,
+                stock: v.stock,
+                price: v.price ? Number(v.price) : null,
+              })),
+              discountPct: Number(p.discountPct || 0),
+            }))}
           />
         )}
 

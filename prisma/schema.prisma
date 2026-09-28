@@ -137,6 +137,7 @@ model Product {
   seoTitle       String?
   seoDescription String?
   seoKeywords    String?
+  ogImage        String?  // custom OpenGraph / Social Share image
   videoUrl       String?  // optional product demo video (YouTube/direct MP4 URL)
   sizeChartImage String? // optional per-product size chart image override
   createdAt   DateTime @default(now())
@@ -1610,6 +1611,7 @@ model FrequentlyBoughtTogether {
   primaryId   String
   secondaryId String
   score       Int    @default(1) // admin-set sort weight
+  discountPct Decimal @default(0) // bundle discount % if bought together
 
   primary   Product @relation("FBTPrimary",   fields: [primaryId],   references: [id], onDelete: Cascade)
   secondary Product @relation("FBTSecondary", fields: [secondaryId], references: [id], onDelete: Cascade)

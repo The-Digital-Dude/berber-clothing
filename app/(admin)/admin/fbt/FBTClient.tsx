@@ -5,7 +5,7 @@ import { Plus, Trash2, Search, ChevronDown, ChevronUp } from "lucide-react"
 import { toast } from "sonner"
 
 type Product = { id: string; name: string; images: { url: string }[] }
-type Pair = { id: string; primaryId: string; secondaryId: string; score: number; secondary: Product }
+type Pair = { id: string; primaryId: string; secondaryId: string; score: number; discountPct?: number; secondary: Product }
 
 export default function FBTClient({ products, initialPairs }: { products: Product[]; initialPairs: Pair[] }) {
   const [pairs, setPairs] = useState<Pair[]>(initialPairs)
@@ -14,6 +14,7 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
   const [search, setSearch] = useState<Record<string, string>>({})
   const [selected, setSelected] = useState<Record<string, string>>({})
   const [score, setScore] = useState<Record<string, string>>({})
+  const [discountPct, setDiscountPct] = useState<Record<string, string>>({})
   const [filter, setFilter] = useState("")
 
   const pairsFor = (primaryId: string) => pairs.filter((p) => p.primaryId === primaryId)
@@ -22,10 +23,11 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
     const secondaryId = selected[primaryId]
     if (!secondaryId) return
     const s = Number(score[primaryId] || "1")
+    const d = Number(discountPct[primaryId] || "0")
     const res = await fetch("/api/admin/fbt", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ primaryId, secondaryId, score: s }),
+      body: JSON.stringify({ primaryId, secondaryId, score: s, discountPct: d }),
     })
     if (!res.ok) { toast.error("Failed to add pair"); return }
     const data = await res.json()
@@ -33,6 +35,7 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
     setPairs((prev) => [...prev.filter((p) => !(p.primaryId === primaryId && p.secondaryId === secondaryId)), { ...data.pair, secondary: sec }])
     setSelected((prev) => ({ ...prev, [primaryId]: "" }))
     setSearch((prev) => ({ ...prev, [primaryId]: "" }))
+    setDiscountPct((prev) => ({ ...prev, [primaryId]: "" }))
     toast.success("Pair added")
   }
 
@@ -96,6 +99,11 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
                         </div>
                       )}
                       <span className="text-xs text-slate-700 max-w-[100px] truncate">{pair.secondary?.name}</span>
+                      {Number(pair.discountPct || 0) > 0 && (
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded-full">
+                          -{pair.discountPct}%
+                        </span>
+                      )}
                       <button
                         onClick={() => removePair(pair.id)}
                         className="text-slate-400 hover:text-red-500 transition-colors ml-0.5"
@@ -128,6 +136,9 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
                       {myPairs.map((pair) => (
                         <div key={pair.id} className="flex items-center gap-2">
                           <span className="text-sm flex-1 truncate">{pair.secondary?.name}</span>
+                          {Number(pair.discountPct || 0) > 0 && (
+                            <span className="text-xs font-semibold text-amber-600">-{pair.discountPct}% off</span>
+                          )}
                           <span className="text-xs text-muted-foreground">score {pair.score}</span>
                           <button onClick={() => removePair(pair.id)} className="p-1 text-red-400 hover:text-red-600">
                             <Trash2 className="w-3.5 h-3.5" />
@@ -138,8 +149,8 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
                   )}
 
                   {/* Add pair UI */}
-                  <div className="flex gap-2 items-start">
-                    <div className="flex-1 relative">
+                  <div className="flex gap-2 items-start flex-wrap sm:flex-nowrap">
+                    <div className="flex-1 min-w-[200px] relative">
                       <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
                       <input
                         value={q}
@@ -170,15 +181,31 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
                         </div>
                       )}
                     </div>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={score[primary.id] || "1"}
-                      onChange={(e) => setScore((prev) => ({ ...prev, [primary.id]: e.target.value }))}
-                      className="w-14 border rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400"
-                      title="Score (higher = shown first)"
-                    />
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={discountPct[primary.id] || ""}
+                        onChange={(e) => setDiscountPct((prev) => ({ ...prev, [primary.id]: e.target.value }))}
+                        placeholder="0"
+                        className="w-16 border rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                        title="Bundle discount %"
+                      />
+                      <span className="text-xs text-muted-foreground">% off</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={score[primary.id] || "1"}
+                        onChange={(e) => setScore((prev) => ({ ...prev, [primary.id]: e.target.value }))}
+                        className="w-14 border rounded-lg px-2 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                        title="Priority score (higher = shown first)"
+                      />
+                      <span className="text-xs text-muted-foreground">score</span>
+                    </div>
                     <button
                       onClick={() => addPair(primary.id)}
                       disabled={!selected[primary.id]}
@@ -189,7 +216,7 @@ export default function FBTClient({ products, initialPairs }: { products: Produc
                   </div>
 
                   {/* Desktop score legend */}
-                  <p className="text-xs text-muted-foreground">Score = display priority (higher shown first). You can add as many suggestions as you like.</p>
+                  <p className="text-xs text-muted-foreground">Configure suggested accessories or combo items. Set optional discount % when bought together.</p>
                 </div>
               )}
             </div>
