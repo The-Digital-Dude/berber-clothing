@@ -9,7 +9,7 @@ import {
   BarChart2, Settings, Tag, RotateCcw, Ticket, Zap, CreditCard, Bell,
   Globe, MessageSquare, Building2, Truck, Warehouse, Mail,
   ChevronRight, Star, Users2, Wallet, Award, ScrollText,
-  Receipt, Download, Layers, Search, PlusCircle,
+  Receipt, Download, Layers, Search, PlusCircle, PanelLeftClose, PanelLeftOpen,
 } from "lucide-react"
 
 // ─── Navigation structure ───────────────────────────────────────────────────
@@ -95,7 +95,7 @@ const groups = [
 ]
 
 // ─── Component ───────────────────────────────────────────────────────────────
-export function Sidebar() {
+export function Sidebar({ collapsed = false, onToggleCollapsed }: { collapsed?: boolean; onToggleCollapsed?: () => void } = {}) {
   const pathname = usePathname()
 
   const defaultOpen = groups.reduce<Record<string, boolean>>((acc, g) => {
@@ -112,11 +112,32 @@ export function Sidebar() {
   const allItems = [...primaryItems, ...groups.flatMap(g => g.items)]
   const filtered = q ? allItems.filter(i => i.label.toLowerCase().includes(q)) : null
 
+  if (collapsed) {
+    return (
+      <div className="flex flex-col h-full items-center">
+        <div className="flex-1 overflow-y-auto py-1 space-y-1 px-1.5 w-full flex flex-col items-center">
+          {[...primaryItems, ...groups.flatMap(g => g.items)].map(item => (
+            <NavLink key={item.href} item={item} pathname={pathname} collapsed />
+          ))}
+        </div>
+        {onToggleCollapsed && (
+          <button
+            onClick={onToggleCollapsed}
+            title="Expand sidebar"
+            className="mb-2 w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white/8 hover:text-white transition-colors"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Search */}
-      <div className="px-3 pb-2">
-        <div className="relative">
+      <div className="px-3 pb-2 flex items-center gap-1.5">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
           <input
             type="text"
@@ -126,6 +147,15 @@ export function Sidebar() {
             className="w-full h-8 pl-8 pr-3 rounded-lg bg-white/6 border border-white/10 text-xs text-slate-300 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500/50 transition-all"
           />
         </div>
+        {onToggleCollapsed && (
+          <button
+            onClick={onToggleCollapsed}
+            title="Collapse sidebar"
+            className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white/8 hover:text-white transition-colors"
+          >
+            <PanelLeftClose className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Quick actions */}
@@ -199,14 +229,34 @@ function isActive(pathname: string, href: string, exact = false) {
   return pathname === href || pathname.startsWith(href + "/")
 }
 
-function NavLink({ item, pathname, primary, indent, onClick }: {
+function NavLink({ item, pathname, primary, indent, collapsed, onClick }: {
   item: { href: string; label: string; icon: any; exact?: boolean }
   pathname: string
   primary?: boolean
   indent?: boolean
+  collapsed?: boolean
   onClick?: () => void
 }) {
   const active = isActive(pathname, item.href, item.exact)
+
+  if (collapsed) {
+    return (
+      <Link
+        href={item.href}
+        onClick={onClick}
+        title={item.label}
+        className={cn(
+          "flex items-center justify-center w-9 h-9 rounded-lg transition-all shrink-0",
+          active
+            ? "bg-amber-500 text-slate-900 shadow-sm shadow-amber-500/20"
+            : "text-slate-400 hover:bg-white/8 hover:text-white"
+        )}
+      >
+        <item.icon className="w-4 h-4" />
+      </Link>
+    )
+  }
+
   return (
     <Link
       href={item.href}

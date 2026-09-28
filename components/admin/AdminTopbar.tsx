@@ -28,8 +28,10 @@ export default function AdminTopbar({ email }: { email: string }) {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(-1)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
   const debounce = useRef<ReturnType<typeof setTimeout>>()
 
@@ -40,7 +42,7 @@ export default function AdminTopbar({ email }: { email: string }) {
       setLoading(true)
       try {
         const res = await fetch(`/api/admin/search?q=${encodeURIComponent(query)}`)
-        if (res.ok) { const d = await res.json(); setResults(d.results || []); setOpen(true) }
+        if (res.ok) { const d = await res.json(); setResults(d.results || []); setOpen(true); setActiveIndex(-1) }
       } finally { setLoading(false) }
     }, 250)
   }, [query])
@@ -54,7 +56,38 @@ export default function AdminTopbar({ email }: { email: string }) {
     return () => document.removeEventListener("mousedown", handler)
   }, [])
 
-  const go = (href: string) => { setQuery(""); setOpen(false); router.push(href) }
+  // Global ⌘K / Ctrl+K shortcut to jump into the search box from anywhere
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault()
+        searchInputRef.current?.focus()
+        searchInputRef.current?.select()
+      }
+    }
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [])
+
+  const go = (href: string) => { setQuery(""); setOpen(false); setActiveIndex(-1); router.push(href) }
+
+  const onSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open || results.length === 0) return
+    if (e.key === "ArrowDown") {
+      e.preventDefault()
+      setActiveIndex(i => (i + 1) % results.length)
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault()
+      setActiveIndex(i => (i - 1 + results.length) % results.length)
+    } else if (e.key === "Enter") {
+      e.preventDefault()
+      const target = activeIndex >= 0 ? results[activeIndex] : results[0]
+      if (target) go(target.href)
+    } else if (e.key === "Escape") {
+      setOpen(false)
+      searchInputRef.current?.blur()
+    }
+  }
 
   return (
     <header className="h-14 flex items-center gap-3 bg-white border-b border-gray-200 px-4 lg:px-5 shrink-0 z-20">
@@ -83,10 +116,12 @@ export default function AdminTopbar({ email }: { email: string }) {
             : <Search className="absolute left-3 w-4 h-4 text-gray-400 pointer-events-none" />
           }
           <input
+            ref={searchInputRef}
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onFocus={() => results.length > 0 && setOpen(true)}
+            onKeyDown={onSearchKeyDown}
             placeholder="Search orders, products, customers…"
             className="w-full h-9 pl-9 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 focus:bg-white transition-all"
           />
@@ -100,9 +135,12 @@ export default function AdminTopbar({ email }: { email: string }) {
             {!loading && results.length === 0 && (
               <div className="px-4 py-6 text-sm text-gray-400 text-center">No results for "{query}"</div>
             )}
-            {results.map(r => (
-              <button key={r.href} onClick={() => go(r.href)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
+            {results.map((r, i) => (
+              <button key={r.href} onClick={() => go(r.href)} onMouseEnter={() => setActiveIndex(i)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-0",
+                  i === activeIndex ? "bg-amber-50" : "hover:bg-gray-50"
+                )}>
                 <span className={cn("text-[9px] font-bold uppercase tracking-wider rounded-full px-2 py-0.5 shrink-0", typePill[r.type])}>
                   {r.type}
                 </span>
