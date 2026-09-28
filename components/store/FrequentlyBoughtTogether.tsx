@@ -4,6 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/store/useCartStore"
+import { useCartUIStore } from "@/store/useCartUIStore"
 import { ShoppingBag, Plus } from "lucide-react"
 
 interface FBTProduct {
@@ -22,6 +23,7 @@ interface Props {
 
 export default function FrequentlyBoughtTogether({ primary, suggestions }: Props) {
   const { addItem } = useCartStore()
+  const openCartDrawer = useCartUIStore((s) => s.open)
 
   if (suggestions.length === 0) return null
 
@@ -33,6 +35,7 @@ export default function FrequentlyBoughtTogether({ primary, suggestions }: Props
       const variant = p.variants.find((v) => v.stock > 0)
       if (variant) addItem({ id: variant.id, productId: p.id, productSlug: p.slug, variantId: variant.id, name: p.name, price: p.price, size: variant.size, color: variant.color, image: p.images[0]?.url ?? "", quantity: 1 })
     })
+    openCartDrawer()
   }
 
   return (

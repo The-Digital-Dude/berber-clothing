@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Check, ChevronDown } from "lucide-react"
 import { useCartStore } from "@/store/useCartStore"
+import { useCartUIStore } from "@/store/useCartUIStore"
 import { toast } from "sonner"
 
 type Variant = { id: string; size: string; color: string; colorHex?: string | null; stock: number; price?: number | null }
@@ -31,6 +32,7 @@ export default function CompleteTheSet({
   primaryColors?: string[]
 }) {
   const addItem = useCartStore((s) => s.addItem)
+  const openCartDrawer = useCartUIStore((s) => s.open)
 
   // Per-companion state: selected? + chosen variant
   const [selected, setSelected] = useState<Record<string, boolean>>({})
@@ -102,6 +104,7 @@ export default function CompleteTheSet({
     toast.success(`${selectedCompanions.length} piece${selectedCompanions.length > 1 ? "s" : ""} added to your bag!`, {
       description: selectedCompanions.map((p) => p.name).join(" · "),
     })
+    openCartDrawer()
   }
 
   if (companions.length === 0) return null

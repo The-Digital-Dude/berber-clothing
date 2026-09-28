@@ -4,6 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button"
 import { ShoppingBag, Minus, Plus, Trash2, Tag, ChevronRight, Layers } from "lucide-react"
 import { useCartStore, CartItem } from "@/store/useCartStore"
+import { useCartUIStore } from "@/store/useCartUIStore"
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
@@ -101,7 +102,8 @@ function CartItemList({ items, removeItem, updateQuantity }: {
 
 export default function CartDrawer({ itemCount: propItemCount, freeShippingThreshold = null }: { itemCount?: number, freeShippingThreshold?: number | null }) {
   const { items, removeItem, updateQuantity } = useCartStore()
-  const [isOpen, setIsOpen] = useState(false)
+  const isOpen = useCartUIStore((s) => s.isOpen)
+  const setIsOpen = useCartUIStore((s) => s.setOpen)
   const [coupon, setCoupon] = useState("")
   const [useLoyalty, setUseLoyalty] = useState(false)
 

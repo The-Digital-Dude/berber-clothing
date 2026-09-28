@@ -215,7 +215,7 @@ export default function CheckoutForm({
     
     // Validate fields
     const newErrors: Record<string, string> = {}
-    if (isGuest && !guestEmail) newErrors.guestEmail = "Email is required"
+    if (!userId && !guestEmail) newErrors.guestEmail = "Email is required"
     if (!address.name) newErrors.name = "Full Name is required"
     if (!address.phone) newErrors.phone = "Phone is required"
     if (!address.division) newErrors.division = "Division is required"
@@ -282,7 +282,7 @@ export default function CheckoutForm({
           giftMessage: giftWrap ? giftMessage : null,
           giftWrapCharge: giftWrapAmount,
           isGuest,
-          guestEmail: isGuest ? guestEmail : null,
+          guestEmail: userId ? null : (guestEmail || null),
           userId: userId || null,
           loyaltyPointsRedeemed: redeemPoints ? Math.min(pointsToRedeem * 100, loyaltyBalance) : 0,
           loyaltyDiscount,
@@ -299,6 +299,12 @@ export default function CheckoutForm({
       })
       const orderData = await orderRes.json()
       if (!orderRes.ok) throw new Error(orderData.error)
+
+      if (orderData.accountCreated) {
+        toast.success("Account created!", {
+          description: "Check your email for a link to set your password.",
+        })
+      }
 
       if (isManualPayment) {
         // Manual payment — order placed, awaiting admin verification
@@ -426,26 +432,31 @@ export default function CheckoutForm({
 
           {step === 1 && (
             <div className="p-6">
-              {/* Guest vs account toggle */}
-              <div className="flex gap-3 mb-6">
-                <button type="button" onClick={() => setIsGuest(false)} className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border transition-all ${!isGuest ? "bg-berber-black text-white border-berber-black" : "border-berber-border text-berber-text-muted hover:border-berber-black"}`}>
-                  <User className="w-3.5 h-3.5 inline mr-1.5" />Login / Register
-                </button>
-                <button type="button" onClick={() => setIsGuest(true)} className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border transition-all ${isGuest ? "bg-berber-black text-white border-berber-black" : "border-berber-border text-berber-text-muted hover:border-berber-black"}`}>
-                  Continue as Guest
-                </button>
-              </div>
+              {!userId && (
+                <>
+                  {/* Guest vs account toggle */}
+                  <div className="flex gap-3 mb-6">
+                    <button type="button" onClick={() => setIsGuest(false)} className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border transition-all ${!isGuest ? "bg-berber-black text-white border-berber-black" : "border-berber-border text-berber-text-muted hover:border-berber-black"}`}>
+                      <User className="w-3.5 h-3.5 inline mr-1.5" />Create Account
+                    </button>
+                    <button type="button" onClick={() => setIsGuest(true)} className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg border transition-all ${isGuest ? "bg-berber-black text-white border-berber-black" : "border-berber-border text-berber-text-muted hover:border-berber-black"}`}>
+                      Guest Checkout
+                    </button>
+                  </div>
 
-              {!isGuest && (
-                <p className="text-xs text-berber-text-muted mb-4 p-3 bg-berber-muted rounded-lg">
-                  <a href="/login?redirect=/checkout" className="text-berber-gold font-bold hover:underline">Log in</a> to use saved addresses & earn loyalty points. Or fill in below to continue as guest.
-                </p>
+                  <p className="text-xs text-berber-text-muted mb-4 p-3 bg-berber-muted rounded-lg">
+                    {!isGuest
+                      ? <>We'll create an account with the details below and email you a link to set a password — no need to type one now. Already have an account? <a href="/login?redirect=/checkout" className="text-berber-gold font-bold hover:underline">Log in</a>.</>
+                      : <>We won't create an account — just enough to process this order. <a href="/login?redirect=/checkout" className="text-berber-gold font-bold hover:underline">Log in</a> instead to use saved addresses & earn loyalty points.</>
+                    }
+                  </p>
+                </>
               )}
 
               <form onSubmit={handleSubmitStep1} className="space-y-4">
-                {isGuest && (
+                {!userId && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Email (for order updates)</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Email *</label>
                     <input type="email" value={guestEmail} onChange={e => { setGuestEmail(e.target.value); setErrors(prev => ({...prev, guestEmail: ""})) }} className={`${inputCls} ${errors.guestEmail ? "border-red-500" : ""}`} placeholder="you@example.com" />
                     {errors.guestEmail && <p className="text-xs text-red-500">{errors.guestEmail}</p>}
                   </div>
@@ -519,7 +530,7 @@ export default function CheckoutForm({
             <div className="p-6 text-sm text-berber-text-muted">
               <p className="font-medium text-berber-black">{address.name} ({address.phone})</p>
               <p>{address.fullAddress}, {address.area}, {address.district}, {address.division}</p>
-              {isGuest && guestEmail && <p className="text-berber-gold mt-1 text-xs">Guest: {guestEmail}</p>}
+              {!userId && guestEmail && <p className="text-berber-gold mt-1 text-xs">{isGuest ? "Guest" : "Account"}: {guestEmail}</p>}
             </div>
           )}
         </div>

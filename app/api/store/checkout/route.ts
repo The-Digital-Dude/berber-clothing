@@ -9,21 +9,57 @@ import { cookies } from "next/headers"
 import { sendOrderConfirmation, sendAdminNewOrder } from "@/lib/email"
 import { brevoOrderPlaced, brevoAddTags } from "@/lib/brevo"
 import { sendPurchaseEvent } from "@/lib/metaConversionsApi"
+import { createAdminClient } from "@/lib/supabase"
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { items, address, paymentMethod, subtotal, shippingCharge, total, userId,
-      note, giftWrap, giftMessage, giftWrapCharge, isGuest, guestEmail,
+    const { items, address, paymentMethod, subtotal, shippingCharge, total,
+      note, giftWrap, giftMessage, giftWrapCharge,
       loyaltyPointsRedeemed, loyaltyDiscount, storeCreditRedeemed, customFields,
       couponId, couponDiscount: clientCouponDiscount, deliveryDate,
       giftCardCode, giftCardDiscount: clientGCDiscount,
       manualTrxId, manualScreenshotUrl } = body
+    let { userId, isGuest, guestEmail } = body as { userId: string | null; isGuest: boolean; guestEmail: string | null }
 
     const isManualPayment = !!(manualTrxId || manualScreenshotUrl)
 
     if (!items?.length || !address || !paymentMethod) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
+
+    // If the customer didn't already have a session and didn't explicitly
+    // choose guest checkout, register a real account for them — passwordless,
+    // via a Supabase invite email that lets them set a password (or just use
+    // the magic link itself to sign in). If the email already belongs to an
+    // existing account, we can't attach this anonymous order to it without
+    // proof of ownership, so it silently falls back to guest checkout instead.
+    let accountJustCreated = false
+    if (!userId && !isGuest && guestEmail) {
+      const existingUser = await prisma.user.findUnique({ where: { email: guestEmail } })
+      if (existingUser) {
+        isGuest = true
+      } else {
+        try {
+          const admin = createAdminClient()
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
+          const { data, error } = await admin.auth.admin.inviteUserByEmail(guestEmail, {
+            data: { name: address.name },
+            redirectTo: `${siteUrl}/reset-password`,
+          })
+          if (error || !data?.user) throw error || new Error("Invite failed")
+
+          const newUser = await prisma.user.create({
+            data: { id: data.user.id, name: address.name, email: guestEmail, phone: address.phone || null, role: "CUSTOMER" },
+          })
+          userId = newUser.id
+          guestEmail = null
+          accountJustCreated = true
+        } catch (e) {
+          console.error("Checkout account creation failed, falling back to guest:", e)
+          isGuest = true
+        }
+      }
     }
 
     // Determine if a COD deposit is required: either store-wide policy, or
@@ -431,7 +467,7 @@ export async function POST(req: Request) {
       })
     })().catch(() => {})
 
-    return NextResponse.json({ orderId: order.id, depositAmount })
+    return NextResponse.json({ orderId: order.id, depositAmount, accountCreated: accountJustCreated })
   } catch (error: any) {
     console.error("Checkout error", error)
     const isClientError = error.message?.includes("stock") || error.message?.includes("available") || error.message?.includes("Coupon usage limit")

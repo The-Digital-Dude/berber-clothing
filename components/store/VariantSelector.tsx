@@ -3,11 +3,13 @@
 import { useState, useMemo } from "react"
 import { toast } from "sonner"
 import { useCartStore } from "@/store/useCartStore"
+import { useCartUIStore } from "@/store/useCartUIStore"
 import { useCompareStore } from "@/store/useCompareStore"
 import NotifyMeForm from "@/components/store/NotifyMeForm"
 import SizeGuideModal from "@/components/store/SizeGuideModal"
 import { Columns2, Truck, Clock } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function VariantSelector({
   product,
@@ -26,6 +28,8 @@ export default function VariantSelector({
 }) {
   const variants = product.variants || []
   const addItem = useCartStore((s) => s.addItem)
+  const openCartDrawer = useCartUIStore((s) => s.open)
+  const router = useRouter()
   const { toggleItem: toggleCompare, hasItem: inCompare } = useCompareStore()
   const comparing = inCompare(product.id)
 
@@ -53,13 +57,14 @@ export default function VariantSelector({
   const dispatchDay = shipsToday ? "today" : "tomorrow"
   const arrivalDays = "3–5 business days"
 
-  const addToCart = () => {
-    if (!activeVariant) return toast.error("Please select a size and color.")
-    if (isOutOfStock) return toast.error("This item is currently out of stock.")
+  // Returns true if the item was actually added (validation passed)
+  const addToCart = (): boolean => {
+    if (!activeVariant) { toast.error("Please select a size and color."); return false }
+    if (isOutOfStock) { toast.error("This item is currently out of stock."); return false }
 
     const basePrice = activeVariant.price ?? product.price
     const finalPrice = flashSale ? (
-      flashSale.discountType === "PERCENTAGE" 
+      flashSale.discountType === "PERCENTAGE"
         ? Math.max(0, basePrice - Math.round((basePrice * flashSale.discountValue) / 100))
         : Math.max(0, basePrice - flashSale.discountValue)
     ) : basePrice;
@@ -79,9 +84,22 @@ export default function VariantSelector({
       quantity: 1,
     })
 
-    toast.success(`Added to bag!`, {
-      description: `${product.name} — ${selectedSize} / ${selectedColor}`,
-    })
+    return true
+  }
+
+  const handleAddToCart = () => {
+    if (addToCart()) {
+      toast.success(`Added to bag!`, {
+        description: `${product.name} — ${selectedSize} / ${selectedColor}`,
+      })
+      openCartDrawer()
+    }
+  }
+
+  const handleBuyNow = () => {
+    if (addToCart()) {
+      router.push("/checkout")
+    }
   }
 
   return (
@@ -189,16 +207,27 @@ export default function VariantSelector({
           </div>
         )}
 
-        {/* Add to bag */}
+        {/* Add to bag / Buy now */}
         {!isOutOfStock ? (
-          <button
-            id="add-to-bag-btn"
-            onClick={addToCart}
-            disabled={!activeVariant}
-            className="w-full py-4 text-sm font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 bg-berber-black text-white hover:bg-berber-gold hover:shadow-lg hover:shadow-berber-gold/20 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {!activeVariant ? "Select a size" : "Add to Bag"}
-          </button>
+          <div className="space-y-2">
+            <button
+              id="add-to-bag-btn"
+              onClick={handleAddToCart}
+              disabled={!activeVariant}
+              className="w-full py-4 text-sm font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 bg-berber-black text-white hover:bg-berber-gold hover:shadow-lg hover:shadow-berber-gold/20 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {!activeVariant ? "Select a size" : "Add to Bag"}
+            </button>
+            {activeVariant && (
+              <button
+                id="buy-now-btn"
+                onClick={handleBuyNow}
+                className="w-full py-4 text-sm font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 bg-transparent border-2 border-berber-black text-berber-black hover:bg-berber-black hover:text-white"
+              >
+                Buy Now
+              </button>
+            )}
+          </div>
         ) : (
           <NotifyMeForm variantId={activeVariant?.id || ""} />
         )}
