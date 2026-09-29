@@ -26,10 +26,12 @@ import {
   Sparkles,
   ChevronRight,
   HelpCircle,
+  Mail,
 } from "lucide-react"
 import { toast } from "sonner"
 import type { CustomerRisk } from "@/lib/customerRisk"
 import OrderItemsEditorModal from "@/components/admin/OrderItemsEditorModal"
+import ApplyDiscountModal from "@/components/admin/ApplyDiscountModal"
 import OrderMessages from "@/components/store/OrderMessages"
 import { cn } from "@/lib/utils"
 import { DIVISIONS, getDistricts, getAreaSuggestions } from "@/lib/bangladeshAddress"
@@ -199,6 +201,7 @@ export default function OrderDetailsClient({
   const [codNote, setCodNote] = useState(order.codCallNote ?? "")
   const [tagsInput, setTagsInput] = useState((order.tags ?? "").split(",").filter(Boolean).join(", "))
   const [isEditingItems, setIsEditingItems] = useState(false)
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false)
   const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<"items" | "fulfillment" | "messages">("items")
   const [deliveryData, setDeliveryData] = useState({
     courier: order.delivery?.courier || "STEADFAST",
@@ -207,18 +210,66 @@ export default function OrderDetailsClient({
   })
   const [isEditingShipping, setIsEditingShipping] = useState(false)
   const [shippingForm, setShippingForm] = useState({
-    name: order.shippingName, phone: order.shippingPhone, address: order.shippingAddress,
-    division: order.shippingDivision, district: order.shippingDistrict, area: order.shippingArea,
+    name: order.shippingName,
+    phone: order.shippingPhone,
+    email: order.user?.email || order.guestEmail || "",
+    address: order.shippingAddress,
+    division: order.shippingDivision,
+    district: order.shippingDistrict,
+    area: order.shippingArea,
+    linkToUser: false,
+    sendConfirmationEmail: false,
   })
+  const [matchedUser, setMatchedUser] = useState<any | null>(null)
+  const [lookingUpUser, setLookingUpUser] = useState(false)
   const [shippingErrors, setShippingErrors] = useState<Record<string, string>>({})
   const [shippingSaving, setShippingSaving] = useState(false)
   const canEditShipping = !["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status)
 
+  // Debounced lookup when editing email
+  useEffect(() => {
+    const emailToTest = shippingForm.email?.trim()
+    if (!isEditingShipping || !emailToTest || !/\S+@\S+\.\S+/.test(emailToTest)) {
+      setMatchedUser(null)
+      return
+    }
+
+    const t = setTimeout(() => {
+      setLookingUpUser(true)
+      fetch(`/api/admin/customers/lookup?email=${encodeURIComponent(emailToTest)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.exists && data?.user) {
+            setMatchedUser(data.user)
+            // Auto-check if order isn't already linked to this user
+            if (order.userId !== data.user.id) {
+              setShippingForm((prev) => ({ ...prev, linkToUser: true }))
+            }
+          } else {
+            setMatchedUser(null)
+            setShippingForm((prev) => ({ ...prev, linkToUser: false }))
+          }
+        })
+        .catch(() => setMatchedUser(null))
+        .finally(() => setLookingUpUser(false))
+    }, 300)
+
+    return () => clearTimeout(t)
+  }, [shippingForm.email, isEditingShipping, order.userId])
+
   const startEditingShipping = () => {
     setShippingForm({
-      name: order.shippingName, phone: order.shippingPhone, address: order.shippingAddress,
-      division: order.shippingDivision, district: order.shippingDistrict, area: order.shippingArea,
+      name: order.shippingName,
+      phone: order.shippingPhone,
+      email: order.user?.email || order.guestEmail || "",
+      address: order.shippingAddress,
+      division: order.shippingDivision,
+      district: order.shippingDistrict,
+      area: order.shippingArea,
+      linkToUser: false,
+      sendConfirmationEmail: false,
     })
+    setMatchedUser(null)
     setShippingErrors({})
     setIsEditingShipping(true)
   }
@@ -231,6 +282,9 @@ export default function OrderDetailsClient({
     if (!shippingForm.district) errors.district = "Required"
     if (!shippingForm.area.trim()) errors.area = "Required"
     if (!shippingForm.address.trim()) errors.address = "Required"
+    if (shippingForm.email && !/\S+@\S+\.\S+/.test(shippingForm.email.trim())) {
+      errors.email = "Invalid email format"
+    }
     setShippingErrors(errors)
     if (Object.keys(errors).length > 0) return
 
@@ -242,6 +296,9 @@ export default function OrderDetailsClient({
         body: JSON.stringify({
           shippingName: shippingForm.name,
           shippingPhone: shippingForm.phone,
+          email: shippingForm.email.trim() || null,
+          linkToUser: shippingForm.linkToUser,
+          sendConfirmationEmail: shippingForm.sendConfirmationEmail,
           shippingAddress: shippingForm.address,
           shippingDivision: shippingForm.division,
           shippingDistrict: shippingForm.district,
@@ -251,7 +308,7 @@ export default function OrderDetailsClient({
       const data = await res.json()
       if (res.ok) {
         setOrder({ ...order, ...data.order })
-        toast.success("Delivery details updated")
+        toast.success("Delivery & customer details updated")
         setIsEditingShipping(false)
         router.refresh()
       } else {
@@ -614,12 +671,34 @@ export default function OrderDetailsClient({
                   <span>Delivery Charge:</span>
                   <span className="font-mono font-bold text-zinc-800">+৳{Number(order.shippingCharge).toLocaleString()}</span>
                 </div>
-                {Number(order.discount) > 0 && (
-                  <div className="flex justify-between text-emerald-700 font-medium">
-                    <span>Discount / Promo:</span>
-                    <span className="font-mono font-bold">-৳{Number(order.discount).toLocaleString()}</span>
+                <div className="flex justify-between items-center text-zinc-600 font-medium py-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className={Number(order.discount) > 0 ? "text-emerald-700 font-semibold" : ""}>
+                      Discount / Promo:
+                    </span>
+                    {order.coupon && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold">
+                        {order.coupon.code}
+                      </span>
+                    )}
                   </div>
-                )}
+                  <div className="flex items-center gap-2">
+                    {Number(order.discount) > 0 ? (
+                      <span className="font-mono font-bold text-emerald-700">-৳{Number(order.discount).toLocaleString()}</span>
+                    ) : (
+                      <span className="font-mono text-zinc-400">৳0</span>
+                    )}
+                    {!["CANCELLED"].includes(order.status) && (
+                      <button
+                        type="button"
+                        onClick={() => setIsApplyingDiscount(true)}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition-colors shadow-2xs"
+                      >
+                        {Number(order.discount) > 0 ? "Edit / Remove" : "+ Add Coupon / Discount"}
+                      </button>
+                    )}
+                  </div>
+                </div>
                 <div className="flex justify-between items-center text-sm font-black text-zinc-900 pt-2 border-t border-zinc-200">
                   <span>Grand Total:</span>
                   <span className="font-mono text-base">৳{Number(order.total).toLocaleString()}</span>
@@ -843,6 +922,39 @@ export default function OrderDetailsClient({
                   />
                   {shippingErrors.phone && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.phone}</p>}
                 </div>
+                <div>
+                  <input
+                    type="email"
+                    value={shippingForm.email}
+                    onChange={(e) => setShippingForm({ ...shippingForm, email: e.target.value })}
+                    placeholder="Customer email (e.g. name@example.com)"
+                    className={cn("w-full h-9 rounded-lg border px-3 font-medium text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900", shippingErrors.email ? "border-rose-400" : "border-zinc-300")}
+                  />
+                  {shippingErrors.email && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.email}</p>}
+                </div>
+
+                {/* Account Link Suggestion */}
+                {lookingUpUser && (
+                  <p className="text-[11px] text-zinc-400">Checking customer database...</p>
+                )}
+                {matchedUser && (
+                  <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5 text-[11px] text-blue-900">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Registered user found: {matchedUser.name || matchedUser.email}</span>
+                    </p>
+                    <label className="flex items-center gap-2 cursor-pointer pt-0.5 font-semibold select-none">
+                      <input
+                        type="checkbox"
+                        checked={shippingForm.linkToUser}
+                        onChange={(e) => setShippingForm({ ...shippingForm, linkToUser: e.target.checked })}
+                        className="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <span>Link order to {matchedUser.name ? `${matchedUser.name}'s` : "this"} customer account</span>
+                    </label>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <select
@@ -892,6 +1004,23 @@ export default function OrderDetailsClient({
                   />
                   {shippingErrors.address && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.address}</p>}
                 </div>
+
+                {/* Email notification checkbox */}
+                {shippingForm.email && (
+                  <label className="flex items-center gap-2 text-[11px] text-zinc-700 cursor-pointer pt-1 font-medium select-none">
+                    <input
+                      type="checkbox"
+                      checked={shippingForm.sendConfirmationEmail}
+                      onChange={(e) => setShippingForm({ ...shippingForm, sendConfirmationEmail: e.target.checked })}
+                      className="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-900 w-3.5 h-3.5 cursor-pointer"
+                    />
+                    <span className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>Send updated confirmation email to customer</span>
+                    </span>
+                  </label>
+                )}
+
                 <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={saveShipping}
@@ -918,8 +1047,29 @@ export default function OrderDetailsClient({
                 <div className="min-w-0 flex-1">
                   <p className="font-extrabold text-zinc-900">{order.shippingName}</p>
                   <p className="text-zinc-500 font-mono mt-0.5">{order.shippingPhone}</p>
-                  {order.user?.email && (
-                    <p className="text-zinc-400 text-[11px] truncate mt-0.5">{order.user.email}</p>
+                  {order.user?.email ? (
+                    <p className="text-zinc-500 text-[11px] truncate flex items-center gap-1.5 mt-1">
+                      <Mail className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      <span className="truncate">{order.user.email}</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 font-bold uppercase tracking-wider">User</span>
+                    </p>
+                  ) : order.guestEmail ? (
+                    <p className="text-zinc-500 text-[11px] truncate flex items-center gap-1.5 mt-1">
+                      <Mail className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                      <span className="truncate">{order.guestEmail}</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 font-bold uppercase tracking-wider border border-amber-200">Guest</span>
+                    </p>
+                  ) : (
+                    canEditShipping && (
+                      <button
+                        type="button"
+                        onClick={startEditingShipping}
+                        className="text-zinc-400 hover:text-zinc-900 text-[11px] flex items-center gap-1 mt-1 transition-colors group"
+                      >
+                        <Mail className="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-600" />
+                        <span className="underline decoration-dashed">+ Add customer email</span>
+                      </button>
+                    )
                   )}
                 </div>
               </div>
@@ -1113,6 +1263,17 @@ export default function OrderDetailsClient({
         isOpen={isEditingItems}
         onClose={() => setIsEditingItems(false)}
         onSaved={(updatedOrder) => {
+          setOrder(updatedOrder)
+          router.refresh()
+        }}
+      />
+
+      {/* Apply Coupon & Discount Modal */}
+      <ApplyDiscountModal
+        isOpen={isApplyingDiscount}
+        onClose={() => setIsApplyingDiscount(false)}
+        order={order}
+        onDiscountApplied={(updatedOrder) => {
           setOrder(updatedOrder)
           router.refresh()
         }}

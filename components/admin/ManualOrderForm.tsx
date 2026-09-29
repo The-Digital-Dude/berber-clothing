@@ -53,7 +53,7 @@ export default function ManualOrderForm() {
   const [items, setItems] = useState<LineItem[]>([])
 
   const [address, setAddress] = useState({
-    name: "", phone: "", division: "", district: "", area: "", fullAddress: "",
+    name: "", phone: "", email: "", division: "", district: "", area: "", fullAddress: "",
   })
   const [paymentMethod, setPaymentMethod] = useState("COD")
   const [markPaid, setMarkPaid] = useState(false)
@@ -233,8 +233,15 @@ export default function ManualOrderForm() {
           <CardHeader><CardTitle>Customer & Shipping</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Input placeholder="Full Name" value={address.name} onChange={(e) => setAddress({ ...address, name: e.target.value })} />
-              <Input placeholder="Phone Number" value={address.phone} onChange={(e) => setAddress({ ...address, phone: e.target.value })} />
+              <Input placeholder="Full Name *" value={address.name} onChange={(e) => setAddress({ ...address, name: e.target.value })} />
+              <Input placeholder="Phone Number *" value={address.phone} onChange={(e) => setAddress({ ...address, phone: e.target.value })} />
+              <Input
+                type="email"
+                placeholder="Email Address (Optional)"
+                value={address.email}
+                onChange={(e) => setAddress({ ...address, email: e.target.value })}
+                className="col-span-2"
+              />
               <Select value={address.division || undefined} onValueChange={(v) => setAddress({ ...address, division: v || "", district: "", area: "" })}>
                 <SelectTrigger><SelectValue placeholder="Division" /></SelectTrigger>
                 <SelectContent>

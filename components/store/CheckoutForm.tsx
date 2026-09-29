@@ -215,7 +215,11 @@ export default function CheckoutForm({
     
     // Validate fields
     const newErrors: Record<string, string> = {}
-    if (!userId && !guestEmail) newErrors.guestEmail = "Email is required"
+    if (!userId && !isGuest && !guestEmail) {
+      newErrors.guestEmail = "Email is required to create an account"
+    } else if (guestEmail && !/\S+@\S+\.\S+/.test(guestEmail)) {
+      newErrors.guestEmail = "Please enter a valid email address"
+    }
     if (!address.name) newErrors.name = "Full Name is required"
     if (!address.phone) newErrors.phone = "Phone is required"
     if (!address.division) newErrors.division = "Division is required"
@@ -466,8 +470,10 @@ export default function CheckoutForm({
               <form onSubmit={handleSubmitStep1} className="space-y-4">
                 {!userId && (
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">Email *</label>
-                    <input type="email" value={guestEmail} onChange={e => { setGuestEmail(e.target.value); setErrors(prev => ({...prev, guestEmail: ""})) }} className={`${inputCls} ${errors.guestEmail ? "border-red-500" : ""}`} placeholder="you@example.com" />
+                    <label className="text-xs font-bold uppercase tracking-widest text-berber-text-muted">
+                      {!isGuest ? "Email *" : "Email Address (Optional)"}
+                    </label>
+                    <input type="email" value={guestEmail} onChange={e => { setGuestEmail(e.target.value); setErrors(prev => ({...prev, guestEmail: ""})) }} className={`${inputCls} ${errors.guestEmail ? "border-red-500" : ""}`} placeholder={!isGuest ? "you@example.com (for your account)" : "you@example.com (optional for tracking & invoice)"} />
                     {errors.guestEmail && <p className="text-xs text-red-500">{errors.guestEmail}</p>}
                   </div>
                 )}

@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { notifyStockAlerts } from "@/lib/stockAlert"
 
-// PATCH body: { updates: [{ variantId, stock, price? }] }
+// PATCH body: { updates: [{ variantId, stock, price?, costPrice? }] }
 export async function PATCH(req: NextRequest) {
   const { error } = await requireAdmin()
   if (error) return error
@@ -21,14 +21,26 @@ export async function PATCH(req: NextRequest) {
   const currentStockMap = Object.fromEntries(currentVariants.map((v) => [v.id, v.stock]))
 
   const results = await Promise.allSettled(
-    updates.map(({ variantId, stock, price }: { variantId: string; stock?: number; price?: number }) =>
-      prisma.productVariant.update({
-        where: { id: variantId },
-        data: {
-          ...(stock !== undefined ? { stock } : {}),
-          ...(price !== undefined ? { price } : {}),
-        },
-      })
+    updates.map(
+      ({
+        variantId,
+        stock,
+        price,
+        costPrice,
+      }: {
+        variantId: string
+        stock?: number
+        price?: number
+        costPrice?: number
+      }) =>
+        prisma.productVariant.update({
+          where: { id: variantId },
+          data: {
+            ...(stock !== undefined ? { stock: Number(stock) } : {}),
+            ...(price !== undefined ? { price: Number(price) } : {}),
+            ...(costPrice !== undefined ? { costPrice: Number(costPrice) } : {}),
+          },
+        })
     )
   )
 

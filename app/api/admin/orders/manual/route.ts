@@ -59,9 +59,24 @@ export async function POST(req: Request) {
       const orderCount = await tx.order.count()
       const orderNumber = `ORD-${new Date().getFullYear()}-${String(orderCount + 1).padStart(4, "0")}`
 
+      const customerEmail = address.email?.trim() || null
+      let matchedUserId: string | null = null
+      if (customerEmail) {
+        const matchedUser = await tx.user.findUnique({
+          where: { email: customerEmail },
+          select: { id: true },
+        })
+        if (matchedUser) {
+          matchedUserId = matchedUser.id
+        }
+      }
+
       const created = await tx.order.create({
         data: {
           orderNumber,
+          userId: matchedUserId,
+          isGuest: !matchedUserId,
+          guestEmail: customerEmail,
           status: "CONFIRMED", // admin already confirmed this with the customer directly
           paymentStatus: markPaid ? "PAID" : "UNPAID",
           paymentMethod: paymentMethod || "COD",

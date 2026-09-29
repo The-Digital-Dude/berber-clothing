@@ -262,8 +262,8 @@ export async function POST(req: Request) {
         data: {
           orderNumber,
           userId: userId || null,
-          isGuest: isGuest || false,
-          guestEmail: isGuest ? (guestEmail || null) : null,
+          isGuest: Boolean(isGuest || !userId),
+          guestEmail: guestEmail?.trim() || null,
           status: "PENDING",
           paymentStatus: isManualPayment ? "PENDING_VERIFICATION" : "UNPAID",
           paymentMethod,
