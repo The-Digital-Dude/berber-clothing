@@ -427,6 +427,22 @@ export async function sendAdminNewOrder(data: {
   await sendMail(adminEmail, `New order — ${data.orderNumber} (৳${data.total.toLocaleString()})`, baseTemplate(store, content))
 }
 
+export async function sendNewsletterWelcome(data: { to: string; couponCode: string }) {
+  const store = await getStoreMeta()
+  const content = `
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You're in the club! 🎉</h1>
+    <p class="muted">Thanks for subscribing — here's your 10% off code for your first order.</p>
+    <hr class="divider">
+    <div style="background:#f5f5f0;border-radius:12px;padding:28px;text-align:center;margin:20px 0">
+      <div class="label" style="text-align:center">Your code</div>
+      <div style="font-size:28px;font-weight:700;font-family:monospace;letter-spacing:3px;margin-top:8px;background:#fff;border:2px dashed #ccc;border-radius:8px;padding:14px 24px;display:inline-block">${data.couponCode}</div>
+    </div>
+    <p class="muted" style="text-align:center">Valid for one use on your first order. We'll also keep you posted on new drops and exclusive releases.</p>
+    <a href="${store.url}/shop" class="btn" style="display:block;text-align:center">Start shopping →</a>`
+
+  await sendMail(data.to, `Here's your 10% off code, ${store.name}`, baseTemplate(store, content))
+}
+
 export async function sendWelcomeEmail(data: { to: string; name: string }) {
   const store = await getStoreMeta()
   const content = `
@@ -546,6 +562,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   "abandoned_cart",
   "review_request",
   "welcome_email",
+  "newsletter_welcome",
   "gift_card",
   "store_credit",
   "back_in_stock",
@@ -696,6 +713,20 @@ function buildPreview(key: EmailTemplateKey, storeName: string): { subject: stri
           <hr class="divider">
           <p>Explore the latest drops, save your favourites, and track your orders — all from one place.</p>
           <a href="#" class="btn">Start shopping →</a>`,
+      }
+    case "newsletter_welcome":
+      return {
+        subject: `Here's your 10% off code, ${storeName}`,
+        content: `
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You're in the club! 🎉</h1>
+          <p class="muted">Thanks for subscribing — here's your 10% off code for your first order.</p>
+          <hr class="divider">
+          <div style="background:#f5f5f0;border-radius:12px;padding:28px;text-align:center;margin:20px 0">
+            <div class="label" style="text-align:center">Your code</div>
+            <div style="font-size:28px;font-weight:700;font-family:monospace;letter-spacing:3px;margin-top:8px;background:#fff;border:2px dashed #ccc;border-radius:8px;padding:14px 24px;display:inline-block">WELCOME10</div>
+          </div>
+          <p class="muted" style="text-align:center">Valid for one use on your first order.</p>
+          <a href="#" class="btn" style="display:block;text-align:center">Start shopping →</a>`,
       }
     case "gift_card":
       return {

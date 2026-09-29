@@ -86,6 +86,13 @@ const TEMPLATES: TemplateItem[] = [
     variables: ["customer_name", "welcome_discount", "store_url"],
   },
   {
+    key: "newsletter_welcome",
+    label: "Newsletter Signup",
+    category: "MARKETING",
+    description: "Sent immediately after subscribing via the footer form, with a one-time 10% off code",
+    variables: ["coupon_code", "store_url"],
+  },
+  {
     key: "gift_card",
     label: "Digital Gift Voucher",
     category: "MARKETING",

@@ -25,7 +25,7 @@ export default function NewsletterForm() {
   }
 
   if (status === "success") {
-    return <p className="text-sm text-berber-gold font-medium">You're subscribed!</p>
+    return <p className="text-sm text-berber-gold font-medium">You're subscribed! Check your email for your 10% off code.</p>
   }
 
   return (

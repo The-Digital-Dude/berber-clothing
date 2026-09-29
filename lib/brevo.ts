@@ -28,8 +28,8 @@ export async function brevoSubscribe(email: string, name?: string, listId?: numb
 
   await prisma.marketingSubscriber.upsert({
     where: { email },
-    create: { email, name, provider: "brevo", listId: String(lid || ""), syncedAt: new Date() },
-    update: { syncedAt: new Date() },
+    create: { email, name, provider: "brevo", listId: String(lid || ""), status: "subscribed", syncedAt: new Date() },
+    update: { status: "subscribed", syncedAt: new Date() },
   }).catch(() => {})
 }
 
