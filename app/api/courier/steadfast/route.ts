@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { requireAdmin } from "@/lib/adminAuth"
 import { createConsignment, getConsignmentStatus } from "@/lib/steadfast"
-import { sendOrderDelivered } from "@/lib/email"
+import { sendOrderDelivered, sendOrderStatusUpdate } from "@/lib/email"
 import { clawbackPointsForOrder } from "@/lib/loyalty"
 
 // POST: create a Steadfast consignment for an order
@@ -95,6 +95,14 @@ export async function GET(req: NextRequest) {
         customerName: order.user?.name || order.shippingName || "Customer",
         orderNumber: order.orderNumber,
         productName: order.items[0]?.product?.name || "your order",
+      }).catch(() => {})
+    }
+    if (toEmail && internalStatus === "RETURNED") {
+      sendOrderStatusUpdate({
+        to: toEmail,
+        customerName: order.user?.name || order.shippingName || "Customer",
+        orderNumber: order.orderNumber,
+        status: "RETURNED",
       }).catch(() => {})
     }
     if (internalStatus === "RETURNED") {

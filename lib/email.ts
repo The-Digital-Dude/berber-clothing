@@ -235,13 +235,14 @@ export async function sendOrderStatusUpdate(data: {
   const statusLabel: Record<string, string> = {
     CONFIRMED: "Order confirmed",
     PROCESSING: "Being processed",
+    PACKED: "Packed and ready for pickup",
     SHIPPED: "Shipped",
     DELIVERED: "Delivered",
     CANCELLED: "Cancelled",
     RETURNED: "Return processed",
   }
   const label = statusLabel[data.status] || data.status
-  const isNegative = data.status === "CANCELLED"
+  const isNegative = data.status === "CANCELLED" || data.status === "RETURNED"
   const content = `
     <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">Order update</h1>
     <p class="muted">Hi ${data.customerName}, here's an update on <strong>${data.orderNumber}</strong>.</p>

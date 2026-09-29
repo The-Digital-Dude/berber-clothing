@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { trackParcel } from "@/lib/pathao"
-import { sendOrderDelivered } from "@/lib/email"
+import { sendOrderDelivered, sendOrderStatusUpdate } from "@/lib/email"
 import { clawbackPointsForOrder } from "@/lib/loyalty"
 
 export async function GET(req: Request) {
@@ -59,10 +59,20 @@ export async function GET(req: Request) {
           }).catch(() => {})
         }
       } else if (newStatus === "RETURNED") {
-        await prisma.order.update({
+        const order = await prisma.order.update({
           where: { id: orderId },
-          data: { status: "RETURNED" }
+          data: { status: "RETURNED" },
+          include: { user: { select: { email: true, name: true } } },
         })
+        const toEmail = order.user?.email || order.guestEmail
+        if (toEmail) {
+          sendOrderStatusUpdate({
+            to: toEmail,
+            customerName: order.user?.name || order.shippingName || "Customer",
+            orderNumber: order.orderNumber,
+            status: "RETURNED",
+          }).catch(() => {})
+        }
         clawbackPointsForOrder(orderId).catch(() => {})
       }
     }

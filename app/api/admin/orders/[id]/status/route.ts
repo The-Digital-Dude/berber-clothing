@@ -108,7 +108,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             orderNumber: order.orderNumber,
             productName: order.items[0]?.product?.name || "your order",
           }).catch(() => {})
-        } else if (["CONFIRMED", "PROCESSING", "CANCELLED"].includes(status)) {
+        } else if (["CONFIRMED", "PROCESSING", "PACKED", "CANCELLED", "RETURNED"].includes(status)) {
           sendOrderStatusUpdate({
             to: toEmail,
             customerName: customerName || "Customer",
