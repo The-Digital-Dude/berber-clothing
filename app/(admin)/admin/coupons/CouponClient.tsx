@@ -277,10 +277,10 @@ export function CouponClient({
                       <span className="text-zinc-300">·</span>
                       <button
                         type="button"
-                        onClick={() => setCode("WELCOME10")}
+                        onClick={() => setCode("WELCOME5")}
                         className="text-[10px] text-zinc-500 hover:text-zinc-900"
                       >
-                        WELCOME10
+                        WELCOME5
                       </button>
                     </div>
                   </div>

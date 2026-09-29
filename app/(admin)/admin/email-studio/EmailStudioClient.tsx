@@ -89,7 +89,7 @@ const TEMPLATES: TemplateItem[] = [
     key: "newsletter_welcome",
     label: "Newsletter Signup",
     category: "MARKETING",
-    description: "Sent immediately after subscribing via the footer form, with a one-time 10% off code",
+    description: "Sent immediately after subscribing via the footer form, with a one-time 5% off code",
     variables: ["coupon_code", "store_url"],
   },
   {

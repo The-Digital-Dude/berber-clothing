@@ -200,7 +200,7 @@ export default function RegisterPage() {
         <div className="absolute bottom-12 left-12 right-12 text-white">
           <h2 className="text-4xl font-heading font-bold mb-4">Unapologetic Style.</h2>
           <p className="text-lg opacity-90">
-            Sign up to get 10% off your first order and start earning Berber Club points.
+            Sign up to get 5% off your first order and start earning Berber Club points.
           </p>
         </div>
       </div>

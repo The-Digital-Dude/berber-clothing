@@ -94,7 +94,7 @@ export default function Footer({
           {/* Contact / Newsletter */}
           <div className="space-y-4">
             <h4 className="font-bold uppercase tracking-wider text-sm">Join The Club</h4>
-            <p className="text-sm text-berber-text-muted">Subscribe for 10% off your first order and exclusive access to new drops.</p>
+            <p className="text-sm text-berber-text-muted">Subscribe for 5% off your first order and exclusive access to new drops.</p>
             <NewsletterForm />
             <div className="pt-4 space-y-2 text-sm text-berber-text-muted">
               <p className="flex items-center gap-2"><Mail className="w-4 h-4" /> {supportEmail}</p>

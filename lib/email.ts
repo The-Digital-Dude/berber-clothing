@@ -431,7 +431,7 @@ export async function sendNewsletterWelcome(data: { to: string; couponCode: stri
   const store = await getStoreMeta()
   const content = `
     <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You're in the club! 🎉</h1>
-    <p class="muted">Thanks for subscribing — here's your 10% off code for your first order.</p>
+    <p class="muted">Thanks for subscribing — here's your 5% off code for your first order.</p>
     <hr class="divider">
     <div style="background:#f5f5f0;border-radius:12px;padding:28px;text-align:center;margin:20px 0">
       <div class="label" style="text-align:center">Your code</div>
@@ -440,7 +440,7 @@ export async function sendNewsletterWelcome(data: { to: string; couponCode: stri
     <p class="muted" style="text-align:center">Valid for one use on your first order. We'll also keep you posted on new drops and exclusive releases.</p>
     <a href="${store.url}/shop" class="btn" style="display:block;text-align:center">Start shopping →</a>`
 
-  await sendMail(data.to, `Here's your 10% off code, ${store.name}`, baseTemplate(store, content))
+  await sendMail(data.to, `Here's your 5% off code, ${store.name}`, baseTemplate(store, content))
 }
 
 export async function sendWelcomeEmail(data: { to: string; name: string }) {
@@ -716,14 +716,14 @@ function buildPreview(key: EmailTemplateKey, storeName: string): { subject: stri
       }
     case "newsletter_welcome":
       return {
-        subject: `Here's your 10% off code, ${storeName}`,
+        subject: `Here's your 5% off code, ${storeName}`,
         content: `
           <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You're in the club! 🎉</h1>
-          <p class="muted">Thanks for subscribing — here's your 10% off code for your first order.</p>
+          <p class="muted">Thanks for subscribing — here's your 5% off code for your first order.</p>
           <hr class="divider">
           <div style="background:#f5f5f0;border-radius:12px;padding:28px;text-align:center;margin:20px 0">
             <div class="label" style="text-align:center">Your code</div>
-            <div style="font-size:28px;font-weight:700;font-family:monospace;letter-spacing:3px;margin-top:8px;background:#fff;border:2px dashed #ccc;border-radius:8px;padding:14px 24px;display:inline-block">WELCOME10</div>
+            <div style="font-size:28px;font-weight:700;font-family:monospace;letter-spacing:3px;margin-top:8px;background:#fff;border:2px dashed #ccc;border-radius:8px;padding:14px 24px;display:inline-block">WELCOME5</div>
           </div>
           <p class="muted" style="text-align:center">Valid for one use on your first order.</p>
           <a href="#" class="btn" style="display:block;text-align:center">Start shopping →</a>`,
