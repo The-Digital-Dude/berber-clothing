@@ -32,6 +32,7 @@ import type { CustomerRisk } from "@/lib/customerRisk"
 import OrderItemsEditorModal from "@/components/admin/OrderItemsEditorModal"
 import OrderMessages from "@/components/store/OrderMessages"
 import { cn } from "@/lib/utils"
+import { DIVISIONS, getDistricts, getAreaSuggestions } from "@/lib/bangladeshAddress"
 
 const RISK_BADGE_CLASS: Record<string, string> = {
   LOW: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
@@ -204,6 +205,62 @@ export default function OrderDetailsClient({
     consignmentId: order.delivery?.consignmentId || "",
     trackingCode: order.delivery?.trackingCode || "",
   })
+  const [isEditingShipping, setIsEditingShipping] = useState(false)
+  const [shippingForm, setShippingForm] = useState({
+    name: order.shippingName, phone: order.shippingPhone, address: order.shippingAddress,
+    division: order.shippingDivision, district: order.shippingDistrict, area: order.shippingArea,
+  })
+  const [shippingErrors, setShippingErrors] = useState<Record<string, string>>({})
+  const [shippingSaving, setShippingSaving] = useState(false)
+  const canEditShipping = !["SHIPPED", "DELIVERED", "CANCELLED"].includes(order.status)
+
+  const startEditingShipping = () => {
+    setShippingForm({
+      name: order.shippingName, phone: order.shippingPhone, address: order.shippingAddress,
+      division: order.shippingDivision, district: order.shippingDistrict, area: order.shippingArea,
+    })
+    setShippingErrors({})
+    setIsEditingShipping(true)
+  }
+
+  const saveShipping = async () => {
+    const errors: Record<string, string> = {}
+    if (!shippingForm.name.trim()) errors.name = "Required"
+    if (!shippingForm.phone.trim()) errors.phone = "Required"
+    if (!shippingForm.division) errors.division = "Required"
+    if (!shippingForm.district) errors.district = "Required"
+    if (!shippingForm.area.trim()) errors.area = "Required"
+    if (!shippingForm.address.trim()) errors.address = "Required"
+    setShippingErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    setShippingSaving(true)
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/shipping`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          shippingName: shippingForm.name,
+          shippingPhone: shippingForm.phone,
+          shippingAddress: shippingForm.address,
+          shippingDivision: shippingForm.division,
+          shippingDistrict: shippingForm.district,
+          shippingArea: shippingForm.area,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setOrder({ ...order, ...data.order })
+        toast.success("Delivery details updated")
+        setIsEditingShipping(false)
+        router.refresh()
+      } else {
+        toast.error(data.error || "Failed to update delivery details")
+      }
+    } finally {
+      setShippingSaving(false)
+    }
+  }
 
   // Copy helper
   const copyToClipboard = (text: string, label: string) => {
@@ -743,18 +800,116 @@ export default function OrderDetailsClient({
               <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-600">
                 Customer & Shipping
               </h2>
-              {customerRisk && (
-                <span
-                  className={cn(
-                    "px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-wider",
-                    RISK_BADGE_CLASS[customerRisk.riskLevel] || "bg-zinc-100 text-zinc-600 border-zinc-200"
-                  )}
-                >
-                  {customerRisk.riskLevel} Risk
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {customerRisk && (
+                  <span
+                    className={cn(
+                      "px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-wider",
+                      RISK_BADGE_CLASS[customerRisk.riskLevel] || "bg-zinc-100 text-zinc-600 border-zinc-200"
+                    )}
+                  >
+                    {customerRisk.riskLevel} Risk
+                  </span>
+                )}
+                {canEditShipping && !isEditingShipping && (
+                  <button
+                    onClick={startEditingShipping}
+                    className="p-1.5 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition"
+                    title="Edit delivery details for this order"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
+            {isEditingShipping ? (
+              <div className="space-y-2.5 text-xs">
+                <div>
+                  <input
+                    value={shippingForm.name}
+                    onChange={(e) => setShippingForm({ ...shippingForm, name: e.target.value })}
+                    placeholder="Full name"
+                    className={cn("w-full h-9 rounded-lg border px-3 font-semibold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900", shippingErrors.name ? "border-rose-400" : "border-zinc-300")}
+                  />
+                  {shippingErrors.name && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.name}</p>}
+                </div>
+                <div>
+                  <input
+                    value={shippingForm.phone}
+                    onChange={(e) => setShippingForm({ ...shippingForm, phone: e.target.value })}
+                    placeholder="Phone"
+                    className={cn("w-full h-9 rounded-lg border px-3 font-mono font-bold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900", shippingErrors.phone ? "border-rose-400" : "border-zinc-300")}
+                  />
+                  {shippingErrors.phone && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.phone}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <select
+                      value={shippingForm.division}
+                      onChange={(e) => setShippingForm({ ...shippingForm, division: e.target.value, district: "", area: "" })}
+                      className={cn("w-full h-9 rounded-lg border px-2 font-semibold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900", shippingErrors.division ? "border-rose-400" : "border-zinc-300")}
+                    >
+                      <option value="">Division</option>
+                      {DIVISIONS.map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    {shippingErrors.division && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.division}</p>}
+                  </div>
+                  <div>
+                    <select
+                      value={shippingForm.district}
+                      onChange={(e) => setShippingForm({ ...shippingForm, district: e.target.value, area: "" })}
+                      disabled={!shippingForm.division}
+                      className={cn("w-full h-9 rounded-lg border px-2 font-semibold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900 disabled:opacity-50", shippingErrors.district ? "border-rose-400" : "border-zinc-300")}
+                    >
+                      <option value="">District</option>
+                      {getDistricts(shippingForm.division).map((d) => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                    {shippingErrors.district && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.district}</p>}
+                  </div>
+                </div>
+                <div>
+                  <input
+                    list="admin-shipping-area-suggestions"
+                    value={shippingForm.area}
+                    onChange={(e) => setShippingForm({ ...shippingForm, area: e.target.value })}
+                    disabled={!shippingForm.district}
+                    placeholder="Area / Thana"
+                    className={cn("w-full h-9 rounded-lg border px-3 font-semibold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900 disabled:opacity-50", shippingErrors.area ? "border-rose-400" : "border-zinc-300")}
+                  />
+                  <datalist id="admin-shipping-area-suggestions">
+                    {getAreaSuggestions(shippingForm.district).map((a) => <option key={a} value={a} />)}
+                  </datalist>
+                  {shippingErrors.area && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.area}</p>}
+                </div>
+                <div>
+                  <textarea
+                    value={shippingForm.address}
+                    onChange={(e) => setShippingForm({ ...shippingForm, address: e.target.value })}
+                    placeholder="Full address"
+                    rows={2}
+                    className={cn("w-full rounded-lg border px-3 py-2 font-medium text-zinc-800 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-900", shippingErrors.address ? "border-rose-400" : "border-zinc-300")}
+                  />
+                  {shippingErrors.address && <p className="text-[11px] text-rose-600 mt-0.5">{shippingErrors.address}</p>}
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={saveShipping}
+                    disabled={shippingSaving}
+                    className="flex-1 h-9 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs disabled:opacity-50 transition-colors"
+                  >
+                    {shippingSaving ? "Saving…" : "Save Delivery Details"}
+                  </button>
+                  <button
+                    onClick={() => setIsEditingShipping(false)}
+                    disabled={shippingSaving}
+                    className="h-9 px-3 rounded-lg border border-zinc-300 text-zinc-600 hover:bg-zinc-100 font-bold text-xs transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-3 text-xs">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold shrink-0">
@@ -826,6 +981,7 @@ export default function OrderDetailsClient({
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Card 3: Payment Management & Notes */}
