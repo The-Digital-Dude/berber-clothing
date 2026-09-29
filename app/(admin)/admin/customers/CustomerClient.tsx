@@ -12,24 +12,28 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { 
-  Search, 
-  User, 
-  ShoppingCart, 
-  Lock, 
-  Unlock, 
-  ExternalLink, 
-  Phone, 
-  Mail, 
+import {
+  Search,
+  User,
+  ShoppingCart,
+  Lock,
+  Unlock,
+  ExternalLink,
+  Phone,
+  Mail,
   MessageSquare,
   ShieldAlert,
   Calendar,
   Layers,
   ChevronRight,
   TrendingUp,
-  Tag
+  Tag,
+  Pencil,
+  X,
+  Save,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import AdminPagination from "@/components/admin/AdminPagination"
 
 type Order = {
@@ -84,6 +88,10 @@ export function CustomerClient({
   const [searchTerm, setSearchTerm] = useState(currentSearch)
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [lockLoading, setLockLoading] = useState(false)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [profileForm, setProfileForm] = useState({ name: "", email: "", phone: "" })
+  const [profileErrors, setProfileErrors] = useState<{ name?: string; email?: string }>({})
+  const [profileSaving, setProfileSaving] = useState(false)
 
   const toggleLock = async (customer: Customer) => {
     if (!customer.id.startsWith("guest:")) {
@@ -95,6 +103,53 @@ export function CustomerClient({
       })
       setLockLoading(false)
       router.refresh()
+    }
+  }
+
+  const openCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer)
+    setIsEditingProfile(false)
+    setProfileErrors({})
+    setProfileForm({ name: customer.name, email: customer.email, phone: customer.phone === "—" ? "" : customer.phone })
+  }
+
+  const startEditingProfile = () => {
+    if (!selectedCustomer) return
+    setProfileForm({
+      name: selectedCustomer.name,
+      email: selectedCustomer.email,
+      phone: selectedCustomer.phone === "—" ? "" : selectedCustomer.phone,
+    })
+    setProfileErrors({})
+    setIsEditingProfile(true)
+  }
+
+  const saveProfile = async () => {
+    if (!selectedCustomer) return
+    const errors: { name?: string; email?: string } = {}
+    if (!profileForm.name.trim()) errors.name = "Name is required"
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileForm.email.trim())) errors.email = "Enter a valid email"
+    setProfileErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    setProfileSaving(true)
+    try {
+      const res = await fetch(`/api/admin/customers/${selectedCustomer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profileForm),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success("Customer details updated")
+        setSelectedCustomer({ ...selectedCustomer, ...profileForm })
+        setIsEditingProfile(false)
+        router.refresh()
+      } else {
+        toast.error(data.error || "Failed to update customer")
+      }
+    } finally {
+      setProfileSaving(false)
     }
   }
 
@@ -275,7 +330,7 @@ export function CustomerClient({
                       <TableCell className="pr-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => setSelectedCustomer(c)}
+                            onClick={() => openCustomer(c)}
                             className="p-1.5 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition text-xs font-semibold flex items-center gap-1"
                             title="View Customer Profile & Orders"
                           >
@@ -337,12 +392,76 @@ export function CustomerClient({
                   </p>
                 </div>
               </div>
+              {selectedCustomer && selectedCustomer.role !== "GUEST" && !isEditingProfile && (
+                <button
+                  onClick={startEditingProfile}
+                  className="p-2 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition"
+                  title="Edit name, email or phone"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </DialogHeader>
 
           {selectedCustomer && (
             <div className="space-y-5 pt-2">
-              {/* Overview Details */}
+              {/* Overview Details / Edit Form */}
+              {isEditingProfile ? (
+                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-3 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-zinc-600 font-medium">Full Name</label>
+                    <input
+                      value={profileForm.name}
+                      onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                      className={cn(
+                        "w-full h-9 rounded-lg border px-3 text-xs font-semibold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900",
+                        profileErrors.name ? "border-rose-400" : "border-zinc-300"
+                      )}
+                    />
+                    {profileErrors.name && <p className="text-[11px] text-rose-600">{profileErrors.name}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-zinc-600 font-medium">Email Address</label>
+                    <input
+                      value={profileForm.email}
+                      onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                      className={cn(
+                        "w-full h-9 rounded-lg border px-3 text-xs font-semibold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900",
+                        profileErrors.email ? "border-rose-400" : "border-zinc-300"
+                      )}
+                    />
+                    {profileErrors.email && <p className="text-[11px] text-rose-600">{profileErrors.email}</p>}
+                    <p className="text-[10px] text-amber-700">Also updates the customer's login email — they'll sign in with the new address next time.</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-zinc-600 font-medium">Phone Number</label>
+                    <input
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      className="w-full h-9 rounded-lg border border-zinc-300 px-3 text-xs font-mono font-bold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={saveProfile}
+                      disabled={profileSaving}
+                      className="flex-1 h-9 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      {profileSaving ? "Saving…" : "Save Changes"}
+                    </button>
+                    <button
+                      onClick={() => setIsEditingProfile(false)}
+                      disabled={profileSaving}
+                      className="h-9 px-3 rounded-lg border border-zinc-300 text-zinc-600 hover:bg-zinc-100 font-bold text-xs flex items-center gap-1 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-zinc-600 font-medium">Email Address:</span>
@@ -372,6 +491,7 @@ export function CustomerClient({
                   </span>
                 </div>
               </div>
+              )}
 
               {/* Order History */}
               <div className="space-y-2.5">
