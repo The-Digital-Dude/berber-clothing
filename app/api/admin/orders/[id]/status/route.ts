@@ -85,7 +85,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     if (status) {
       await prisma.orderStatusLog.create({
-        data: { orderId: id, status, note: `Status updated to ${status} via Admin Panel` },
+        data: { orderId: id, status, note: body.statusNote || `Status updated to ${status} via Admin Panel` },
       })
 
       // Email notification (fire-and-forget)

@@ -69,7 +69,7 @@ function ModernOrderStepper({
 }: {
   status: string
   loading: boolean
-  onAdvance: (status: string) => void
+  onAdvance: (status: string, statusNote?: string) => void
   onSetException: (status: string) => void
 }) {
   const isException = EXCEPTION_STATUSES.includes(status)
@@ -131,9 +131,23 @@ function ModernOrderStepper({
       {/* Action Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
         {isException ? (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
-            Status: {status}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+              Status: {status}
+            </span>
+            {status === "CANCELLED" && (
+              <button
+                type="button"
+                onClick={() => onAdvance("CONFIRMED", "Reactivated — customer confirmed they want to proceed after all")}
+                disabled={loading}
+                title="Customer asked us to proceed after all — move this order back into the normal fulfillment flow"
+                className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Reactivate → Confirmed
+              </button>
+            )}
+          </div>
         ) : (
           <span className="text-[11px] text-zinc-500">
             {currentIndex < STEPPER_STAGES.length - 1 ? (
@@ -198,13 +212,13 @@ export default function OrderDetailsClient({
   }
 
   // Status update
-  const updateStatus = async (status: string) => {
+  const updateStatus = async (status: string, statusNote?: string) => {
     setLoading(true)
     try {
       const res = await fetch(`/api/admin/orders/${order.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, statusNote }),
       })
       if (res.ok) {
         const updated = await res.json()
