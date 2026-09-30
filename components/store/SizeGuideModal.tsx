@@ -58,8 +58,14 @@ export default function SizeGuideModal({ categoryId, sizeChartImage }: { categor
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between px-6 py-4 border-b border-berber-border">
               <h2 className="font-heading font-bold text-lg flex items-center gap-2"><Ruler className="w-5 h-5 text-berber-gold" /> Size Guide</h2>
               <button onClick={() => setOpen(false)} className="text-berber-text-muted hover:text-berber-black transition-colors"><X className="w-5 h-5" /></button>
