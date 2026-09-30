@@ -56,28 +56,88 @@ export default async function BulkPackingSlipPage({
       <head>
         <title>Packing Slips — {orders.length} orders</title>
         <style>{`
-          @page { size: A4; margin: 10mm; }
-          * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; }
-          body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; }
+          @page {
+            size: 3in 3in;
+            margin: 2mm;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            color: #000;
+          }
           .slip-wrap {
             width: 100%;
-            max-width: 190mm;
-            margin: 0 auto 6mm;
-            padding-bottom: 6mm;
-            border-bottom: 1px dashed #999;
-            break-inside: avoid;
+            max-width: 76mm;
+            background: #fff;
+            overflow: hidden;
             page-break-inside: avoid;
+            break-inside: avoid;
+            page-break-after: always;
+            break-after: page;
           }
-          .slip-wrap:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+          .slip-wrap:last-child {
+            page-break-after: auto;
+            break-after: auto;
+          }
           @media screen {
-            body { background: #ddd; padding: 10mm 0; }
-            .slip-wrap { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); padding: 8mm; border-bottom: none; margin-bottom: 6mm; }
+            body {
+              background: #e4e4e7;
+              padding: 24px 16px;
+              min-height: 100vh;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 16px;
+            }
+            .preview-banner {
+              background: #18181b;
+              color: #fafafa;
+              font-family: system-ui, -apple-system, sans-serif;
+              font-size: 11px;
+              font-weight: 600;
+              padding: 6px 14px;
+              border-radius: 9999px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+            .slip-wrap {
+              width: 76mm;
+              min-height: 76mm;
+              background: #fff;
+              box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+              border-radius: 4px;
+              padding: 3mm;
+            }
           }
-          @media print { button { display: none; } }
+          @media print {
+            .preview-banner, button {
+              display: none !important;
+            }
+            body {
+              background: #fff !important;
+              padding: 0 !important;
+              gap: 0 !important;
+              display: block !important;
+            }
+            .slip-wrap {
+              box-shadow: none !important;
+              border-radius: 0 !important;
+              padding: 0 !important;
+              max-width: 100% !important;
+              width: 100% !important;
+            }
+          }
         `}</style>
       </head>
       <body>
+        <div className="preview-banner">
+          🏷️ 3" × 3" Thermal Bulk Labels ({orders.length} orders)
+        </div>
         {orders.map((order) => (
           <div key={order.id} className="slip-wrap">
             <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />

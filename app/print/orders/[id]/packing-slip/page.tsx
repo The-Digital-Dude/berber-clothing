@@ -37,19 +37,79 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
       <head>
         <title>Packing Slip — {order.orderNumber}</title>
         <style>{`
-          @page { size: A4; margin: 10mm; }
-          * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; }
-          body { font-family: 'Courier New', monospace; font-size: 12px; color: #000; background: #fff; }
-          .slip-wrap { width: 100%; max-width: 190mm; margin: 0 auto; }
-          @media screen {
-            body { background: #ddd; padding: 10mm 0; }
-            .slip-wrap { background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2); padding: 8mm; }
+          @page {
+            size: 3in 3in;
+            margin: 2mm;
           }
-          @media print { button { display: none; } }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            color: #000;
+          }
+          .slip-wrap {
+            width: 100%;
+            max-width: 76mm;
+            margin: 0 auto;
+            background: #fff;
+            overflow: hidden;
+          }
+          @media screen {
+            body {
+              background: #e4e4e7;
+              padding: 24px 16px;
+              min-height: 100vh;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .preview-banner {
+              background: #18181b;
+              color: #fafafa;
+              font-family: system-ui, -apple-system, sans-serif;
+              font-size: 11px;
+              font-weight: 600;
+              padding: 6px 14px;
+              border-radius: 9999px;
+              margin-bottom: 16px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            }
+            .slip-wrap {
+              width: 76mm;
+              min-height: 76mm;
+              background: #fff;
+              box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+              border-radius: 4px;
+              padding: 3mm;
+            }
+          }
+          @media print {
+            .preview-banner, button {
+              display: none !important;
+            }
+            body {
+              background: #fff !important;
+              padding: 0 !important;
+            }
+            .slip-wrap {
+              box-shadow: none !important;
+              border-radius: 0 !important;
+              padding: 0 !important;
+              max-width: 100% !important;
+              width: 100% !important;
+            }
+          }
         `}</style>
       </head>
       <body>
+        <div className="preview-banner">
+          🏷️ 3" × 3" Thermal Label Preview
+        </div>
         <div className="slip-wrap">
           <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
         </div>
