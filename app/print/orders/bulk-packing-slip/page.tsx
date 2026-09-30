@@ -43,6 +43,13 @@ export default async function BulkPackingSlipPage({
   return (
     <div className="print-bulk-slips-container">
       <style>{`
+        @page {
+          size: 3in 3in;
+          margin: 0;
+        }
+        @page :blank {
+          display: none !important;
+        }
         * {
           box-sizing: border-box;
           -webkit-print-color-adjust: exact;
@@ -82,17 +89,11 @@ export default async function BulkPackingSlipPage({
           }
         }
         @media print {
-          @page {
-            size: 76mm 76mm;
-            margin: 0 !important;
-          }
           html, body {
-            width: 100% !important;
-            height: auto !important;
+            width: 3in !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
-            overflow: visible !important;
           }
           header, nav, footer, aside, [data-sonner-toaster], #nprogress, [data-nextjs-toploader], .preview-banner, button {
             display: none !important;
@@ -112,13 +113,14 @@ export default async function BulkPackingSlipPage({
           .slip-wrap {
             box-shadow: none !important;
             border-radius: 0 !important;
-            padding: 0 !important;
+            padding: 1mm 0 !important;
             margin: 0 auto !important;
             width: 100% !important;
             max-width: 65mm !important;
-            height: auto !important;
+            height: 3in !important;
+            max-height: 3in !important;
             box-sizing: border-box !important;
-            overflow: visible !important;
+            overflow: hidden !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             page-break-after: always !important;
