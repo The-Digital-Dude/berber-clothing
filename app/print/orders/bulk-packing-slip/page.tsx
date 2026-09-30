@@ -47,14 +47,6 @@ export default async function BulkPackingSlipPage({
           size: 3in 3in;
           margin: 0;
         }
-        @page :blank {
-          display: none !important;
-        }
-        * {
-          box-sizing: border-box;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
         @media screen {
           .print-bulk-slips-container {
             min-height: 100vh;
@@ -95,13 +87,6 @@ export default async function BulkPackingSlipPage({
             padding: 0 !important;
             background: #fff !important;
           }
-          header, nav, footer, aside, [data-sonner-toaster], #nprogress, [data-nextjs-toploader], .preview-banner, button {
-            display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
           .print-bulk-slips-container {
             background: #fff !important;
             padding: 0 !important;
@@ -117,8 +102,8 @@ export default async function BulkPackingSlipPage({
             margin: 0 auto !important;
             width: 100% !important;
             max-width: 65mm !important;
-            height: 3in !important;
-            max-height: 3in !important;
+            height: auto !important;
+            max-height: 2.85in !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
             page-break-inside: avoid !important;
@@ -132,7 +117,7 @@ export default async function BulkPackingSlipPage({
           }
         }
       `}</style>
-      <div className="preview-banner">
+      <div className="preview-banner no-print">
         🏷️ 3" × 3" Thermal Bulk Labels ({orders.length} orders)
       </div>
       {orders.map((order) => (
@@ -140,7 +125,9 @@ export default async function BulkPackingSlipPage({
           <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
         </div>
       ))}
-      <PrintButton />
+      <div className="no-print">
+        <PrintButton />
+      </div>
     </div>
   )
 }

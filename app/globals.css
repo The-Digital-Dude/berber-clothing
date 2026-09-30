@@ -12,22 +12,47 @@
   }
 }
 
+@page {
+  size: 3in 3in;
+  margin: 0;
+}
+
 @media print {
+  *, *::before, *::after {
+    box-sizing: border-box !important;
+  }
   html, body {
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;
+    color: #000 !important;
+    width: 3in !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: 3in !important;
+    overflow: hidden !important;
   }
   nav,
   footer,
   aside,
   header,
+  button,
+  .no-print,
   [data-sonner-toaster],
+  [data-sonner-toast],
   #nprogress,
-  [data-nextjs-toploader] {
+  [data-nextjs-toploader],
+  script,
+  iframe {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
   }
 }
 
