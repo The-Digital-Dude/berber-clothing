@@ -1,5 +1,5 @@
 // Shared slip content optimized for 3" x 3" (76mm x 76mm) thermal label printers.
-// Safe 65mm-66mm width to prevent right-edge clipping on thermal printheads.
+// Includes Steadfast / courier consignment details and tracking information.
 
 type SlipOrder = {
   orderNumber: string
@@ -16,6 +16,12 @@ type SlipOrder = {
   note?: string | null
   giftWrap?: boolean
   giftMessage?: string | null
+  delivery?: {
+    courier?: string | null
+    trackingCode?: string | null
+    consignmentId?: string | null
+    status?: string | null
+  } | null
   items: { id: string; productName: string; size?: string | null; color?: string | null; quantity: number }[]
 }
 
@@ -36,6 +42,9 @@ export function PackingSlipContent({
   })
 
   const locationParts = [order.shippingArea, order.shippingDistrict, order.shippingDivision].filter(Boolean).join(", ")
+  const courierName = order.delivery?.courier?.toUpperCase() || "STEADFAST"
+  const trackingCode = order.delivery?.trackingCode
+  const consignmentId = order.delivery?.consignmentId
 
   return (
     <div
@@ -53,7 +62,7 @@ export function PackingSlipContent({
       }}
     >
       {/* Header */}
-      <div style={{ borderBottom: "1.5px solid #000", paddingBottom: "2px", marginBottom: "3px" }}>
+      <div style={{ borderBottom: "1.5px solid #000", paddingBottom: "2px", marginBottom: "2.5px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: "11px", fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase" }}>{storeName}</span>
           <span style={{ fontSize: "7.5px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>PACKING SLIP</span>
@@ -64,8 +73,36 @@ export function PackingSlipContent({
         </div>
       </div>
 
+      {/* Steadfast / Courier Tracking Bar */}
+      <div
+        style={{
+          border: "1px solid #000",
+          padding: "1.5px 3px",
+          marginBottom: "2.5px",
+          background: "#fff",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontSize: "7.5px",
+        }}
+      >
+        <div>
+          <span style={{ fontWeight: 900, textTransform: "uppercase" }}>🚚 {courierName}</span>
+          {trackingCode && (
+            <span style={{ fontWeight: 800, marginLeft: "3px" }}>· TRK: {trackingCode}</span>
+          )}
+        </div>
+        <div>
+          {consignmentId ? (
+            <span style={{ fontWeight: 700 }}>CID: #{consignmentId}</span>
+          ) : (
+            <span style={{ color: "#444" }}>INV: #{order.orderNumber}</span>
+          )}
+        </div>
+      </div>
+
       {/* Recipient / Shipping Address */}
-      <div style={{ borderBottom: "1px dashed #000", paddingBottom: "2.5px", marginBottom: "3px" }}>
+      <div style={{ borderBottom: "1px dashed #000", paddingBottom: "2px", marginBottom: "2.5px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: "9px", fontWeight: 800 }}>{order.shippingName}</span>
           <span style={{ fontSize: "8.5px", fontWeight: 800 }}>{order.shippingPhone}</span>
@@ -81,7 +118,7 @@ export function PackingSlipContent({
       </div>
 
       {/* Items List */}
-      <div style={{ borderBottom: "1px dashed #000", paddingBottom: "2px", marginBottom: "3px" }}>
+      <div style={{ borderBottom: "1px dashed #000", paddingBottom: "2px", marginBottom: "2.5px" }}>
         <div style={{ fontSize: "7px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "1px" }}>
           ITEMS ({order.items.reduce((acc, item) => acc + (item.quantity || 1), 0)} PCS)
         </div>
@@ -107,7 +144,7 @@ export function PackingSlipContent({
       </div>
 
       {/* Payment / Collection Box */}
-      <div style={{ border: "1.2px solid #000", padding: "2px 4px", marginBottom: "2.5px", background: "#fff" }}>
+      <div style={{ border: "1.2px solid #000", padding: "2px 4px", marginBottom: "2px", background: "#fff" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ fontSize: "7px", textTransform: "uppercase", fontWeight: 700 }}>Payment Method</div>

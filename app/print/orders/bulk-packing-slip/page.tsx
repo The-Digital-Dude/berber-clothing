@@ -28,7 +28,10 @@ export default async function BulkPackingSlipPage({
   const [rawOrders, settings] = await Promise.all([
     prisma.order.findMany({
       where: { id: { in: orderIds } },
-      include: { items: true },
+      include: {
+        items: true,
+        delivery: true,
+      },
     }),
     prisma.setting.findMany({ where: { key: { in: ["store_name", "support_phone"] } } }),
   ])

@@ -15,6 +15,7 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
     where: { id },
     include: {
       items: { include: { product: { include: { images: { take: 1 } } } } },
+      delivery: true,
     },
   })
   if (!order) notFound()
