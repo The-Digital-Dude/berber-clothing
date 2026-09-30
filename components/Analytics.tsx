@@ -41,7 +41,11 @@ export default async function Analytics() {
       )}
 
       {CLARITY_ID && (
-        <Script id="clarity" strategy="afterInteractive">{`
+        // id must not be "clarity" -- an element with id="clarity" is auto-exposed as
+        // window.clarity by the browser, which shadows the snippet's own
+        // `window.clarity = window.clarity || function(){...}` queue function and
+        // breaks every event the real clarity.ms script tries to send.
+        <Script id="ms-clarity-init" strategy="afterInteractive">{`
           (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
           t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
           y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
