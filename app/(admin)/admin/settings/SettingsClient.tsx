@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import {
-  Store, CreditCard, Truck, Percent, Mail, BarChart2, Users, ChevronRight
+  Store, CreditCard, Truck, Percent, Mail, BarChart2, Users, ChevronRight,
+  ShieldCheck, Eye, EyeOff, CheckCircle2, AlertCircle, RefreshCw, Zap, Copy, Check, Globe
 } from "lucide-react"
 
 type Staff = { id: string; name: string; email: string; role: string }
@@ -21,6 +22,7 @@ type Staff = { id: string; name: string; email: string; role: string }
 const TABS = [
   { id: "general", label: "General", icon: Store },
   { id: "payments", label: "Payments", icon: CreditCard },
+  { id: "courier", label: "Steadfast Courier", icon: Zap },
   { id: "shipping", label: "Shipping & Tax", icon: Truck },
   { id: "email", label: "Email / SMTP", icon: Mail },
   { id: "tracking", label: "Tracking & SEO", icon: BarChart2 },
@@ -63,6 +65,19 @@ export function SettingsClient({
   const [codDepositEnabled, setCodDepositEnabled] = useState(initialSettings["cod_deposit_enabled"] === "true")
   const [codDepositAmount, setCodDepositAmount] = useState(initialSettings["cod_deposit_amount"] || "100")
   const [isPaymentSaving, setIsPaymentSaving] = useState(false)
+
+  // Steadfast Courier Settings
+  const [steadfastApiKey, setSteadfastApiKey] = useState(initialSettings["steadfast_api_key"] || "")
+  const [steadfastSecretKey, setSteadfastSecretKey] = useState(initialSettings["steadfast_secret_key"] || "")
+  const [steadfastBaseUrl, setSteadfastBaseUrl] = useState(initialSettings["steadfast_base_url"] || "https://portal.packzy.com/api/v1")
+  const [steadfastWebhookSecret, setSteadfastWebhookSecret] = useState(initialSettings["steadfast_webhook_secret"] || "")
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [showSecretKey, setShowSecretKey] = useState(false)
+  const [isSteadfastSaving, setIsSteadfastSaving] = useState(false)
+  const [isTestingConnection, setIsTestingConnection] = useState(false)
+  const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string; balance?: number } | null>(null)
+  const [copiedWebhook, setCopiedWebhook] = useState(false)
+  const [copiedBearer, setCopiedBearer] = useState(false)
 
   // Shipping & Tax
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(initialSettings["free_shipping_above"] || "")
@@ -135,6 +150,67 @@ export function SettingsClient({
       ok ? toast.success("Payment settings saved") : toast.error("Failed to save")
       if (ok) router.refresh()
     } catch { toast.error("Error saving") } finally { setIsPaymentSaving(false) }
+  }
+
+  const handleSaveSteadfast = async () => {
+    setIsSteadfastSaving(true)
+    try {
+      const ok = await patch({
+        steadfast_api_key: steadfastApiKey.trim(),
+        steadfast_secret_key: steadfastSecretKey.trim(),
+        steadfast_base_url: steadfastBaseUrl.trim(),
+        steadfast_webhook_secret: steadfastWebhookSecret.trim(),
+      })
+      ok ? toast.success("Steadfast credentials & Webhook secret saved") : toast.error("Failed to save Steadfast settings")
+      if (ok) router.refresh()
+    } catch {
+      toast.error("Error saving Steadfast settings")
+    } finally {
+      setIsSteadfastSaving(false)
+    }
+  }
+
+  const handleTestSteadfast = async () => {
+    if (!steadfastApiKey || !steadfastSecretKey) {
+      toast.error("Please enter both Steadfast API Key and Secret Key first")
+      return
+    }
+    setIsTestingConnection(true)
+    setConnectionTestResult(null)
+    try {
+      const res = await fetch("/api/admin/courier/steadfast/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: steadfastApiKey.trim(),
+          secretKey: steadfastSecretKey.trim(),
+          baseUrl: steadfastBaseUrl.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setConnectionTestResult({
+          success: true,
+          balance: data.balance,
+          message: data.message || `Connected! Current Balance: ৳${data.balance ?? 0}`,
+        })
+        toast.success(`Steadfast API verified! Balance: ৳${data.balance ?? 0}`)
+      } else {
+        setConnectionTestResult({
+          success: false,
+          message: data.message || "Failed to authenticate with Steadfast API",
+        })
+        toast.error(data.message || "Steadfast authentication failed")
+      }
+    } catch (err: any) {
+      setConnectionTestResult({
+        success: false,
+        message: err.message || "Network error testing Steadfast gateway",
+      })
+      toast.error("Error connecting to Steadfast")
+    } finally {
+      setIsTestingConnection(false)
+    }
   }
 
   const handleSaveShippingTax = async () => {
@@ -230,7 +306,7 @@ export function SettingsClient({
   return (
     <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
       {/* Tab sidebar */}
-      <aside className="lg:w-52 shrink-0">
+      <aside className="lg:w-56 shrink-0">
         <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
           {TABS.map((tab) => {
             const Icon = tab.icon
@@ -241,11 +317,11 @@ export function SettingsClient({
                 className={cn(
                   "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-all text-left w-full",
                   activeTab === tab.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-zinc-900 text-white shadow-xs"
+                    : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
+                <Icon className={cn("h-4 w-4 shrink-0", activeTab === tab.id ? "text-amber-400" : "text-zinc-500")} />
                 {tab.label}
               </button>
             )
@@ -254,7 +330,7 @@ export function SettingsClient({
       </aside>
 
       {/* Tab content */}
-      <div className="flex-1 min-w-0 max-w-2xl">
+      <div className="flex-1 min-w-0 max-w-3xl">
 
         {/* General */}
         {activeTab === "general" && (
@@ -351,6 +427,252 @@ export function SettingsClient({
               </CardContent>
             </Card>
             <Button onClick={handleSavePayments} disabled={isPaymentSaving}>{isPaymentSaving ? "Saving…" : "Save Payment Settings"}</Button>
+          </div>
+        )}
+
+        {/* Steadfast Courier Integration */}
+        {activeTab === "courier" && (
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  <Zap className="w-3.5 h-3.5" />
+                  Primary Courier Partner
+                </span>
+              </div>
+              <h2 className="text-lg font-semibold mt-1">Steadfast Courier Integration</h2>
+              <p className="text-sm text-muted-foreground">
+                Configure your official Steadfast API and Secret keys directly. This powers live 1-Click Dispatches, tracking synchronizations, and Fraud Risk scoring.
+              </p>
+            </div>
+
+            <Card className="border-indigo-100 shadow-xs">
+              <CardHeader className="bg-gradient-to-r from-indigo-50/50 to-white border-b border-indigo-50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base flex items-center gap-2 text-zinc-900">
+                      <span>API Credentials</span>
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                    </CardTitle>
+                    <CardDescription>
+                      Find your API Key and Secret Key in your{" "}
+                      <a
+                        href="https://portal.steadfast.com.bd"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-indigo-600 font-semibold underline hover:text-indigo-800"
+                      >
+                        Steadfast Merchant Portal
+                      </a>
+                    </CardDescription>
+                  </div>
+                  <span className="text-xs font-mono font-bold bg-white border border-zinc-200 px-2 py-1 rounded-md text-zinc-700">
+                    portal.steadfast.com.bd
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-5">
+                <Field label="Steadfast API Key" hint="Required for parcel dispatch & fraud checks">
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showApiKey ? "text" : "password"}
+                      value={steadfastApiKey}
+                      onChange={(e) => setSteadfastApiKey(e.target.value)}
+                      placeholder="Paste your Steadfast API Key"
+                      className="pr-10 font-mono text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="absolute right-3 text-zinc-400 hover:text-zinc-600"
+                    >
+                      {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </Field>
+
+                <Field label="Steadfast Secret Key" hint="Secret key provided by Steadfast">
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showSecretKey ? "text" : "password"}
+                      value={steadfastSecretKey}
+                      onChange={(e) => setSteadfastSecretKey(e.target.value)}
+                      placeholder="Paste your Steadfast Secret Key"
+                      className="pr-10 font-mono text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecretKey(!showSecretKey)}
+                      className="absolute right-3 text-zinc-400 hover:text-zinc-600"
+                    >
+                      {showSecretKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </Field>
+
+                <Field label="API Base URL" hint="Default is https://portal.packzy.com/api/v1">
+                  <Input
+                    value={steadfastBaseUrl}
+                    onChange={(e) => setSteadfastBaseUrl(e.target.value)}
+                    placeholder="https://portal.packzy.com/api/v1"
+                    className="font-mono text-xs"
+                  />
+                </Field>
+
+                {connectionTestResult && (
+                  <div
+                    className={cn(
+                      "p-3.5 rounded-xl border flex items-start gap-2.5 text-xs",
+                      connectionTestResult.success
+                        ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                        : "bg-rose-50/80 border-rose-200 text-rose-900"
+                    )}
+                  >
+                    {connectionTestResult.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                      <p className="font-semibold">{connectionTestResult.message}</p>
+                      {connectionTestResult.balance !== undefined && (
+                        <p className="text-[11px] text-emerald-700 mt-0.5">
+                          Steadfast Courier API is fully authenticated and ready for 1-Click dispatches.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                onClick={handleSaveSteadfast}
+                disabled={isSteadfastSaving}
+                className="bg-zinc-900 hover:bg-zinc-800 text-white font-semibold"
+              >
+                {isSteadfastSaving ? "Saving to Database…" : "Save Steadfast Credentials"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleTestSteadfast}
+                disabled={isTestingConnection}
+                className="border-zinc-300 font-semibold gap-2"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", isTestingConnection && "animate-spin")} />
+                {isTestingConnection ? "Testing Gateway…" : "Test Connection & Balance"}
+              </Button>
+            </div>
+
+            {/* Steadfast Webhook Setup Card */}
+            <Card className="border-amber-200/80 bg-linear-to-br from-amber-50/50 via-white to-amber-50/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800">
+                    <Globe className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-zinc-900">Steadfast Live Webhook Listener</CardTitle>
+                    <CardDescription className="text-xs text-zinc-600 mt-0.5">
+                      Receive real-time parcel status updates (Delivered, In Transit, Returned, Cancelled) automatically.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-xs text-zinc-700 leading-relaxed">
+                  Paste this Webhook URL in your{" "}
+                  <a
+                    href="https://portal.packzy.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-semibold text-amber-900 underline hover:text-amber-700"
+                  >
+                    Steadfast Merchant Dashboard
+                  </a>{" "}
+                  under <strong>Settings &rarr; Webhook / API</strong>:
+                </div>
+
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-900 text-zinc-100 font-mono text-xs border border-zinc-800">
+                  <span className="flex-1 truncate select-all text-amber-300">
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin}/api/webhooks/steadfast`
+                      : "https://www.berber.clothing/api/webhooks/steadfast"}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      const url =
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/api/webhooks/steadfast`
+                          : "https://www.berber.clothing/api/webhooks/steadfast"
+                      navigator.clipboard.writeText(url)
+                      setCopiedWebhook(true)
+                      toast.success("Copied Steadfast Webhook URL to clipboard!")
+                      setTimeout(() => setCopiedWebhook(false), 2000)
+                    }}
+                    className="h-7 px-2.5 text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 gap-1.5"
+                  >
+                    {copiedWebhook ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedWebhook ? "Copied" : "Copy"}</span>
+                  </Button>
+                </div>
+
+                <div className="pt-2 border-t border-amber-200/60 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-zinc-800">
+                      Webhook Bearer Token / Secret (Optional)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const token = "sf_sec_" + Math.random().toString(36).slice(2) + Date.now().toString(36)
+                        setSteadfastWebhookSecret(token)
+                        toast.success("Generated secure Webhook Bearer Token. Click 'Save Steadfast Credentials' to save.")
+                      }}
+                      className="text-[11px] font-semibold text-amber-900 hover:text-amber-700 underline"
+                    >
+                      ⚡ Auto-Generate Token
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={steadfastWebhookSecret}
+                      onChange={(e) => setSteadfastWebhookSecret(e.target.value)}
+                      placeholder="Paste token or leave empty to use Secret Key / open verification"
+                      className="font-mono text-xs bg-white"
+                    />
+                    {steadfastWebhookSecret && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard.writeText(steadfastWebhookSecret)
+                          setCopiedBearer(true)
+                          toast.success("Copied Bearer Token to clipboard!")
+                          setTimeout(() => setCopiedBearer(false), 2000)
+                        }}
+                        className="h-9 px-3 text-xs border-amber-300 gap-1.5 shrink-0"
+                      >
+                        {copiedBearer ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        <span>{copiedBearer ? "Copied" : "Copy Token"}</span>
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-500">
+                    If set, incoming webhooks must include <code>Authorization: Bearer &lt;TOKEN&gt;</code> or <code>Secret-Key: &lt;TOKEN&gt;</code>.
+                  </p>
+                </div>
+
+                <div className="text-[11px] text-zinc-500 space-y-1 pt-1">
+                  <p>&bull; Automatically synchronizes delivery states: <code>DELIVERED</code>, <code>IN_TRANSIT</code>, <code>CANCELLED</code>, <code>RETURNED</code>.</p>
+                  <p>&bull; Marks Cash on Delivery (COD) payment status as <code>PAID</code> when delivery is confirmed.</p>
+                  <p>&bull; Sends instant email updates to customers upon successful delivery.</p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 

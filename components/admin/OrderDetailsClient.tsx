@@ -27,6 +27,7 @@ import {
   ChevronRight,
   HelpCircle,
   Mail,
+  Zap,
 } from "lucide-react"
 import { toast } from "sonner"
 import type { CustomerRisk } from "@/lib/customerRisk"
@@ -185,6 +186,8 @@ export default function OrderDetailsClient({
 }) {
   const router = useRouter()
   const [order, setOrder] = useState(initialOrder)
+  const [riskData, setRiskData] = useState<CustomerRisk | null>(customerRisk || null)
+  const [isRefreshingRisk, setIsRefreshingRisk] = useState(false)
 
   useEffect(() => {
     setOrder(initialOrder)
@@ -196,6 +199,11 @@ export default function OrderDetailsClient({
       trackingCode: initialOrder.delivery?.trackingCode || "",
     })
   }, [initialOrder])
+
+  useEffect(() => {
+    if (customerRisk) setRiskData(customerRisk)
+  }, [customerRisk])
+
   const [loading, setLoading] = useState(false)
   const [pendingWaLink, setPendingWaLink] = useState<string | null>(null)
   const [codNote, setCodNote] = useState(order.codCallNote ?? "")
@@ -390,52 +398,79 @@ export default function OrderDetailsClient({
     }
   }
 
-  // Dispatch courier
+  // 1-Click Dispatch to Steadfast
   const dispatchToCourier = async () => {
     setLoading(true)
     try {
-      const isSteadfast = deliveryData.courier === "STEADFAST"
-      const res = await fetch(isSteadfast ? "/api/courier/steadfast" : "/api/delivery/pathao/create", {
+      const res = await fetch("/api/courier/steadfast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId: order.id }),
       })
       const data = await res.json()
-      if (res.ok) {
-        const consignment = isSteadfast ? data.consignment : data
+      if (res.ok && data.consignment) {
+        const consignment = data.consignment
         setDeliveryData({
-          courier: deliveryData.courier,
-          consignmentId: String(consignment.consignmentId ?? consignment.consignment_id ?? ""),
-          trackingCode: consignment.trackingCode ?? consignment.tracking_code ?? "",
+          courier: "STEADFAST",
+          consignmentId: String(consignment.consignment_id ?? ""),
+          trackingCode: consignment.tracking_code ?? "",
         })
-        toast.success(`Parcel created successfully with ${isSteadfast ? "Steadfast" : "Pathao"}`)
+        toast.success(`⚡ Dispatched to Steadfast! CID: ${consignment.consignment_id}`)
         router.refresh()
       } else {
-        toast.error(data.error || "Failed to create parcel")
+        toast.error(data.error || "Failed to dispatch parcel to Steadfast")
       }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to dispatch to Steadfast")
     } finally {
       setLoading(false)
     }
   }
 
-  // Refresh tracking
+  // Refresh tracking from Steadfast
   const refreshCourierTracking = async () => {
+    if (!deliveryData.consignmentId) return
     setLoading(true)
     try {
-      const isSteadfast = deliveryData.courier === "STEADFAST"
-      const url = isSteadfast
-        ? `/api/courier/steadfast?consignmentId=${encodeURIComponent(deliveryData.consignmentId)}`
-        : `/api/delivery/pathao/track?orderId=${order.id}`
-      const res = await fetch(url)
+      const res = await fetch(`/api/courier/steadfast?consignmentId=${encodeURIComponent(deliveryData.consignmentId)}`)
       const data = await res.json()
       if (res.ok) {
-        toast.success(`Courier status: ${data.internalStatus ?? data.status}`)
+        toast.success(`Steadfast status: ${data.internalStatus ?? data.status}`)
         router.refresh()
       } else {
         toast.error(data.error || "Failed to refresh tracking")
       }
+    } catch (err: any) {
+      toast.error(err.message || "Error syncing Steadfast tracking")
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Re-check live fraud risk score from Steadfast
+  const handleRefreshFraudRisk = async () => {
+    if (!order.shippingPhone) {
+      toast.error("Order is missing shipping phone number")
+      return
+    }
+    setIsRefreshingRisk(true)
+    try {
+      const res = await fetch("/api/admin/courier/steadfast/fraud-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: order.shippingPhone }),
+      })
+      const data = await res.json()
+      if (res.ok && data.risk) {
+        setRiskData(data.risk)
+        toast.success("Steadfast fraud score refreshed")
+      } else {
+        toast.error(data.error || "Failed to fetch fraud score")
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Network error refreshing fraud score")
+    } finally {
+      setIsRefreshingRisk(false)
     }
   }
 
@@ -730,16 +765,16 @@ export default function OrderDetailsClient({
             </div>
           )}
 
-          {/* TAB 2: LOGISTICS & COURIER DISPATCH */}
+          {/* TAB 2: STEADFAST COURIER FULFILLMENT CENTER */}
           {activeWorkspaceTab === "fulfillment" && (
             <div className="bg-white border border-zinc-200/80 rounded-2xl p-5 sm:p-6 space-y-6 shadow-2xs">
               <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
                 <div>
                   <h2 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-indigo-600" />
-                    <span>Courier & Parcel Fulfillment Center</span>
+                    <Zap className="w-4 h-4 text-indigo-600" />
+                    <span>Steadfast Courier Fulfillment</span>
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">Automated Steadfast / Pathao parcel dispatch & tracking</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">Automated Steadfast 1-click dispatch, parcel booking & live tracking</p>
                 </div>
                 {order.delivery?.status && (
                   <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -750,18 +785,14 @@ export default function OrderDetailsClient({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-600">Selected Courier</label>
-                  <select
-                    value={deliveryData.courier}
-                    onChange={(e) => setDeliveryData({ ...deliveryData, courier: e.target.value })}
-                    className="w-full h-10 rounded-xl border border-zinc-300 bg-white px-3 text-xs font-bold text-zinc-800 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
-                  >
-                    <option value="STEADFAST">Steadfast Courier</option>
-                    <option value="PATHAO">Pathao Courier</option>
-                    <option value="REDX">RedX Delivery</option>
-                    <option value="PAPERFLY">Paperfly</option>
-                    <option value="SELF">Self Delivery</option>
-                  </select>
+                  <label className="text-xs font-bold uppercase tracking-wider text-zinc-600">Partner Courier</label>
+                  <div className="w-full h-10 rounded-xl border border-zinc-200 bg-zinc-50 px-3 flex items-center justify-between text-xs font-bold text-zinc-800 shadow-2xs">
+                    <span className="flex items-center gap-1.5 text-indigo-700">
+                      <Zap className="w-3.5 h-3.5 text-indigo-600" />
+                      Steadfast Courier
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">portal.packzy.com</span>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -794,55 +825,66 @@ export default function OrderDetailsClient({
                       type="text"
                       value={deliveryData.trackingCode}
                       onChange={(e) => setDeliveryData({ ...deliveryData, trackingCode: e.target.value })}
-                      placeholder="e.g. STF-8492048 or URL"
+                      placeholder="e.g. STF-8492048 or Tracking URL"
                       className="w-full h-10 rounded-xl border border-zinc-300 bg-white px-3 pr-9 text-xs font-mono font-bold text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
                     />
                     {deliveryData.trackingCode && (
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(deliveryData.trackingCode, "Tracking Code")}
-                        className="absolute right-2.5 text-zinc-400 hover:text-zinc-900"
-                        title="Copy Tracking Code"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
+                      <div className="absolute right-2.5 flex items-center gap-1">
+                        <a
+                          href={
+                            deliveryData.trackingCode.startsWith("http")
+                              ? deliveryData.trackingCode
+                              : `https://steadfast.com.bd/t/${deliveryData.trackingCode}`
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1 text-indigo-600 hover:text-indigo-800"
+                          title="Open Live Tracking Link"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(deliveryData.trackingCode, "Tracking Code")}
+                          className="p-1 text-zinc-400 hover:text-zinc-900"
+                          title="Copy Tracking Code"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Automated Actions */}
+              {/* 1-Click Automated Actions */}
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                {(deliveryData.courier === "PATHAO" || deliveryData.courier === "STEADFAST") && (
-                  <>
-                    {!deliveryData.consignmentId ? (
-                      <button
-                        type="button"
-                        onClick={dispatchToCourier}
-                        disabled={loading}
-                        className="flex-1 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
-                      >
-                        <Truck className="w-4 h-4" />
-                        <span>{loading ? "Creating parcel…" : `Dispatch to ${deliveryData.courier === "PATHAO" ? "Pathao" : "Steadfast"}`}</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={refreshCourierTracking}
-                        disabled={loading}
-                        className="flex-1 h-10 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                      >
-                        <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-                        <span>Refresh Live Tracking</span>
-                      </button>
-                    )}
-                  </>
+                {!deliveryData.consignmentId ? (
+                  <button
+                    type="button"
+                    onClick={dispatchToCourier}
+                    disabled={loading}
+                    className="flex-1 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors disabled:opacity-50"
+                  >
+                    <Zap className="w-4 h-4 text-amber-300" />
+                    <span>{loading ? "Booking Steadfast Parcel…" : "⚡ 1-Click Dispatch to Steadfast"}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={refreshCourierTracking}
+                    disabled={loading}
+                    className="flex-1 h-11 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                    <span>Sync Steadfast Tracking</span>
+                  </button>
                 )}
                 <button
                   type="button"
                   onClick={saveDelivery}
                   disabled={loading}
-                  className="h-10 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-colors shadow-2xs disabled:opacity-50"
+                  className="h-11 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold transition-colors shadow-2xs disabled:opacity-50"
                 >
                   {loading ? "Saving…" : "Save Delivery Info"}
                 </button>
@@ -880,14 +922,14 @@ export default function OrderDetailsClient({
                 Customer & Shipping
               </h2>
               <div className="flex items-center gap-2">
-                {customerRisk && (
+                {riskData && (
                   <span
                     className={cn(
                       "px-2 py-0.5 rounded-md text-[10px] font-black border uppercase tracking-wider",
-                      RISK_BADGE_CLASS[customerRisk.riskLevel] || "bg-zinc-100 text-zinc-600 border-zinc-200"
+                      RISK_BADGE_CLASS[riskData.riskLevel] || "bg-zinc-100 text-zinc-600 border-zinc-200"
                     )}
                   >
-                    {customerRisk.riskLevel} Risk
+                    {riskData.riskLevel} Risk
                   </span>
                 )}
                 {canEditShipping && !isEditingShipping && (
@@ -1115,58 +1157,77 @@ export default function OrderDetailsClient({
               )}
 
               {/* Customer Risk Details & Steadfast Intelligence */}
-              {customerRisk && (customerRisk.riskLevel !== "NEW" || customerRisk.steadfast) && (
-                <div className={cn("p-3.5 rounded-xl border text-[11px] space-y-2", RISK_BADGE_CLASS[customerRisk.riskLevel] || "bg-zinc-50 border-zinc-200 text-zinc-700")}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 font-bold">
-                      {customerRisk.riskLevel === "HIGH" ? (
-                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                      ) : customerRisk.riskLevel === "MEDIUM" ? (
-                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                      ) : (
-                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Fraud & Delivery Intelligence</span>
+                  <button
+                    type="button"
+                    onClick={handleRefreshFraudRisk}
+                    disabled={isRefreshingRisk}
+                    className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-indigo-600 hover:text-indigo-800 transition disabled:opacity-50"
+                  >
+                    <RefreshCw className={cn("w-3 h-3", isRefreshingRisk && "animate-spin")} />
+                    <span>{isRefreshingRisk ? "Checking Steadfast…" : "Re-check Fraud Score"}</span>
+                  </button>
+                </div>
+
+                {riskData && (riskData.riskLevel !== "NEW" || riskData.steadfast) ? (
+                  <div className={cn("p-3.5 rounded-xl border text-[11px] space-y-2", RISK_BADGE_CLASS[riskData.riskLevel] || "bg-zinc-50 border-zinc-200 text-zinc-700")}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-bold">
+                        {riskData.riskLevel === "HIGH" ? (
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                        ) : riskData.riskLevel === "MEDIUM" ? (
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                        ) : (
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                        )}
+                        <span>{riskData.riskLevel} Risk Profile</span>
+                      </div>
+                      {riskData.steadfast && (
+                        <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-white">
+                          Steadfast Verified
+                        </span>
                       )}
-                      <span>{customerRisk.riskLevel} Risk Profile</span>
                     </div>
-                    {customerRisk.steadfast && (
-                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-white">
-                        Steadfast Verified
-                      </span>
+
+                    {riskData.fraudWarning && (
+                      <p className="font-semibold text-rose-700 bg-rose-50 p-2 rounded-lg border border-rose-200/80">
+                        ⚠️ {riskData.fraudWarning}
+                      </p>
+                    )}
+
+                    {riskData.steadfast && (
+                      <div className="bg-white/80 p-2.5 rounded-lg border border-zinc-200/60 text-[10.5px] space-y-1">
+                        <div className="font-bold text-zinc-900 flex justify-between items-center">
+                          <span>⚡ Steadfast Courier Network:</span>
+                          <span className="text-zinc-600">
+                            {riskData.steadfast.success_rate !== undefined
+                              ? `${Math.round(riskData.steadfast.success_rate * 100)}% Success`
+                              : "No Prior Parcels"}
+                          </span>
+                        </div>
+                        <div className="text-zinc-600">
+                          Total Parcels: <strong>{riskData.steadfast.total_parcels ?? 0}</strong> (
+                          <span className="text-emerald-700 font-semibold">{riskData.steadfast.delivered_parcels ?? 0} delivered</span> /{" "}
+                          <span className="text-rose-700 font-semibold">{riskData.steadfast.cancelled_parcels ?? 0} returned</span>)
+                        </div>
+                      </div>
+                    )}
+
+                    {riskData.totalOrders > 0 && (
+                      <p className="text-[10px] text-zinc-600">
+                        Store History: <strong>{riskData.delivered}</strong> delivered of{" "}
+                        <strong>{riskData.totalOrders}</strong> total orders.
+                      </p>
                     )}
                   </div>
-
-                  {customerRisk.fraudWarning && (
-                    <p className="font-semibold text-rose-700 bg-rose-50 p-2 rounded-lg border border-rose-200/80">
-                      ⚠️ {customerRisk.fraudWarning}
-                    </p>
-                  )}
-
-                  {customerRisk.steadfast && (
-                    <div className="bg-white/80 p-2.5 rounded-lg border border-zinc-200/60 text-[10.5px] space-y-1">
-                      <div className="font-bold text-zinc-900 flex justify-between items-center">
-                        <span>⚡ Steadfast Courier Network:</span>
-                        <span className="text-zinc-600">
-                          {customerRisk.steadfast.success_rate !== undefined
-                            ? `${Math.round(customerRisk.steadfast.success_rate * 100)}% Success`
-                            : "No Prior Parcels"}
-                        </span>
-                      </div>
-                      <div className="text-zinc-600">
-                        Total Parcels: <strong>{customerRisk.steadfast.total_parcels ?? 0}</strong> (
-                        <span className="text-emerald-700 font-semibold">{customerRisk.steadfast.delivered_parcels ?? 0} delivered</span> /{" "}
-                        <span className="text-rose-700 font-semibold">{customerRisk.steadfast.cancelled_parcels ?? 0} returned</span>)
-                      </div>
-                    </div>
-                  )}
-
-                  {customerRisk.totalOrders > 0 && (
-                    <p className="text-[10px] text-zinc-600">
-                      Store History: <strong>{customerRisk.delivered}</strong> delivered of{" "}
-                      <strong>{customerRisk.totalOrders}</strong> total orders.
-                    </p>
-                  )}
-                </div>
-              )}
+                ) : (
+                  <div className="p-3 rounded-xl border border-zinc-200/70 bg-zinc-50/50 text-[11px] text-zinc-500">
+                    No negative delivery reports found for this customer.
+                  </div>
+                )}
+              </div>
             </div>
             )}
           </div>

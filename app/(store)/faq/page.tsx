@@ -1,8 +1,19 @@
-import { Metadata } from "next"
+import type { Metadata } from "next"
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
 export const metadata: Metadata = {
-  title: "FAQ — Berber Clothing",
-  description: "Frequently asked questions about orders, shipping, returns, and care at Berber Clothing.",
+  title: "Frequently Asked Questions (FAQ) | Berber Clothing",
+  description: "Find answers regarding orders, Cash on Delivery, sizing, delivery timelines across Bangladesh, and easy 7-day returns at Berber Clothing.",
+  alternates: {
+    canonical: `${SITE_URL}/faq`,
+  },
+  openGraph: {
+    title: "Frequently Asked Questions (FAQ) | Berber Clothing",
+    description: "Find answers regarding orders, Cash on Delivery, sizing, delivery timelines across Bangladesh, and easy 7-day returns.",
+    url: `${SITE_URL}/faq`,
+    siteName: "Berber Clothing",
+  },
 }
 
 const faqs = [

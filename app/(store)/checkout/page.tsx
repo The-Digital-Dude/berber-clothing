@@ -7,11 +7,11 @@ import { auth } from "@/lib/auth"
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ recover?: string }>
+  searchParams: Promise<{ recover?: string; coupon?: string }>
 }) {
   const session = await auth()
   const userId = session?.user?.id
-  const { recover } = await searchParams
+  const { recover, coupon } = await searchParams
 
   // Restore abandoned cart items if ?recover=sessionId
   let recoveredItems: any[] = []
@@ -96,6 +96,7 @@ export default async function CheckoutPage({
           storeCreditBalance={storeCreditBalance}
           userId={userId}
           recoveredItems={recoveredItems}
+          initialCouponCode={coupon || ""}
         />
       </div>
     </div>

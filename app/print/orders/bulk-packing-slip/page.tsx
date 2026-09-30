@@ -34,7 +34,7 @@ export default async function BulkPackingSlipPage({
         delivery: true,
       },
     }),
-    prisma.setting.findMany({ where: { key: { in: ["store_name", "support_phone"] } } }),
+    prisma.setting.findMany({ where: { key: { in: ["store_name", "support_phone", "store_url"] } } }),
   ])
 
   // Preserve the order the admin selected them in, not the DB's default order.
@@ -43,13 +43,12 @@ export default async function BulkPackingSlipPage({
   const map = Object.fromEntries(settings.map(s => [s.key, s.value]))
   const storeName = map.store_name || "Berber"
   const supportPhone = map.support_phone || ""
+  const siteUrl = (map.store_url || process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing").replace(/\/+$/, "")
 
-  // Generate QR codes for all orders in parallel
+  // Generate QR codes for all orders targeting on-site tracking in parallel
   const qrCodes = await Promise.all(
     orders.map(order => {
-      const trackingTarget = order.delivery?.trackingCode
-        ? `https://steadfast.com.bd/t/${order.delivery.trackingCode}`
-        : `https://berber.clothing/track?order=${order.orderNumber}`
+      const trackingTarget = `${siteUrl}/track?order=${encodeURIComponent(order.orderNumber)}`
       return generateQrCodeDataUrl(trackingTarget)
     })
   )
@@ -69,7 +68,7 @@ export default async function BulkPackingSlipPage({
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 20px;
           }
           .preview-banner {
             background: #18181b;
@@ -80,6 +79,9 @@ export default async function BulkPackingSlipPage({
             padding: 6px 14px;
             border-radius: 9999px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 8px;
           }
           .slip-wrap {
             width: 76.2mm;
@@ -105,8 +107,6 @@ export default async function BulkPackingSlipPage({
             background: #fff !important;
             padding: 0 !important;
             margin: 0 !important;
-            min-height: 0 !important;
-            gap: 0 !important;
             display: block !important;
           }
           .slip-wrap {
@@ -116,24 +116,27 @@ export default async function BulkPackingSlipPage({
             margin: 0 auto !important;
             width: 100% !important;
             max-width: 65mm !important;
-            height: auto !important;
-            max-height: 2.85in !important;
+            height: 3in !important;
+            max-height: 3in !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
             page-break-after: always !important;
             break-after: page !important;
-          }
-          .slip-wrap:last-child {
-            page-break-after: avoid !important;
-            break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            display: block !important;
           }
         }
       `}</style>
+
       <div className="preview-banner no-print">
-        🏷️ Steadfast 3" × 3" Bulk Labels ({orders.length} orders)
+        <span>🏷️ Bulk Steadfast Packing Slips ({orders.length} orders)</span>
       </div>
+
+      <div className="no-print mb-2">
+        <PrintButton />
+      </div>
+
       {orders.map((order, idx) => (
         <div key={order.id} className="slip-wrap">
           <PackingSlipContent
@@ -144,9 +147,6 @@ export default async function BulkPackingSlipPage({
           />
         </div>
       ))}
-      <div className="no-print">
-        <PrintButton />
-      </div>
     </div>
   )
 }

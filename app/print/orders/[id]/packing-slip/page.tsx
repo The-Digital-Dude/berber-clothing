@@ -21,14 +21,14 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
   })
   if (!order) notFound()
 
-  const settings = await prisma.setting.findMany({ where: { key: { in: ["store_name", "support_phone"] } } })
+  const settings = await prisma.setting.findMany({ where: { key: { in: ["store_name", "support_phone", "store_url"] } } })
   const map = Object.fromEntries(settings.map(s => [s.key, s.value]))
   const storeName = map.store_name || "Berber"
   const supportPhone = map.support_phone || ""
+  const siteUrl = map.store_url || process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
-  const trackingTarget = order.delivery?.trackingCode
-    ? `https://steadfast.com.bd/t/${order.delivery.trackingCode}`
-    : `https://berber.clothing/track?order=${order.orderNumber}`
+  // QR Code points to on-site live tracking page
+  const trackingTarget = `${siteUrl.replace(/\/+$/, "")}/track?order=${encodeURIComponent(order.orderNumber)}`
   const qrDataUrl = await generateQrCodeDataUrl(trackingTarget)
 
   return (

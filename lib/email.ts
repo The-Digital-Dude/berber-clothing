@@ -8,19 +8,27 @@ import prisma from "@/lib/prisma"
 
 async function getSmtpConfig() {
   const keys = ["smtp_host", "smtp_port", "smtp_secure", "smtp_user", "smtp_pass", "smtp_from_name", "smtp_from_email"]
-  const rows = await prisma.setting.findMany({ where: { key: { in: keys } } })
+  const rows = await prisma.setting.findMany({ where: { key: { in: keys } } }).catch(() => [])
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]))
-  return s
+  return {
+    smtp_host: s.smtp_host || process.env.SMTP_HOST || "",
+    smtp_port: s.smtp_port || process.env.SMTP_PORT || "587",
+    smtp_secure: s.smtp_secure || process.env.SMTP_SECURE || "false",
+    smtp_user: s.smtp_user || process.env.SMTP_USER || "",
+    smtp_pass: s.smtp_pass || process.env.SMTP_PASS || "",
+    smtp_from_name: s.smtp_from_name || process.env.SMTP_FROM_NAME || "",
+    smtp_from_email: s.smtp_from_email || process.env.SMTP_FROM_EMAIL || "",
+  }
 }
 
 async function getSenderMeta() {
   const rows = await prisma.setting.findMany({
     where: { key: { in: ["smtp_from_name", "smtp_from_email", "store_name", "support_email"] } },
-  })
+  }).catch(() => [])
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]))
   return {
-    name: s.smtp_from_name || s.store_name || "Berber",
-    email: s.smtp_from_email || s.support_email || process.env.BREVO_FROM_EMAIL || process.env.FROM_EMAIL || "noreply@berber.clothing",
+    name: s.smtp_from_name || process.env.SMTP_FROM_NAME || s.store_name || "Berber",
+    email: s.smtp_from_email || process.env.SMTP_FROM_EMAIL || s.support_email || process.env.BREVO_FROM_EMAIL || process.env.FROM_EMAIL || "noreply@berber.clothing",
   }
 }
 
@@ -216,9 +224,9 @@ export async function sendShippingDispatched(data: {
     <hr class="divider">
     <div class="grid-2">
       <div><div class="label">Courier</div><div class="value">${data.courierName}</div></div>
-      <div><div class="label">Tracking number</div><div class="value" style="font-family:monospace">${data.trackingNumber}</div></div>
+      <div><div class="label">Tracking number</div><div class="value" style="font-family:monospace">${data.trackingNumber || data.orderNumber}</div></div>
     </div>
-    ${data.trackingUrl ? `<a href="${data.trackingUrl}" class="btn">Track shipment →</a>` : `<a href="${store.url}/account/orders" class="btn">View order →</a>`}
+    <a href="${data.trackingUrl || `${store.url}/track?order=${encodeURIComponent(data.orderNumber)}`}" class="btn">Track live order →</a>
     <p class="muted" style="margin-top:16px">Delivery typically takes 1–3 business days after dispatch.</p>`
 
   await sendMail(data.to, `Dispatched — ${data.orderNumber} is on the way!`, baseTemplate(store, content))
@@ -252,7 +260,7 @@ export async function sendOrderStatusUpdate(data: {
       <span class="tag ${isNegative ? "tag-red" : "tag-green"}" style="font-size:14px;padding:6px 16px;margin-top:6px;display:inline-block">${label}</span>
     </div>
     ${data.note ? `<div class="alert">${data.note}</div>` : ""}
-    <a href="${store.url}/account/orders" class="btn">View order →</a>`
+    <a href="${store.url}/track?order=${encodeURIComponent(data.orderNumber)}" class="btn">Track live order →</a>`
 
   await sendMail(data.to, `${label} — ${data.orderNumber}`, baseTemplate(store, content))
 }
@@ -308,37 +316,57 @@ export async function sendBackInStockAlert(data: {
 export async function sendAbandonedCartEmail(data: {
   to: string
   customerName: string
-  cartItems: { name: string; size: string; color: string; quantity: number; price: number; image?: string }[]
+  cartItems: { name?: string; productName?: string; size?: string; color?: string; quantity: number; price: number; image?: string }[]
   cartTotal: number
   recoveryUrl: string
+  couponCode?: string
+  discountPercent?: number
   note?: string
 }) {
   const store = await getStoreMeta()
+  const couponCode = data.couponCode || "COMEBACK5"
+  const discountPercent = data.discountPercent || 5
+
   const itemRows = data.cartItems.map((i) => `
-    <div class="item-row">
-      ${i.image ? `<img src="${i.image}" alt="${i.name}" style="width:56px;height:56px;object-fit:cover;border-radius:6px;margin-right:12px;flex-shrink:0">` : ""}
+    <div class="item-row" style="display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #eee">
+      ${i.image ? `<img src="${i.image}" alt="${i.name || i.productName || "Item"}" style="width:56px;height:56px;object-fit:cover;border-radius:8px;margin-right:12px;flex-shrink:0">` : ""}
       <div style="flex:1">
-        <div style="font-weight:500">${i.name}</div>
-        <div class="muted">${i.size} / ${i.color} &nbsp;×${i.quantity}</div>
+        <div style="font-weight:600;font-size:14px;color:#18181b">${i.name || i.productName || "Item"}</div>
+        <div class="muted" style="font-size:12px;color:#71717a">${[i.size, i.color].filter(Boolean).join(" / ") || "Standard"} &nbsp;×${i.quantity}</div>
       </div>
-      <div style="font-weight:500">৳${(i.price * i.quantity).toLocaleString()}</div>
+      <div style="font-weight:700;font-size:14px;color:#18181b">৳${(i.price * i.quantity).toLocaleString()}</div>
     </div>`).join("")
 
   const noteHtml = data.note
-    ? `<p style="margin-top:16px;padding:12px 16px;background:#fef9ec;border-left:3px solid #c9a84c;border-radius:4px;font-size:14px;color:#92670a">${data.note}</p>`
+    ? `<p style="margin-top:16px;padding:12px 16px;background:#fef9ec;border-left:3px solid #c9a84c;border-radius:6px;font-size:13px;color:#92670a">${data.note}</p>`
     : ""
 
-  const content = `
-    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px">You left something behind</h1>
-    <p class="muted">Hi ${data.customerName}, you left ${data.cartItems.length} item${data.cartItems.length > 1 ? "s" : ""} in your bag.</p>
-    <hr class="divider">
-    ${itemRows}
-    <div class="total-final" style="margin-top:16px"><span>Total</span><span>৳${data.cartTotal.toLocaleString()}</span></div>
-    ${noteHtml}
-    <a href="${data.recoveryUrl}" class="btn">Complete your order →</a>
-    <p class="muted" style="margin-top:16px">This link takes you straight back to checkout. Your bag is saved.</p>`
+  const couponHtml = `
+    <div style="background:#faf8f5;border:2px dashed #c9a84c;border-radius:12px;padding:20px;text-align:center;margin:24px 0">
+      <span style="display:inline-block;background:#c9a84c;color:#fff;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;padding:3px 10px;border-radius:9999px;margin-bottom:8px">Special ${discountPercent}% Discount</span>
+      <h3 style="font-size:16px;font-weight:700;color:#18181b;margin-bottom:6px">Complete your order today & save ${discountPercent}%</h3>
+      <p style="font-size:12px;color:#71717a;margin-bottom:12px">Use this exclusive recovery voucher code at checkout:</p>
+      <div style="display:inline-block;background:#18181b;color:#fef08a;font-family:monospace;font-size:20px;font-weight:900;letter-spacing:4px;padding:8px 24px;border-radius:8px;border:1px solid #27272a">${couponCode}</div>
+      <p style="font-size:11px;color:#a1a1aa;margin-top:10px">The 5% discount is automatically applied when you click the button below.</p>
+    </div>`
 
-  await sendMail(data.to, `Your bag is waiting — complete your ${store.name} order`, baseTemplate(store, content))
+  const content = `
+    <h1 style="font-size:24px;font-weight:800;letter-spacing:-0.5px;color:#18181b;margin-bottom:8px">You left something behind</h1>
+    <p class="muted" style="color:#71717a;font-size:14px">Hi ${data.customerName}, your bag items are reserved, but stock is limited.</p>
+    <hr class="divider" style="border:none;border-top:1px solid #eee;margin:16px 0">
+    ${itemRows}
+    <div class="total-final" style="display:flex;justify-content:space-between;margin-top:16px;font-size:16px;font-weight:800;color:#18181b">
+      <span>Subtotal</span>
+      <span>৳${data.cartTotal.toLocaleString()}</span>
+    </div>
+    ${couponHtml}
+    ${noteHtml}
+    <div style="text-align:center;margin-top:20px">
+      <a href="${data.recoveryUrl}" class="btn" style="display:inline-block;background:#18181b;color:#fff;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:14px 32px;border-radius:9999px;text-decoration:none">Claim 5% Off & Checkout →</a>
+    </div>
+    <p class="muted" style="margin-top:20px;font-size:11px;text-align:center;color:#a1a1aa">This link takes you straight back to checkout with your saved bag and discount code preloaded.</p>`
+
+  await sendMail(data.to, `5% OFF your reserved bag — complete your ${store.name} order`, baseTemplate(store, content))
 }
 
 export async function sendGiftCardEmail(data: {

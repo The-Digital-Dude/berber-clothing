@@ -2,9 +2,26 @@ import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { sendAbandonedCartEmail } from "@/lib/email"
 
-// Called hourly by Supabase pg_cron (Vercel Cron was removed from
-// vercel.json to avoid duplicate/triple firing): GET /api/cron/abandoned-cart
-// Sends email 1 at 1h, email 2 at 24h (with optional coupon incentive)
+async function ensureComebackCoupon() {
+  try {
+    return await prisma.coupon.upsert({
+      where: { code: "COMEBACK5" },
+      update: { isActive: true, value: 5, type: "PERCENTAGE" },
+      create: {
+        code: "COMEBACK5",
+        type: "PERCENTAGE",
+        value: 5,
+        isActive: true,
+      },
+    })
+  } catch (err) {
+    console.error("[abandoned-cart] Failed to upsert COMEBACK5 coupon:", err)
+    return null
+  }
+}
+
+// Called hourly by Supabase pg_cron: GET /api/cron/abandoned-cart
+// Sends email 1 at 1h, email 2 at 24h (with 5% COMEBACK5 discount voucher)
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization")
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -13,6 +30,9 @@ export async function GET(req: Request) {
 
   const setting = await prisma.setting.findUnique({ where: { key: "abandoned_cart_email_enabled" } })
   if (setting?.value !== "true") return NextResponse.json({ skipped: true })
+
+  // Ensure 5% discount coupon exists in the database
+  await ensureComebackCoupon()
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
   const now = Date.now()
@@ -40,17 +60,22 @@ export async function GET(req: Request) {
         customerName: cart.name || "there",
         cartItems: items,
         cartTotal,
-        recoveryUrl: `${siteUrl}/checkout?recover=${cart.sessionId}`,
+        couponCode: "COMEBACK5",
+        discountPercent: 5,
+        recoveryUrl: `${siteUrl}/checkout?recover=${cart.sessionId}&coupon=COMEBACK5`,
+        note: "Complete your order now and enjoy an exclusive 5% discount with code COMEBACK5.",
       })
       await prisma.abandonedCart.update({
         where: { id: cart.id },
         data: { email1SentAt: new Date(), emailSent: true, emailSentAt: new Date() },
       })
       sent1++
-    } catch {}
+    } catch (err) {
+      console.error("[abandoned-cart] Failed to send email 1:", err)
+    }
   }
 
-  // ── Email 2: after 24 hours (with discount coupon if available) ──────────
+  // ── Email 2: after 24 hours (with discount coupon reminder) ──────────────
   const email2Cutoff = new Date(now - 24 * 60 * 60 * 1000)
   const email2Carts = await prisma.abandonedCart.findMany({
     where: {
@@ -63,11 +88,6 @@ export async function GET(req: Request) {
     take: 100,
   })
 
-  // Look for an auto-coupon reserved for abandoned cart recovery
-  const recoveryCoupon = await prisma.coupon.findFirst({
-    where: { code: { startsWith: "COMEBACK" }, isActive: true },
-  }).catch(() => null)
-
   let sent2 = 0
   for (const cart of email2Carts) {
     try {
@@ -75,28 +95,28 @@ export async function GET(req: Request) {
       if (!items.length || !cart.email) continue
       const cartTotal = items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
 
-      // Build recovery URL — include coupon code if available
-      let recoveryUrl = `${siteUrl}/checkout?recover=${cart.sessionId}`
-      if (recoveryCoupon) recoveryUrl += `&coupon=${recoveryCoupon.code}`
-
-      // Reuse the same email template; add note about discount
       await sendAbandonedCartEmail({
         to: cart.email,
         customerName: cart.name || "there",
         cartItems: items,
         cartTotal,
-        recoveryUrl,
-        note: recoveryCoupon
-          ? `Use code ${recoveryCoupon.code} for ${recoveryCoupon.type === "PERCENTAGE" ? `${recoveryCoupon.value}% off` : `৳${recoveryCoupon.value} off`} — today only!`
-          : "Your items won't stay reserved for long.",
+        couponCode: "COMEBACK5",
+        discountPercent: 5,
+        recoveryUrl: `${siteUrl}/checkout?recover=${cart.sessionId}&coupon=COMEBACK5`,
+        note: "Your reserved bag won't stay saved for long! Use code COMEBACK5 for 5% off before items sell out.",
       })
       await prisma.abandonedCart.update({
         where: { id: cart.id },
         data: { email2SentAt: new Date() },
       })
       sent2++
-    } catch {}
+    } catch (err) {
+      console.error("[abandoned-cart] Failed to send email 2:", err)
+    }
   }
 
-  return NextResponse.json({ email1: { processed: email1Carts.length, sent: sent1 }, email2: { processed: email2Carts.length, sent: sent2 } })
+  return NextResponse.json({
+    email1: { processed: email1Carts.length, sent: sent1 },
+    email2: { processed: email2Carts.length, sent: sent2 },
+  })
 }

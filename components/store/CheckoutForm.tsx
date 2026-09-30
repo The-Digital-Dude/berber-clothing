@@ -38,6 +38,7 @@ export default function CheckoutForm({
   storeCreditBalance = 0,
   userId,
   recoveredItems,
+  initialCouponCode = "",
 }: {
   freeShippingThreshold?: number | null
   shippingChargeAmount?: number
@@ -57,6 +58,7 @@ export default function CheckoutForm({
   storeCreditBalance?: number
   userId?: string
   recoveredItems?: any[]
+  initialCouponCode?: string
 }) {
   const { items, clearCart, addItem } = useCartStore()
   const router = useRouter()
@@ -105,6 +107,38 @@ export default function CheckoutForm({
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Real-time abandoned cart snapshotting as shopper enters contact info
+  useEffect(() => {
+    if (!items.length) return
+    const currentEmail = guestEmail || ""
+    const currentPhone = address.phone || ""
+    const currentName = address.name || ""
+    if (!currentEmail && !currentPhone) return
+
+    const timer = setTimeout(() => {
+      let sessionId = typeof window !== "undefined" ? localStorage.getItem("berber_cart_session") : null
+      if (!sessionId) {
+        sessionId = Math.random().toString(36).slice(2) + Date.now().toString(36)
+        if (typeof window !== "undefined") localStorage.setItem("berber_cart_session", sessionId)
+      }
+      const cartSubtotal = items.reduce((s, i) => s + i.price * i.quantity, 0)
+      fetch("/api/store/abandoned-cart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          email: currentEmail || null,
+          phone: currentPhone || null,
+          name: currentName || null,
+          items,
+          subtotal: cartSubtotal,
+        }),
+      }).catch(() => {})
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [guestEmail, address.phone, address.name, items])
+
   // Step 3 — extras
   const [orderNote, setOrderNote] = useState("")
   const [giftWrap, setGiftWrap] = useState(false)
@@ -123,10 +157,43 @@ export default function CheckoutForm({
   const [customFields, setCustomFields] = useState<Record<string, string>>({})
 
   // Coupon
-  const [couponCode, setCouponCode] = useState("")
+  const [couponCode, setCouponCode] = useState(initialCouponCode ? initialCouponCode.toUpperCase().trim() : "")
   const [appliedCoupon, setAppliedCoupon] = useState<{ couponId: string; couponCode: string; discount: number; message: string } | null>(null)
   const [couponError, setCouponError] = useState("")
   const [couponLoading, setCouponLoading] = useState(false)
+
+  // Auto-apply initialCouponCode when items are available
+  useEffect(() => {
+    if (!initialCouponCode || appliedCoupon) return
+    const code = initialCouponCode.toUpperCase().trim()
+    const activeItems = items.length > 0 ? items : (recoveredItems && recoveredItems.length > 0 ? recoveredItems : [])
+    if (!activeItems.length) return
+
+    let cancelled = false
+    setCouponLoading(true)
+    fetch("/api/store/apply-coupon", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, items: activeItems, userId, guestEmail: guestEmail || undefined }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        if (data.couponId) {
+          setAppliedCoupon(data)
+          setCouponCode(code)
+          toast.success(`🎉 Voucher applied: ${data.message || `${code} 5% discount applied`}`)
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setCouponLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [initialCouponCode, items.length, recoveredItems?.length, userId, guestEmail])
 
   // Gift card
   const [gcCode, setGcCode] = useState("")

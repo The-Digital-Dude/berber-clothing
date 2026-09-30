@@ -23,6 +23,8 @@ const STATUS_META: Record<string, { label: string; icon: any }> = {
   DELIVERED: { label: "Delivered", icon: Home },
 }
 
+export const dynamic = "force-dynamic"
+
 export default async function OrderConfirmationPage({ 
   params, 
   searchParams 

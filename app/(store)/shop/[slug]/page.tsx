@@ -33,25 +33,43 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     include: { images: { take: 1, orderBy: { sortOrder: "asc" } }, category: true },
   }).catch(() => null)
 
-  if (!product) return { title: "Product Not Found" }
+  if (!product) return { title: "Product Not Found | Berber Clothing" }
 
-  const image = (product as any).ogImage || product.images[0]?.url
+  const rawImage = (product as any).ogImage || product.images[0]?.url || ""
   const price = Number(product.price).toLocaleString()
-  const title = (product as any).seoTitle || `${product.name} — ৳${price}`
-  const description = (product as any).seoDescription || product.description || `Shop ${product.name} at Berber. Premium quality fashion from Bangladesh.`
-  const keywords = (product as any).seoKeywords || undefined
+  const title = (product as any).seoTitle || `${product.name} — ৳${price} | Cash on Delivery in Bangladesh | Berber Clothing`
+  const description = (product as any).seoDescription || product.description || `Buy ${product.name} online at ৳${price} in Bangladesh. Premium modern formalwear with express delivery and Cash on Delivery.`
+  const keywords = (product as any).seoKeywords || [product.name, product.category?.name || "Menswear", "Bangladesh suits", "mens formalwear BD", "buy blazer Bangladesh", "Cash on Delivery BD"]
+
+  const ogImageUrl = `${SITE_URL}/api/og?title=${encodeURIComponent(product.name)}&price=${encodeURIComponent(price)}&image=${encodeURIComponent(rawImage)}&category=${encodeURIComponent(product.category?.name || "Modern Formalwear")}`
 
   return {
     title,
     description,
     keywords,
+    alternates: {
+      canonical: `${SITE_URL}/shop/${slug}`,
+    },
     openGraph: {
       title,
       description,
       url: `${SITE_URL}/shop/${slug}`,
-      images: image ? [{ url: image, width: 800, height: 1000, alt: product.name }] : [],
+      siteName: "Berber Clothing",
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${product.name} — Berber Clothing`,
+        },
+      ],
     },
-    twitter: { card: "summary_large_image", title, description, images: image ? [image] : [] },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImageUrl],
+    },
   }
 }
 

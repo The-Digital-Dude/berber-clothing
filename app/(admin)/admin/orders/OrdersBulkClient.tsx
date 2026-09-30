@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Eye, Printer, AlertTriangle, ChevronRight, PanelRightOpen,
-  MessageSquare, Edit, Truck, CheckCircle2, Copy, ShieldCheck
+  MessageSquare, Edit, Truck, CheckCircle2, Copy, ShieldCheck, Zap
 } from "lucide-react"
 import Link from "next/link"
 import OrderQuickDrawer from "@/components/admin/OrderQuickDrawer"
@@ -70,6 +70,7 @@ export default function OrdersBulkClient({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState("")
   const [loading, setLoading] = useState(false)
+  const [isBulkDispatching, setIsBulkDispatching] = useState(false)
   const [drawerOrderId, setDrawerOrderId] = useState<string | null>(null)
   const [editingOrder, setEditingOrder] = useState<any | null>(null)
 
@@ -112,6 +113,30 @@ export default function OrdersBulkClient({
       toast.error(e.message || "Failed to update orders")
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleBulkDispatchSteadfast() {
+    if (selected.size === 0) return
+    setIsBulkDispatching(true)
+    try {
+      const res = await fetch("/api/admin/orders/bulk-dispatch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderIds: Array.from(selected) }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`⚡ Successfully dispatched ${data.dispatched} orders to Steadfast!${data.failed > 0 ? ` (${data.failed} skipped/failed)` : ""}`)
+        router.refresh()
+        setSelected(new Set())
+      } else {
+        toast.error(data.error || "Failed to bulk dispatch to Steadfast")
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error bulk dispatching to Steadfast")
+    } finally {
+      setIsBulkDispatching(false)
     }
   }
 
@@ -175,7 +200,16 @@ export default function OrdersBulkClient({
         </div>
 
         {someSelected && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleBulkDispatchSteadfast}
+              disabled={isBulkDispatching || loading}
+              className="h-8 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-2xs"
+            >
+              <Zap className={cn("h-3.5 w-3.5 text-amber-300", isBulkDispatching && "animate-spin")} />
+              <span>{isBulkDispatching ? "Dispatching to Steadfast…" : "⚡ Bulk Dispatch to Steadfast"}</span>
+            </Button>
             <Button
               size="sm"
               variant="outline"

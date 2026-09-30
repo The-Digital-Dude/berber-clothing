@@ -12,6 +12,10 @@ type SlipOrder = {
   paymentMethod: string
   paymentStatus: string
   total: number | string
+  depositAmount?: number | string | null
+  depositPaid?: boolean | null
+  advanceCharge?: number | string | null
+  advancePaid?: boolean | null
   note?: string | null
   giftWrap?: boolean
   giftMessage?: string | null
@@ -36,8 +40,12 @@ export function PackingSlipContent({
   qrDataUrl?: string
 }) {
   const isPaid = order.paymentStatus?.toUpperCase() === "PAID"
-  const sfId = order.delivery?.consignmentId || order.delivery?.trackingCode || order.orderNumber
-  const trackingCode = order.delivery?.trackingCode || sfId
+  
+  // Use official Steadfast Consignment ID if dispatched, otherwise fallback to Order Number
+  const hasConsignment = Boolean(order.delivery?.consignmentId)
+  const sfId = order.delivery?.consignmentId || order.orderNumber
+  const trackingCode = order.delivery?.trackingCode || (hasConsignment ? order.delivery?.consignmentId : order.orderNumber)
+  
   const barcodeSvg = generateCode128Svg(String(sfId), 26)
 
   // Format SF-ID with spaces like the official Steadfast label (e.g. 3 0 2 0 8 8 1 9 0)
@@ -54,6 +62,12 @@ export function PackingSlipContent({
   })
 
   const locationParts = [order.shippingArea, order.shippingDistrict].filter(Boolean).join(", ")
+
+  // Accurate COD Net Collect Calculation
+  const totalNum = Number(order.total) || 0
+  const depositNum = order.depositPaid ? Number(order.depositAmount || 0) : 0
+  const advanceNum = order.advancePaid ? Number(order.advanceCharge || 0) : 0
+  const netCodAmount = isPaid || order.paymentMethod !== "COD" ? 0 : Math.max(0, Math.round(totalNum - depositNum - advanceNum))
 
   return (
     <div
@@ -74,7 +88,7 @@ export function PackingSlipContent({
       {/* 1. Steadfast Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "2px", borderBottom: "1.5px solid #000" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          {/* Steadfast Swirl / Brand Logo */}
+          {/* Brand Logo Icon */}
           <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: "9px" }}>
             B
           </div>
@@ -84,18 +98,20 @@ export function PackingSlipContent({
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "7px", fontWeight: 800, color: "#000" }}>Merchant ID: K8U7MIIN</div>
-          <div style={{ fontSize: "6.5px", fontWeight: 700, color: "#444" }}>Courier: <strong>STEADFAST</strong></div>
+          <div style={{ fontSize: "7px", fontWeight: 800, color: "#000" }}>Courier: <strong>STEADFAST</strong></div>
+          <div style={{ fontSize: "6.5px", fontWeight: 700, color: "#444" }}>
+            {hasConsignment ? `CID: ${order.delivery?.consignmentId}` : "Pre-Dispatch"}
+          </div>
           {order.delivery?.trackingCode && (
             <div style={{ fontSize: "6.5px", color: "#222" }}>TRK: {order.delivery.trackingCode}</div>
           )}
         </div>
       </div>
 
-      {/* 2. Barcode Section */}
+      {/* 2. Barcode Section (Steadfast Consignment ID) */}
       <div style={{ padding: "2px 0 1px", textAlign: "center", borderBottom: "1px dashed #000" }}>
         <div style={{ width: "96%", margin: "0 auto", height: "24px" }} dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
-        <div style={{ fontSize: "8.5px", fontWeight: 800, letterSpacing: "2.5px", marginTop: "1px" }}>
+        <div style={{ fontSize: "8.5px", fontWeight: 800, letterSpacing: "2px", marginTop: "1px" }}>
           {spacedSfId}
         </div>
       </div>
@@ -177,10 +193,10 @@ export function PackingSlipContent({
       {/* 6. Cash on Delivery Box (Official Steadfast Style) */}
       <div style={{ border: "1.5px solid #000", padding: "2px 4px", margin: "2px 0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff" }}>
         <div style={{ fontSize: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-          {isPaid ? "PAID ONLINE" : "CASH ON DELIVERY"}
+          {isPaid ? "PAID ONLINE" : netCodAmount === 0 ? "PAID IN ADVANCE" : "CASH ON DELIVERY"}
         </div>
         <div style={{ fontSize: "11px", fontWeight: 900 }}>
-          ৳ {Number(order.total).toLocaleString()}
+          ৳ {netCodAmount.toLocaleString()}
         </div>
       </div>
 

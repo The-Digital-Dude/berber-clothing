@@ -22,7 +22,7 @@ const SETTLED_STATUSES = ["DELIVERED", "CANCELLED", "RETURNED"] as const
  * Computes a phone number's delivery track record from our own store history
  * combined with real-time Steadfast Courier Network fraud checks.
  */
-export async function getCustomerRisk(phone: string): Promise<CustomerRisk> {
+export async function getCustomerRisk(phone: string, forceFresh = false): Promise<CustomerRisk> {
   const normalizedPhone = phone.trim()
 
   const [orders, sfFraud] = await Promise.all([
@@ -30,7 +30,7 @@ export async function getCustomerRisk(phone: string): Promise<CustomerRisk> {
       where: { shippingPhone: normalizedPhone },
       select: { status: true },
     }),
-    checkSteadfastFraud(normalizedPhone),
+    checkSteadfastFraud(normalizedPhone, forceFresh),
   ])
 
   const totalOrders = orders.length
