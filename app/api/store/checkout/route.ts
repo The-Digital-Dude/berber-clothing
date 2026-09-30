@@ -497,6 +497,9 @@ export async function POST(req: Request) {
         datasetId: pixelSetting?.value || null,
         contentIds: items.map((item: any) => item.productId),
         externalId: userId || toEmail || address.phone || null,
+        fullName: address.name || null,
+        city: address.district || null,
+        state: address.division || null,
       })
     })().catch(() => {})
 

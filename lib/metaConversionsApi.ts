@@ -6,6 +6,13 @@ function sha256(value: string): string {
   return crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex")
 }
 
+// Meta's matching docs call for stripping punctuation/whitespace from city and
+// state before hashing (e.g. "Cox's Bazar" -> "coxsbazar") -- unnormalized
+// values hash to something that never matches Meta's own normalized copy.
+function sha256Normalized(value: string): string {
+  return sha256(value.replace(/[^a-zA-Z0-9]/g, ""))
+}
+
 // Bangladeshi phone numbers are often entered without the country code —
 // Meta requires E.164-ish digits (country code + number, no symbols) before hashing.
 function normalizePhone(phone: string): string {
@@ -32,6 +39,12 @@ type PurchaseEventInput = {
   contentIds?: string[]
   /** A stable per-customer identifier (userId for logged-in customers, or an email/phone-derived fallback for guests) — hashed before sending. Meta uses this as an extra cross-device matching signal alongside em/ph. */
   externalId?: string | null
+  /** Customer's full name as entered at checkout — split into fn/ln for Meta. */
+  fullName?: string | null
+  /** District — the closest match to Meta's "city" (ct) field for a Bangladeshi address. */
+  city?: string | null
+  /** Division — the closest match to Meta's "state" (st) field for a Bangladeshi address. */
+  state?: string | null
 }
 
 /**
@@ -54,6 +67,15 @@ export async function sendPurchaseEvent(input: PurchaseEventInput): Promise<void
     if (input.fbp) userData.fbp = input.fbp
     if (input.fbc) userData.fbc = input.fbc
     if (input.externalId) userData.external_id = [sha256(input.externalId)]
+    if (input.fullName) {
+      const [firstName, ...rest] = input.fullName.trim().split(/\s+/)
+      if (firstName) userData.fn = [sha256(firstName)]
+      if (rest.length) userData.ln = [sha256(rest.join(" "))]
+    }
+    if (input.city) userData.ct = [sha256Normalized(input.city)]
+    if (input.state) userData.st = [sha256Normalized(input.state)]
+    // Every order ships within Bangladesh -- country is a static, always-accurate signal.
+    userData.country = [sha256("bd")]
 
     const body = {
       data: [
