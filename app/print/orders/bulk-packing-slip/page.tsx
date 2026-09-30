@@ -58,7 +58,7 @@ export default async function BulkPackingSlipPage({
         <style>{`
           @page {
             size: 3in 3in;
-            margin: 2mm;
+            margin: 0mm;
           }
           * {
             box-sizing: border-box;
@@ -73,7 +73,7 @@ export default async function BulkPackingSlipPage({
           }
           .slip-wrap {
             width: 100%;
-            max-width: 76mm;
+            max-width: 76.2mm;
             background: #fff;
             overflow: hidden;
             page-break-inside: avoid;
@@ -82,8 +82,8 @@ export default async function BulkPackingSlipPage({
             break-after: page;
           }
           .slip-wrap:last-child {
-            page-break-after: auto;
-            break-after: auto;
+            page-break-after: avoid;
+            break-after: avoid;
           }
           @media screen {
             body {
@@ -106,17 +106,26 @@ export default async function BulkPackingSlipPage({
               box-shadow: 0 2px 8px rgba(0,0,0,0.15);
             }
             .slip-wrap {
-              width: 76mm;
-              min-height: 76mm;
+              width: 76.2mm;
+              height: 76.2mm;
               background: #fff;
               box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
               border-radius: 4px;
-              padding: 3mm;
+              padding: 2.5mm 3mm;
             }
           }
           @media print {
+            html, body {
+              width: 3in !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
             .preview-banner, button {
               display: none !important;
+              visibility: hidden !important;
+              height: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
             body {
               background: #fff !important;
@@ -127,9 +136,21 @@ export default async function BulkPackingSlipPage({
             .slip-wrap {
               box-shadow: none !important;
               border-radius: 0 !important;
-              padding: 0 !important;
-              max-width: 100% !important;
-              width: 100% !important;
+              padding: 2mm 2.5mm !important;
+              max-width: 3in !important;
+              width: 3in !important;
+              height: 3in !important;
+              max-height: 3in !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-after: always !important;
+              break-after: page !important;
+            }
+            .slip-wrap:last-child {
+              page-break-after: avoid !important;
+              break-after: avoid !important;
             }
           }
         `}</style>
