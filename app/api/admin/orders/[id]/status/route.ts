@@ -5,6 +5,7 @@ import { sendOrderStatusUpdate, sendShippingDispatched, sendOrderDelivered } fro
 import { buildWhatsAppMessage, buildWaLink, sendWhatsAppMessage } from "@/lib/whatsapp"
 import { processReferral } from "@/lib/referral"
 import { clawbackPointsForOrder } from "@/lib/loyalty"
+import { createAdminNotification } from "@/lib/adminNotifications"
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await requireAdmin()
@@ -47,6 +48,17 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // or returned, so a customer can't order, earn points, cancel, and keep them.
     if ((status === "CANCELLED" || status === "RETURNED") && order.userId) {
       clawbackPointsForOrder(order.id).catch(() => {})
+    }
+
+    if (status === "CANCELLED" || status === "RETURNED") {
+      const customerName = order.user?.name || order.shippingName || "Customer"
+      createAdminNotification({
+        type: status === "CANCELLED" ? "order_cancelled" : "order_returned",
+        title: `Order #${order.orderNumber} ${status === "CANCELLED" ? "cancelled" : "returned"}`,
+        message: `${customerName}'s order was marked ${status.toLowerCase()}`,
+        link: `/admin/orders/${order.id}`,
+        entityId: order.id,
+      })
     }
 
     // Reseller profit crediting on successful delivery

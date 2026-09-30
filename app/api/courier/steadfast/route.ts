@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/adminAuth"
 import { createConsignment, getConsignmentStatus } from "@/lib/steadfast"
 import { sendOrderDelivered, sendOrderStatusUpdate } from "@/lib/email"
 import { clawbackPointsForOrder } from "@/lib/loyalty"
+import { createAdminNotification } from "@/lib/adminNotifications"
 
 export const dynamic = "force-dynamic"
 
@@ -171,6 +172,13 @@ export async function GET(req: NextRequest) {
       }
       if (internalStatus === "RETURNED") {
         clawbackPointsForOrder(order.id).catch(() => {})
+        createAdminNotification({
+          type: "order_returned",
+          title: `Order #${order.orderNumber} returned`,
+          message: `${order.user?.name || order.shippingName || "Customer"}'s order was returned (Steadfast)`,
+          link: `/admin/orders/${order.id}`,
+          entityId: order.id,
+        })
       }
     }
 

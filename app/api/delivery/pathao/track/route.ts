@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma"
 import { trackParcel } from "@/lib/pathao"
 import { sendOrderDelivered, sendOrderStatusUpdate } from "@/lib/email"
 import { clawbackPointsForOrder } from "@/lib/loyalty"
+import { createAdminNotification } from "@/lib/adminNotifications"
 
 export async function GET(req: Request) {
   try {
@@ -74,6 +75,13 @@ export async function GET(req: Request) {
           }).catch(() => {})
         }
         clawbackPointsForOrder(orderId).catch(() => {})
+        createAdminNotification({
+          type: "order_returned",
+          title: `Order #${order.orderNumber} returned`,
+          message: `${order.user?.name || order.shippingName || "Customer"}'s order was returned (Pathao)`,
+          link: `/admin/orders/${order.id}`,
+          entityId: order.id,
+        })
       }
     }
 

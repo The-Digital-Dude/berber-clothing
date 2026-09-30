@@ -621,6 +621,24 @@ model StockAlert {
 }
 
 // ─────────────────────────────────────────────
+// ADMIN NOTIFICATION CENTER
+// ─────────────────────────────────────────────
+
+model AdminNotification {
+  id        String   @id @default(cuid())
+  type      String   // "new_order" | "low_stock" | "order_cancelled" | "order_returned" | "new_customer"
+  title     String
+  message   String
+  link      String?
+  entityId  String?  // order/variant/customer id this notification is about, for reference
+  readBy    String[] @default([]) // admin user ids who have read this -- read state is per-admin, not global
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("admin_notifications")
+}
+
+// ─────────────────────────────────────────────
 // BANNERS & SETTINGS
 // ─────────────────────────────────────────────
 

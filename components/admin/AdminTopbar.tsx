@@ -12,6 +12,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sidebar, primaryItems, groups } from "@/components/admin/Sidebar"
 import AdminBreadcrumbs from "@/components/admin/AdminBreadcrumbs"
+import AdminNotificationBell from "@/components/admin/AdminNotificationBell"
 import { cn } from "@/lib/utils"
 
 type SearchResult = {
@@ -269,13 +270,7 @@ export default function AdminTopbar({ email }: { email: string }) {
             <span>Store</span>
           </Link>
 
-          <Link
-            href="/admin/stock-alerts"
-            title="Notifications & Alerts"
-            className="relative p-2 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 transition-colors"
-          >
-            <Bell className="w-4 h-4" />
-          </Link>
+          <AdminNotificationBell />
 
           {/* User Account Popover */}
           <div className="relative" ref={userRef}>

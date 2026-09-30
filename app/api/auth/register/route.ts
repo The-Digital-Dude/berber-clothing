@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase"
 import { brevoSubscribe } from "@/lib/brevo"
 import { sendWelcomeEmail } from "@/lib/email"
 import { linkReferralIfPresent } from "@/lib/referral"
+import { createAdminNotification } from "@/lib/adminNotifications"
 
 // Called right after a successful supabase.auth.signUp() on the client.
 // Creates the matching Prisma profile row and mirrors the role into
@@ -37,6 +38,16 @@ export async function POST(req: Request) {
     // Fire-and-forget: welcome email + marketing list subscriptions
     sendWelcomeEmail({ to: email, name }).catch(() => {})
     brevoSubscribe(email, name).catch(() => {})
+
+    if (!existing) {
+      createAdminNotification({
+        type: "new_customer",
+        title: `New customer: ${name}`,
+        message: `${email} just created an account`,
+        link: "/admin/customers",
+        entityId: user.id,
+      })
+    }
 
     // Attribute this signup to whoever referred them, if any
     const refCode = (await cookies()).get("berber_ref")?.value

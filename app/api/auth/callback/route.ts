@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase"
 import prisma from "@/lib/prisma"
+import { createAdminNotification } from "@/lib/adminNotifications"
 
 // Handles the redirect back from Supabase (OAuth + password recovery).
 export async function GET(req: Request) {
@@ -41,6 +42,14 @@ export async function GET(req: Request) {
 
     const admin = createAdminClient()
     await admin.auth.admin.updateUserById(id, { app_metadata: { role: "CUSTOMER" } })
+
+    createAdminNotification({
+      type: "new_customer",
+      title: `New customer: ${profile.name || profile.email}`,
+      message: `${profile.email} signed up via OAuth`,
+      link: "/admin/customers",
+      entityId: profile.id,
+    })
   }
 
   const redirectTo = profile.role === "ADMIN" ? "/admin" : "/account"

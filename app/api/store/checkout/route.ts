@@ -11,6 +11,7 @@ import { brevoOrderPlaced, brevoAddTags } from "@/lib/brevo"
 import { sendPurchaseEvent } from "@/lib/metaConversionsApi"
 import { createAdminClient } from "@/lib/supabase"
 import { linkReferralIfPresent } from "@/lib/referral"
+import { createAdminNotification } from "@/lib/adminNotifications"
 
 export async function POST(req: Request) {
   try {
@@ -59,6 +60,13 @@ export async function POST(req: Request) {
 
           const refCode = (await cookies()).get("berber_ref")?.value
           linkReferralIfPresent(newUser.id, refCode).catch(() => {})
+          createAdminNotification({
+            type: "new_customer",
+            title: `New customer: ${newUser.name}`,
+            message: `${newUser.email} created an account at checkout`,
+            link: "/admin/customers",
+            entityId: newUser.id,
+          })
         } catch (e) {
           console.error("Checkout account creation failed, falling back to guest:", e)
           isGuest = true
@@ -205,12 +213,26 @@ export async function POST(req: Request) {
       serverCreditDiscount = Math.min(storeCreditRedeemed, Number(credit?.balance ?? 0))
     }
 
+    // Populated inside the transaction below when an item's purchase drops
+    // its variant from >=5 units to <5 -- read after the transaction commits
+    // to fire "low stock" notifications. Threshold matches the admin
+    // inventory dashboard's own low-stock definition (lib/adminNotifications
+    // consumers, app/(admin)/admin/inventory/page.tsx).
+    const lowStockCrossings: { productId: string; productName: string; size: string; color: string; newStock: number }[] = []
+
     const order = await prisma.$transaction(async (tx) => {
       // Re-check stock inside transaction to prevent race conditions
       for (const item of items) {
-        const variant = await tx.productVariant.findUnique({ where: { id: item.variantId } })
+        const variant = await tx.productVariant.findUnique({
+          where: { id: item.variantId },
+          include: { product: { select: { id: true, name: true } } },
+        })
         if (!variant || variant.stock < item.quantity) {
           throw new Error(`Insufficient stock for item: ${item.name} (${item.size})`)
+        }
+        const newStock = variant.stock - item.quantity
+        if (variant.stock >= 5 && newStock < 5) {
+          lowStockCrossings.push({ productId: variant.product.id, productName: variant.product.name, size: variant.size, color: variant.color, newStock })
         }
         await tx.productVariant.update({
           where: { id: item.variantId },
@@ -471,6 +493,25 @@ export async function POST(req: Request) {
     prisma.funnelEvent.create({
       data: { event: "purchase", orderId: order.id, metadata: JSON.stringify({ total: serverTotal, items: items.length }) },
     }).catch(() => {})
+
+    // Admin notification center (fire-and-forget)
+    createAdminNotification({
+      type: "new_order",
+      title: `New order #${order.orderNumber}`,
+      message: `${address.name} placed an order for ৳${serverTotal.toLocaleString("en-BD")}`,
+      link: `/admin/orders/${order.id}`,
+      entityId: order.id,
+    })
+    for (const crossing of lowStockCrossings) {
+      const variantLabel = [crossing.size, crossing.color].filter(Boolean).join(" / ")
+      createAdminNotification({
+        type: "low_stock",
+        title: `Low stock: ${crossing.productName}`,
+        message: `${variantLabel} dropped to ${crossing.newStock} unit${crossing.newStock === 1 ? "" : "s"} left`,
+        link: `/admin/products/${crossing.productId}`,
+        entityId: crossing.productId,
+      })
+    }
 
     // Meta Conversions API — server-side Purchase event (fire-and-forget).
     // Uses order.id as the event_id so Meta deduplicates this against the
