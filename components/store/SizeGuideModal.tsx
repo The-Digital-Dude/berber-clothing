@@ -20,7 +20,13 @@ export default function SizeGuideModal({ categoryId, sizeChartImage }: { categor
     if (open && !guide) {
       fetch(`/api/admin/size-guide?categoryId=${categoryId}`)
         .then(r => r.json())
-        .then(d => { if (d && d.columns) setGuide(d) })
+        .then(d => {
+          // columns/rows are stored as JSON-encoded strings (Prisma String
+          // columns, not Json) -- the admin editor parses them on read, but
+          // this modal never did, so guide.columns was a raw string and
+          // guide.columns.map() threw for every category that had a guide.
+          if (d && d.columns) setGuide({ ...d, columns: JSON.parse(d.columns), rows: JSON.parse(d.rows) })
+        })
         .catch(() => {})
     }
   }, [open, categoryId, guide])
