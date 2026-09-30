@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { X, Ruler } from "lucide-react"
 
 type SizeGuide = {
@@ -15,6 +16,10 @@ export default function SizeGuideModal({ categoryId, sizeChartImage }: { categor
   const [guide, setGuide] = useState<SizeGuide | null>(null)
   const [myMeasure, setMyMeasure] = useState("")
   const [recommended, setRecommended] = useState("")
+  // Portal target isn't available during SSR/first render -- only render the
+  // portal once mounted, to avoid a hydration mismatch.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   useEffect(() => {
     if (open && !guide) {
@@ -57,7 +62,7 @@ export default function SizeGuideModal({ categoryId, sizeChartImage }: { categor
         <Ruler className="w-3.5 h-3.5" /> Size Guide
       </button>
 
-      {open && (
+      {open && mounted && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={() => setOpen(false)}
@@ -143,7 +148,8 @@ export default function SizeGuideModal({ categoryId, sizeChartImage }: { categor
               {!guide && <div className="text-sm text-berber-text-muted">Size guide not available for this category yet.</div>}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
