@@ -43,57 +43,56 @@ export default async function BulkPackingSlipPage({
   return (
     <div className="print-bulk-slips-container">
       <style>{`
-        @page {
-          size: 3in 3in;
-          margin: 0mm !important;
-        }
         * {
           box-sizing: border-box;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
-        .print-bulk-slips-container {
-          min-height: 100vh;
-          background: #e4e4e7;
-          padding: 24px 16px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-        }
-        .preview-banner {
-          background: #18181b;
-          color: #fafafa;
-          font-family: system-ui, -apple-system, sans-serif;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 6px 14px;
-          border-radius: 9999px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-        .slip-wrap {
-          width: 76.2mm;
-          min-height: 76.2mm;
-          max-width: 76.2mm;
-          background: #fff;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-          border-radius: 4px;
-          padding: 2mm 3mm;
-          overflow: hidden;
-          display: flex;
-          justify-content: center;
+        @media screen {
+          .print-bulk-slips-container {
+            min-height: 100vh;
+            background: #e4e4e7;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+          }
+          .preview-banner {
+            background: #18181b;
+            color: #fafafa;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          }
+          .slip-wrap {
+            width: 76.2mm;
+            min-height: 76.2mm;
+            max-width: 76.2mm;
+            background: #fff;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            padding: 2mm 3mm;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+          }
         }
         @media print {
           @page {
-            size: 3in 3in;
-            margin: 0mm !important;
+            size: 76mm 76mm;
+            margin: 0 !important;
           }
           html, body {
             width: 100% !important;
-            max-width: 3in !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
+            overflow: visible !important;
           }
           header, nav, footer, aside, [data-sonner-toaster], #nprogress, [data-nextjs-toploader], .preview-banner, button {
             display: none !important;
@@ -113,14 +112,13 @@ export default async function BulkPackingSlipPage({
           .slip-wrap {
             box-shadow: none !important;
             border-radius: 0 !important;
-            padding: 1.5mm 0 !important;
+            padding: 0 !important;
             margin: 0 auto !important;
             width: 100% !important;
-            max-width: 68mm !important;
-            height: 3in !important;
-            max-height: 3in !important;
+            max-width: 65mm !important;
+            height: auto !important;
             box-sizing: border-box !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
             page-break-after: always !important;

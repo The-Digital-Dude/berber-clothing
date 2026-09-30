@@ -13,9 +13,21 @@
 }
 
 @media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
   nav,
-  footer {
+  footer,
+  aside,
+  header,
+  [data-sonner-toaster],
+  #nprogress,
+  [data-nextjs-toploader] {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
   }
 }
 
