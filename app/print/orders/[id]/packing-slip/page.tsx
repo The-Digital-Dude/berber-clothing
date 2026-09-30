@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { notFound, redirect } from "next/navigation"
 import PrintButton from "./PrintButton"
 import { PackingSlipContent } from "@/components/print/PackingSlipContent"
+import { generateQrCodeDataUrl } from "@/lib/barcode"
 
 export default async function PackingSlipPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -24,6 +25,11 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
   const map = Object.fromEntries(settings.map(s => [s.key, s.value]))
   const storeName = map.store_name || "Berber"
   const supportPhone = map.support_phone || ""
+
+  const trackingTarget = order.delivery?.trackingCode
+    ? `https://steadfast.com.bd/t/${order.delivery.trackingCode}`
+    : `https://berber.clothing/track?order=${order.orderNumber}`
+  const qrDataUrl = await generateQrCodeDataUrl(trackingTarget)
 
   return (
     <div className="print-slip-container">
@@ -110,10 +116,15 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
         }
       `}</style>
       <div className="preview-banner no-print">
-        🏷️ 3" × 3" Thermal Label Preview
+        🏷️ Steadfast 3" × 3" Packing Label Preview
       </div>
       <div className="slip-wrap">
-        <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
+        <PackingSlipContent
+          order={order as any}
+          storeName={storeName}
+          supportPhone={supportPhone}
+          qrDataUrl={qrDataUrl}
+        />
       </div>
       <div className="no-print">
         <PrintButton />

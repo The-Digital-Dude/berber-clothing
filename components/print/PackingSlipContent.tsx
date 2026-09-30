@@ -1,5 +1,4 @@
-// Shared slip content optimized for 3" x 3" (76mm x 76mm) thermal label printers.
-// Includes Steadfast / courier consignment details and tracking information.
+import { generateCode128Svg } from "@/lib/barcode"
 
 type SlipOrder = {
   orderNumber: string
@@ -29,22 +28,32 @@ export function PackingSlipContent({
   order,
   storeName,
   supportPhone,
+  qrDataUrl,
 }: {
   order: SlipOrder
   storeName: string
   supportPhone: string
+  qrDataUrl?: string
 }) {
   const isPaid = order.paymentStatus?.toUpperCase() === "PAID"
-  const formattedDate = new Date(order.createdAt).toLocaleDateString("en-GB", {
+  const sfId = order.delivery?.consignmentId || order.delivery?.trackingCode || order.orderNumber
+  const trackingCode = order.delivery?.trackingCode || sfId
+  const barcodeSvg = generateCode128Svg(String(sfId), 26)
+
+  // Format SF-ID with spaces like the official Steadfast label (e.g. 3 0 2 0 8 8 1 9 0)
+  const spacedSfId = String(sfId).split("").join(" ")
+
+  const printedAt = new Date().toLocaleDateString("en-GB", {
     day: "2-digit",
-    month: "short",
-    year: "numeric",
+    month: "2-digit",
+    year: "2-digit",
+  }) + " " + new Date().toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
   })
 
-  const locationParts = [order.shippingArea, order.shippingDistrict, order.shippingDivision].filter(Boolean).join(", ")
-  const courierName = order.delivery?.courier?.toUpperCase() || "STEADFAST"
-  const trackingCode = order.delivery?.trackingCode
-  const consignmentId = order.delivery?.consignmentId
+  const locationParts = [order.shippingArea, order.shippingDistrict].filter(Boolean).join(", ")
 
   return (
     <div
@@ -52,127 +61,134 @@ export function PackingSlipContent({
       style={{
         color: "#000",
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-        fontSize: "8.5px",
+        fontSize: "8px",
         lineHeight: 1.15,
         padding: "1mm 1.5mm",
         margin: "0 auto",
         width: "100%",
         maxWidth: "66mm",
         boxSizing: "border-box",
+        background: "#fff",
       }}
     >
-      {/* Header */}
-      <div style={{ borderBottom: "1.5px solid #000", paddingBottom: "2px", marginBottom: "2.5px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: "11px", fontWeight: 900, letterSpacing: "0.5px", textTransform: "uppercase" }}>{storeName}</span>
-          <span style={{ fontSize: "7.5px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>PACKING SLIP</span>
+      {/* 1. Steadfast Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "2px", borderBottom: "1.5px solid #000" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          {/* Steadfast Swirl / Brand Logo */}
+          <div style={{ width: "16px", height: "16px", borderRadius: "50%", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 900, fontSize: "9px" }}>
+            B
+          </div>
+          <div>
+            <div style={{ fontSize: "10.5px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.3px", lineHeight: 1 }}>{storeName}</div>
+            {supportPhone && <div style={{ fontSize: "6.5px", color: "#333", marginTop: "1px" }}>Support: {supportPhone}</div>}
+          </div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1px" }}>
-          <span style={{ fontSize: "9.5px", fontWeight: 800 }}>#{order.orderNumber}</span>
-          <span style={{ fontSize: "7.5px", color: "#111" }}>{formattedDate}</span>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: "7px", fontWeight: 700, color: "#222" }}>Courier: <strong>STEADFAST</strong></div>
+          {order.delivery?.trackingCode && (
+            <div style={{ fontSize: "6.5px", color: "#444" }}>TRK: {order.delivery.trackingCode}</div>
+          )}
         </div>
       </div>
 
-      {/* Steadfast / Courier Tracking Bar */}
-      <div
-        style={{
-          border: "1px solid #000",
-          padding: "1.5px 3px",
-          marginBottom: "2.5px",
-          background: "#fff",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: "7.5px",
-        }}
-      >
-        <div>
-          <span style={{ fontWeight: 900, textTransform: "uppercase" }}>🚚 {courierName}</span>
-          {trackingCode && (
-            <span style={{ fontWeight: 800, marginLeft: "3px" }}>· TRK: {trackingCode}</span>
-          )}
+      {/* 2. Barcode Section */}
+      <div style={{ padding: "2px 0 1px", textAlign: "center", borderBottom: "1px dashed #000" }}>
+        <div style={{ width: "96%", margin: "0 auto", height: "24px" }} dangerouslySetInnerHTML={{ __html: barcodeSvg }} />
+        <div style={{ fontSize: "8.5px", fontWeight: 800, letterSpacing: "2.5px", marginTop: "1px" }}>
+          {spacedSfId}
         </div>
-        <div>
-          {consignmentId ? (
-            <span style={{ fontWeight: 700 }}>CID: #{consignmentId}</span>
+      </div>
+
+      {/* 3. QR Code & Metadata Grid (Official Steadfast Layout) */}
+      <div style={{ display: "flex", alignItems: "stretch", borderBottom: "1px dashed #000", padding: "2px 0" }}>
+        {/* QR Code */}
+        <div style={{ width: "24mm", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", paddingRight: "4px" }}>
+          {qrDataUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={qrDataUrl} alt="Steadfast QR" style={{ width: "22mm", height: "22mm", display: "block" }} />
           ) : (
-            <span style={{ color: "#444" }}>INV: #{order.orderNumber}</span>
+            <div style={{ width: "20mm", height: "20mm", border: "1px solid #000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "7px" }}>QR</div>
           )}
+        </div>
+        {/* Info Grid */}
+        <div style={{ flex: 1, fontSize: "7.5px", borderLeft: "1px solid #ddd", paddingLeft: "4px", display: "flex", flexDirection: "column", justifyContent: "space-around" }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontWeight: 800, color: "#444" }}>INVOICE</span>
+            <span style={{ fontWeight: 800 }}>#{order.orderNumber}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontWeight: 800, color: "#444" }}>SF-ID</span>
+            <span style={{ fontWeight: 800 }}>{sfId}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontWeight: 800, color: "#444" }}>DELIVERY</span>
+            <span style={{ fontWeight: 800 }}>Home</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontWeight: 800, color: "#444" }}>WEIGHT</span>
+            <span style={{ fontWeight: 800 }}>0.5 KG</span>
+          </div>
         </div>
       </div>
 
-      {/* Recipient / Shipping Address */}
-      <div style={{ borderBottom: "1px dashed #000", paddingBottom: "2px", marginBottom: "2.5px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: "9px", fontWeight: 800 }}>{order.shippingName}</span>
-          <span style={{ fontSize: "8.5px", fontWeight: 800 }}>{order.shippingPhone}</span>
+      {/* 4. Customer Info Section */}
+      <div style={{ borderBottom: "1px dashed #000", padding: "2px 0" }}>
+        <div style={{ display: "flex", marginBottom: "1px" }}>
+          <span style={{ width: "14mm", fontWeight: 800, color: "#444", flexShrink: 0 }}>NAME</span>
+          <span style={{ fontWeight: 800, fontSize: "8.5px" }}>{order.shippingName}</span>
         </div>
-        <div style={{ fontSize: "8px", marginTop: "1px", wordBreak: "break-word", lineHeight: 1.15 }}>
-          {order.shippingAddress}
+        <div style={{ display: "flex", marginBottom: "1px" }}>
+          <span style={{ width: "14mm", fontWeight: 800, color: "#444", flexShrink: 0 }}>PHONE</span>
+          <span style={{ fontWeight: 800, fontSize: "8.5px" }}>{order.shippingPhone}</span>
+        </div>
+        <div style={{ display: "flex", marginBottom: "1px" }}>
+          <span style={{ width: "14mm", fontWeight: 800, color: "#444", flexShrink: 0 }}>ADDRESS</span>
+          <span style={{ flex: 1, fontSize: "7.5px", wordBreak: "break-word" }}>{order.shippingAddress}</span>
         </div>
         {locationParts && (
-          <div style={{ fontSize: "7.5px", fontWeight: 600, color: "#111", marginTop: "1px" }}>
-            📍 {locationParts}
+          <div style={{ display: "flex" }}>
+            <span style={{ width: "14mm", fontWeight: 800, color: "#444", flexShrink: 0 }}>AREA</span>
+            <span style={{ flex: 1, fontWeight: 700, fontSize: "7.5px" }}>{locationParts}</span>
           </div>
         )}
       </div>
 
-      {/* Items List */}
-      <div style={{ borderBottom: "1px dashed #000", paddingBottom: "2px", marginBottom: "2.5px" }}>
-        <div style={{ fontSize: "7px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "1px" }}>
-          ITEMS ({order.items.reduce((acc, item) => acc + (item.quantity || 1), 0)} PCS)
+      {/* 5. Items to Pack (Packing Checklist) */}
+      <div style={{ borderBottom: "1px dashed #000", padding: "2px 0" }}>
+        <div style={{ fontSize: "6.5px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.3px", marginBottom: "1px" }}>
+          ITEMS TO PACK ({order.items.reduce((acc, item) => acc + (item.quantity || 1), 0)} PCS)
         </div>
         {order.items.map((item) => {
           const variant = [item.size, item.color].filter(Boolean).join(" / ")
           return (
-            <div key={item.id} style={{ display: "flex", alignItems: "center", padding: "1px 0", borderBottom: "1px dotted #e5e5e5" }}>
-              <div style={{ width: "8px", height: "8px", border: "1.2px solid #000", marginRight: "4px", flexShrink: 0 }} />
-              <div style={{ flex: 1, minWidth: 0, paddingRight: "6px" }}>
-                <span style={{ fontWeight: 700, fontSize: "8.5px", wordBreak: "break-word" }}>
-                  {item.productName}
-                </span>
-                {variant && (
-                  <span style={{ fontSize: "7.5px", color: "#333", marginLeft: "3px" }}>({variant})</span>
-                )}
+            <div key={item.id} style={{ display: "flex", alignItems: "center", padding: "0.5px 0" }}>
+              <div style={{ width: "7px", height: "7px", border: "1px solid #000", marginRight: "3px", flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0, paddingRight: "4px" }}>
+                <span style={{ fontWeight: 700, fontSize: "7.5px" }}>{item.productName}</span>
+                {variant && <span style={{ fontSize: "6.5px", color: "#444", marginLeft: "2px" }}>({variant})</span>}
               </div>
-              <div style={{ fontWeight: 900, fontSize: "9px", flexShrink: 0, paddingRight: "2px" }}>
-                ×{item.quantity}
-              </div>
+              <div style={{ fontWeight: 800, fontSize: "8px", flexShrink: 0 }}>×{item.quantity}</div>
             </div>
           )
         })}
       </div>
 
-      {/* Payment / Collection Box */}
-      <div style={{ border: "1.2px solid #000", padding: "2px 4px", marginBottom: "2px", background: "#fff" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontSize: "7px", textTransform: "uppercase", fontWeight: 700 }}>Payment Method</div>
-            <div style={{ fontSize: "8px", fontWeight: 800 }}>{order.paymentMethod || "COD"}</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "7px", textTransform: "uppercase", fontWeight: 700 }}>
-              {isPaid ? "Paid Total" : "Collect COD"}
-            </div>
-            <div style={{ fontSize: "10.5px", fontWeight: 900 }}>
-              ৳{Number(order.total).toLocaleString()}
-            </div>
-          </div>
+      {/* 6. Cash on Delivery Box (Official Steadfast Style) */}
+      <div style={{ border: "1.5px solid #000", padding: "2px 4px", margin: "2px 0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#fff" }}>
+        <div style={{ fontSize: "8px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+          {isPaid ? "PAID ONLINE" : "CASH ON DELIVERY"}
+        </div>
+        <div style={{ fontSize: "11px", fontWeight: 900 }}>
+          ৳ {Number(order.total).toLocaleString()}
         </div>
       </div>
 
-      {/* Notes or Gift Message */}
-      {(order.note || order.giftWrap) && (
-        <div style={{ fontSize: "7px", border: "1px dotted #000", padding: "1px 3px", marginBottom: "2px", lineHeight: 1.15 }}>
-          {order.giftWrap && <div style={{ fontWeight: 800 }}>🎁 Gift Wrapped{order.giftMessage ? `: "${order.giftMessage}"` : ""}</div>}
-          {order.note && <div><strong>Note:</strong> {order.note}</div>}
-        </div>
-      )}
-
-      {/* Footer Support Info */}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "6.5px", color: "#333", marginTop: "1px", borderTop: "0.5px solid #e0e0e0", paddingTop: "1px" }}>
-        <span>Thank you for shopping with us!</span>
-        {supportPhone && <span>Support: {supportPhone}</span>}
+      {/* 7. Footer (Steadfast Branding & Print Date) */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "6px", color: "#333", paddingTop: "1px" }}>
+        <span>Printed: {printedAt}</span>
+        <span style={{ fontWeight: 700 }}>
+          ⚡ <strong>steadfast</strong> steadfast.com.bd
+        </span>
       </div>
     </div>
   )

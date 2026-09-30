@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import PrintButton from "../[id]/packing-slip/PrintButton"
 import { PackingSlipContent } from "@/components/print/PackingSlipContent"
+import { generateQrCodeDataUrl } from "@/lib/barcode"
 
 export default async function BulkPackingSlipPage({
   searchParams,
@@ -42,6 +43,16 @@ export default async function BulkPackingSlipPage({
   const map = Object.fromEntries(settings.map(s => [s.key, s.value]))
   const storeName = map.store_name || "Berber"
   const supportPhone = map.support_phone || ""
+
+  // Generate QR codes for all orders in parallel
+  const qrCodes = await Promise.all(
+    orders.map(order => {
+      const trackingTarget = order.delivery?.trackingCode
+        ? `https://steadfast.com.bd/t/${order.delivery.trackingCode}`
+        : `https://berber.clothing/track?order=${order.orderNumber}`
+      return generateQrCodeDataUrl(trackingTarget)
+    })
+  )
 
   return (
     <div className="print-bulk-slips-container">
@@ -121,11 +132,16 @@ export default async function BulkPackingSlipPage({
         }
       `}</style>
       <div className="preview-banner no-print">
-        🏷️ 3" × 3" Thermal Bulk Labels ({orders.length} orders)
+        🏷️ Steadfast 3" × 3" Bulk Labels ({orders.length} orders)
       </div>
-      {orders.map((order) => (
+      {orders.map((order, idx) => (
         <div key={order.id} className="slip-wrap">
-          <PackingSlipContent order={order as any} storeName={storeName} supportPhone={supportPhone} />
+          <PackingSlipContent
+            order={order as any}
+            storeName={storeName}
+            supportPhone={supportPhone}
+            qrDataUrl={qrCodes[idx]}
+          />
         </div>
       ))}
       <div className="no-print">
