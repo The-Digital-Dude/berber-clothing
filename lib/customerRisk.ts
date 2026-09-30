@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { checkSteadfastFraud, type SteadfastFraudReport } from "@/lib/steadfast"
 
 export type RiskLevel = "NEW" | "LOW" | "MEDIUM" | "HIGH"
 
@@ -10,22 +11,27 @@ export type CustomerRisk = {
   pending: number
   successRate: number | null // null when not enough history to judge
   riskLevel: RiskLevel
+  steadfast?: SteadfastFraudReport | null
+  fraudWarning?: string | null
 }
 
 const FAILED_STATUSES = ["CANCELLED", "RETURNED"] as const
 const SETTLED_STATUSES = ["DELIVERED", "CANCELLED", "RETURNED"] as const
 
 /**
- * Computes a phone number's delivery track record from our own order
- * history. No external API needed — this is the data we already have.
+ * Computes a phone number's delivery track record from our own store history
+ * combined with real-time Steadfast Courier Network fraud checks.
  */
 export async function getCustomerRisk(phone: string): Promise<CustomerRisk> {
   const normalizedPhone = phone.trim()
 
-  const orders = await prisma.order.findMany({
-    where: { shippingPhone: normalizedPhone },
-    select: { status: true },
-  })
+  const [orders, sfFraud] = await Promise.all([
+    prisma.order.findMany({
+      where: { shippingPhone: normalizedPhone },
+      select: { status: true },
+    }),
+    checkSteadfastFraud(normalizedPhone),
+  ])
 
   const totalOrders = orders.length
   const delivered = orders.filter((o) => o.status === "DELIVERED").length
@@ -37,14 +43,34 @@ export async function getCustomerRisk(phone: string): Promise<CustomerRisk> {
   ).length
   const pending = totalOrders - settled
 
-  // Need at least 2 settled orders before we trust a success rate.
-  const successRate = settled >= 2 ? delivered / settled : null
+  // Need at least 2 settled orders before we trust internal success rate
+  const internalSuccessRate = settled >= 2 ? delivered / settled : null
 
   let riskLevel: RiskLevel = "NEW"
-  if (successRate !== null) {
-    if (successRate >= 0.8) riskLevel = "LOW"
-    else if (successRate >= 0.5) riskLevel = "MEDIUM"
-    else riskLevel = "HIGH"
+  let fraudWarning: string | null = null
+
+  // 1. Evaluate internal store history
+  if (internalSuccessRate !== null) {
+    if (internalSuccessRate >= 0.8) riskLevel = "LOW"
+    else if (internalSuccessRate >= 0.5) riskLevel = "MEDIUM"
+    else {
+      riskLevel = "HIGH"
+      fraudWarning = `Internal history: ${returnedOrCancelled} cancelled/returned out of ${settled} settled orders.`
+    }
+  }
+
+  // 2. Evaluate Steadfast Courier Network Fraud check
+  if (sfFraud) {
+    if (sfFraud.fraud_reports && sfFraud.fraud_reports > 0) {
+      riskLevel = "HIGH"
+      fraudWarning = `Steadfast Alert: ${sfFraud.fraud_reports} fraud report(s) logged across courier network.`
+    } else if (sfFraud.risk_level === "HIGH") {
+      riskLevel = "HIGH"
+      fraudWarning = `Steadfast Network: High return risk (${sfFraud.delivered_parcels ?? 0} delivered / ${sfFraud.cancelled_parcels ?? 0} returned).`
+    } else if (sfFraud.risk_level === "MEDIUM" && riskLevel !== "HIGH") {
+      riskLevel = "MEDIUM"
+      fraudWarning = `Steadfast Network: Moderate return rate (${Math.round((sfFraud.success_rate ?? 0) * 100)}% delivery success).`
+    }
   }
 
   return {
@@ -53,8 +79,10 @@ export async function getCustomerRisk(phone: string): Promise<CustomerRisk> {
     delivered,
     returnedOrCancelled,
     pending,
-    successRate,
+    successRate: internalSuccessRate,
     riskLevel,
+    steadfast: sfFraud,
+    fraudWarning,
   }
 }
 
@@ -96,7 +124,15 @@ export async function getCustomerRiskBatch(phones: string[]): Promise<Map<string
       else riskLevel = "HIGH"
     }
 
-    result.set(phone, { phone, totalOrders, delivered, returnedOrCancelled, pending, successRate, riskLevel })
+    result.set(phone, {
+      phone,
+      totalOrders,
+      delivered,
+      returnedOrCancelled,
+      pending,
+      successRate,
+      riskLevel,
+    })
   }
 
   return result

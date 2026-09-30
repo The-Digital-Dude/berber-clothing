@@ -84,9 +84,10 @@ export function PackingSlipContent({
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "7px", fontWeight: 700, color: "#222" }}>Courier: <strong>STEADFAST</strong></div>
+          <div style={{ fontSize: "7px", fontWeight: 800, color: "#000" }}>Merchant ID: K8U7MIIN</div>
+          <div style={{ fontSize: "6.5px", fontWeight: 700, color: "#444" }}>Courier: <strong>STEADFAST</strong></div>
           {order.delivery?.trackingCode && (
-            <div style={{ fontSize: "6.5px", color: "#444" }}>TRK: {order.delivery.trackingCode}</div>
+            <div style={{ fontSize: "6.5px", color: "#222" }}>TRK: {order.delivery.trackingCode}</div>
           )}
         </div>
       </div>

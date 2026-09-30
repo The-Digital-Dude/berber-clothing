@@ -1114,20 +1114,57 @@ export default function OrderDetailsClient({
                 </button>
               )}
 
-              {/* Customer Risk Details */}
-              {customerRisk && customerRisk.riskLevel !== "NEW" && (
-                <div className={cn("p-3 rounded-xl border text-[11px] space-y-1.5", RISK_BADGE_CLASS[customerRisk.riskLevel])}>
-                  <div className="flex items-center gap-1.5 font-bold">
-                    {customerRisk.riskLevel === "HIGH" ? (
-                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                    ) : (
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              {/* Customer Risk Details & Steadfast Intelligence */}
+              {customerRisk && (customerRisk.riskLevel !== "NEW" || customerRisk.steadfast) && (
+                <div className={cn("p-3.5 rounded-xl border text-[11px] space-y-2", RISK_BADGE_CLASS[customerRisk.riskLevel] || "bg-zinc-50 border-zinc-200 text-zinc-700")}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      {customerRisk.riskLevel === "HIGH" ? (
+                        <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                      ) : customerRisk.riskLevel === "MEDIUM" ? (
+                        <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      ) : (
+                        <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                      )}
+                      <span>{customerRisk.riskLevel} Risk Profile</span>
+                    </div>
+                    {customerRisk.steadfast && (
+                      <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-zinc-900 text-white">
+                        Steadfast Verified
+                      </span>
                     )}
-                    <span>{customerRisk.riskLevel} Return Risk Warning</span>
                   </div>
-                  <p>
-                    <strong>{customerRisk.delivered}</strong> delivered vs <strong>{customerRisk.returnedOrCancelled}</strong> cancelled/returned ({Math.round((customerRisk.successRate ?? 0) * 100)}% delivery success).
-                  </p>
+
+                  {customerRisk.fraudWarning && (
+                    <p className="font-semibold text-rose-700 bg-rose-50 p-2 rounded-lg border border-rose-200/80">
+                      ⚠️ {customerRisk.fraudWarning}
+                    </p>
+                  )}
+
+                  {customerRisk.steadfast && (
+                    <div className="bg-white/80 p-2.5 rounded-lg border border-zinc-200/60 text-[10.5px] space-y-1">
+                      <div className="font-bold text-zinc-900 flex justify-between items-center">
+                        <span>⚡ Steadfast Courier Network:</span>
+                        <span className="text-zinc-600">
+                          {customerRisk.steadfast.success_rate !== undefined
+                            ? `${Math.round(customerRisk.steadfast.success_rate * 100)}% Success`
+                            : "No Prior Parcels"}
+                        </span>
+                      </div>
+                      <div className="text-zinc-600">
+                        Total Parcels: <strong>{customerRisk.steadfast.total_parcels ?? 0}</strong> (
+                        <span className="text-emerald-700 font-semibold">{customerRisk.steadfast.delivered_parcels ?? 0} delivered</span> /{" "}
+                        <span className="text-rose-700 font-semibold">{customerRisk.steadfast.cancelled_parcels ?? 0} returned</span>)
+                      </div>
+                    </div>
+                  )}
+
+                  {customerRisk.totalOrders > 0 && (
+                    <p className="text-[10px] text-zinc-600">
+                      Store History: <strong>{customerRisk.delivered}</strong> delivered of{" "}
+                      <strong>{customerRisk.totalOrders}</strong> total orders.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
