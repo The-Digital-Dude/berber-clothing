@@ -9,15 +9,21 @@ const QUESTIONS: Question[] = [
   { label: "How do you prefer your fit?", options: ["Slim / Fitted", "Regular", "Relaxed / Oversized"] },
 ]
 
+// Berber's entire catalog uses numeric chest sizing (34-44), never S/M/L --
+// the old letter-size scale here couldn't match any real product variant.
+// Same relative height/weight/fit logic as before, just relabeled onto the
+// sizes that actually exist.
+const SIZES = ["34", "36", "38", "40", "42", "44"]
+
 const SIZE_MAP: Record<string, string> = {
-  "Under 155cm-Under 50kg-Slim / Fitted": "XS",
-  "155–165cm-50–60kg-Slim / Fitted": "S",
-  "155–165cm-50–60kg-Regular": "M",
-  "165–175cm-60–70kg-Regular": "M",
-  "165–175cm-70–80kg-Regular": "L",
-  "175–185cm-70–80kg-Regular": "L",
-  "175–185cm-80–90kg-Regular": "XL",
-  "Over 185cm-Over 90kg-Regular": "2XL",
+  "Under 155cm-Under 50kg-Slim / Fitted": "34",
+  "155–165cm-50–60kg-Slim / Fitted": "36",
+  "155–165cm-50–60kg-Regular": "38",
+  "165–175cm-60–70kg-Regular": "38",
+  "165–175cm-70–80kg-Regular": "40",
+  "175–185cm-70–80kg-Regular": "40",
+  "175–185cm-80–90kg-Regular": "42",
+  "Over 185cm-Over 90kg-Regular": "44",
 }
 
 function getRecommendation(answers: string[]): string {
@@ -26,14 +32,12 @@ function getRecommendation(answers: string[]): string {
   const heightIdx = ["Under 155cm", "155–165cm", "165–175cm", "175–185cm", "Over 185cm"].indexOf(answers[0])
   const weightIdx = ["Under 50kg", "50–60kg", "60–70kg", "70–80kg", "80–90kg", "Over 90kg"].indexOf(answers[1])
   const score = heightIdx + weightIdx
-  const base = ["XS", "S", "M", "L", "XL", "2XL"][Math.min(Math.max(Math.round(score / 2), 0), 5)]
+  const base = SIZES[Math.min(Math.max(Math.round(score / 2), 0), 5)]
   if (answers[2] === "Relaxed / Oversized") {
-    const sizes = ["XS", "S", "M", "L", "XL", "2XL"]
-    return sizes[Math.min(sizes.indexOf(base) + 1, sizes.length - 1)]
+    return SIZES[Math.min(SIZES.indexOf(base) + 1, SIZES.length - 1)]
   }
   if (answers[2] === "Slim / Fitted") {
-    const sizes = ["XS", "S", "M", "L", "XL", "2XL"]
-    return sizes[Math.max(sizes.indexOf(base) - 1, 0)]
+    return SIZES[Math.max(SIZES.indexOf(base) - 1, 0)]
   }
   return base
 }
@@ -58,7 +62,7 @@ export default function SizeQuiz({ onSelect }: { onSelect?: (size: string) => vo
 
   return (
     <>
-      <button onClick={() => { setOpen(true); reset() }} className="text-sm underline text-gray-500 hover:text-black">
+      <button onClick={() => { setOpen(true); reset() }} className="text-xs text-berber-text-muted underline underline-offset-4 hover:text-berber-gold transition-colors whitespace-nowrap">
         Not sure of your size? Take the quiz
       </button>
 

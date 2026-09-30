@@ -47,8 +47,11 @@ export default function SocialProof({ productId }: { productId?: string }) {
 
   return (
     <>
-      {/* Recently purchased toast */}
-      <div className={`fixed bottom-6 left-6 z-50 transition-all duration-500 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}>
+      {/* Recently purchased toast -- offset above the mobile bottom nav (h-16)
+          + sticky add-to-bag bar so it doesn't render underneath them; both
+          bars are mobile-only (md:hidden / hidden past desktop), so this
+          collapses back to a small corner offset on desktop. */}
+      <div className={`fixed bottom-40 left-4 right-4 sm:right-auto sm:left-6 md:bottom-6 z-[60] transition-all duration-500 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}>
         <div className="bg-white border border-berber-border rounded-xl shadow-lg px-4 py-3 flex items-center gap-3 max-w-xs">
           <div className="w-10 h-10 bg-berber-muted rounded-lg flex items-center justify-center shrink-0">
             <ShoppingBag className="w-5 h-5 text-berber-gold" />

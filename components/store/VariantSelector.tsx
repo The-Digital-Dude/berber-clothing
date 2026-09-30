@@ -7,6 +7,7 @@ import { useCartUIStore } from "@/store/useCartUIStore"
 import { useCompareStore } from "@/store/useCompareStore"
 import NotifyMeForm from "@/components/store/NotifyMeForm"
 import SizeGuideModal from "@/components/store/SizeGuideModal"
+import SizeQuiz from "@/components/store/SizeQuiz"
 import { Columns2, Truck, Clock } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -146,9 +147,12 @@ export default function VariantSelector({
       {/* Sizes / Attribute 1 */}
       {sizes.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-berber-black">{attr1Label}</h3>
-            {categoryId && <SizeGuideModal categoryId={categoryId} sizeChartImage={sizeChartImage} />}
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-berber-black shrink-0">{attr1Label}</h3>
+            <div className="flex items-center gap-3">
+              <SizeQuiz onSelect={(size) => setSelectedSize(size)} />
+              {categoryId && <SizeGuideModal categoryId={categoryId} sizeChartImage={sizeChartImage} />}
+            </div>
           </div>
           <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
             {sizes.map(size => {

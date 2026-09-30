@@ -15,17 +15,26 @@ interface SearchResult {
   category?: { name: string }
 }
 
-const POPULAR = ["White Shirt", "Chinos", "Kurti", "Tote Bag", "Polo"]
-
 export default function SearchModal({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("")
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [popular, setPopular] = useState<string[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   useEffect(() => {
     inputRef.current?.focus()
+  }, [])
+
+  // Real categories + top-selling product names -- these used to be a
+  // hardcoded placeholder list (White Shirt, Chinos, Kurti, Tote Bag, Polo)
+  // that never matched anything actually sold here.
+  useEffect(() => {
+    fetch("/api/store/popular-searches")
+      .then((r) => r.json())
+      .then((d) => setPopular(d.terms || []))
+      .catch(() => {})
   }, [])
 
   // Close on Escape
@@ -102,7 +111,7 @@ export default function SearchModal({ onClose }: { onClose: () => void }) {
                 <TrendingUp className="w-3.5 h-3.5" /> Popular Searches
               </p>
               <div className="flex flex-wrap gap-2">
-                {POPULAR.map((term) => (
+                {popular.map((term) => (
                   <button
                     key={term}
                     onClick={() => setQuery(term)}

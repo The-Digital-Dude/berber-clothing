@@ -13,7 +13,6 @@ import SocialProof from "@/components/store/SocialProof"
 import ProductAddons from "@/components/store/ProductAddons"
 import ReviewMediaGallery from "@/components/store/ReviewMediaGallery"
 import ProductQA from "@/components/store/ProductQA"
-import SizeQuiz from "@/components/store/SizeQuiz"
 import StickyAddToCart from "@/components/store/StickyAddToCart"
 import CompleteTheSet from "@/components/store/CompleteTheSet"
 import TrackPageView from "@/components/store/TrackPageView"
@@ -313,9 +312,6 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
 
             {/* Social proof */}
             <SocialProof productId={product.id} />
-
-            {/* Size quiz */}
-            <SizeQuiz />
 
             {/* Selectors */}
             <VariantSelector
