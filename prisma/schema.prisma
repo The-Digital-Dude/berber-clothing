@@ -22,6 +22,7 @@ model User {
   phone          String?
   role           String   @default("CUSTOMER")
   isLocked       Boolean  @default(false)
+  abandonedCartEmailsEnabled Boolean @default(true)
   referralCode   String?  @unique
   referredByCode String?
   createdAt      DateTime @default(now())

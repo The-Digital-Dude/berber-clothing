@@ -54,6 +54,11 @@ export async function GET(req: Request) {
     try {
       const items = JSON.parse(cart.items || "[]") as any[]
       if (!items.length || !cart.email) continue
+      // Guests have no account to opt out from, so only registered customers
+      // who explicitly turned this off (Admin -> Customers -> edit profile)
+      // get skipped here.
+      const customer = await prisma.user.findUnique({ where: { email: cart.email }, select: { abandonedCartEmailsEnabled: true } })
+      if (customer && !customer.abandonedCartEmailsEnabled) continue
       const cartTotal = items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
       await sendAbandonedCartEmail({
         to: cart.email,
@@ -93,6 +98,8 @@ export async function GET(req: Request) {
     try {
       const items = JSON.parse(cart.items || "[]") as any[]
       if (!items.length || !cart.email) continue
+      const customer = await prisma.user.findUnique({ where: { email: cart.email }, select: { abandonedCartEmailsEnabled: true } })
+      if (customer && !customer.abandonedCartEmailsEnabled) continue
       const cartTotal = items.reduce((s: number, i: any) => s + i.price * i.quantity, 0)
 
       await sendAbandonedCartEmail({

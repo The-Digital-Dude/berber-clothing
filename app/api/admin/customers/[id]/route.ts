@@ -27,7 +27,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (error) return error
   const { id } = await params
   const body = await req.json()
-  const { addTag, removeTag, name, email, phone } = body
+  const { addTag, removeTag, name, email, phone, abandonedCartEmailsEnabled } = body
+
+  if (abandonedCartEmailsEnabled !== undefined) {
+    await prisma.user.update({ where: { id }, data: { abandonedCartEmailsEnabled: !!abandonedCartEmailsEnabled } })
+    return NextResponse.json({ ok: true })
+  }
 
   if (addTag) {
     await prisma.customerTag.upsert({

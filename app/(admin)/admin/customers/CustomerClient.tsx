@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import {
   Search,
   User,
@@ -51,6 +52,7 @@ type Customer = {
   phone: string
   role: string
   isLocked: boolean
+  abandonedCartEmailsEnabled: boolean
   joinedDate: string
   totalOrders: number
   totalSpent: number
@@ -104,6 +106,18 @@ export function CustomerClient({
       setLockLoading(false)
       router.refresh()
     }
+  }
+
+  const toggleAbandonedCartEmails = async (customer: Customer) => {
+    if (customer.id.startsWith("guest:")) return
+    const next = !customer.abandonedCartEmailsEnabled
+    setSelectedCustomer((c) => c && c.id === customer.id ? { ...c, abandonedCartEmailsEnabled: next } : c)
+    await fetch(`/api/admin/customers/${customer.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ abandonedCartEmailsEnabled: next }),
+    })
+    router.refresh()
   }
 
   const openCustomer = (customer: Customer) => {
@@ -491,6 +505,24 @@ export function CustomerClient({
                   </span>
                 </div>
               </div>
+              )}
+
+              {/* Marketing preferences */}
+              {selectedCustomer.role !== "GUEST" && (
+                <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/80 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-zinc-800">Abandoned Cart Emails</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      {selectedCustomer.abandonedCartEmailsEnabled
+                        ? "This customer will be emailed if they leave items in their cart."
+                        : "Off — this customer will never receive cart recovery emails."}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={selectedCustomer.abandonedCartEmailsEnabled}
+                    onCheckedChange={() => toggleAbandonedCartEmails(selectedCustomer)}
+                  />
+                </div>
               )}
 
               {/* Order History */}
