@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     const orders = await prisma.order.findMany({
       where,
       include: {
-        items: true,
+        items: { include: { variant: { select: { costPrice: true } } } },
       },
     })
 
@@ -104,23 +104,34 @@ export async function GET(req: Request) {
       Total: Number(o.total),
     }))
 
-    // ─── P&L (lightweight, cash-basis) ───────────────────────────
-    // COGS = cost of inventory actually received from suppliers in range.
-    // Expenses = operating costs logged in range.
-    const [receivedPOs, expenses] = await Promise.all([
-      prisma.purchaseOrder.findMany({
-        where: { status: "RECEIVED", receivedAt: { gte: fromDate } },
-        select: { totalCost: true },
-      }),
-      prisma.expense.findMany({
-        where: { date: { gte: fromDate } },
-        select: { amount: true, category: true },
-      }),
-    ])
+    // ─── P&L ──────────────────────────────────────────────────────
+    // COGS matched to actual units sold (quantity * variant.costPrice),
+    // same methodology already used correctly on the Inventory page
+    // (app/(admin)/admin/inventory/page.tsx) -- this used to be the cost of
+    // Purchase Orders *received* in range, which has nothing to do with what
+    // was actually sold in that window (restocking heavily with zero sales
+    // showed huge "COGS"; selling from existing stock showed ৳0).
+    // Cancelled and returned orders are excluded -- neither is a real sale.
+    const pnlOrders = orders.filter((o) => o.status !== "CANCELLED" && o.status !== "RETURNED")
+    let netRevenue = 0
+    let totalCOGS = 0
+    for (const o of pnlOrders) {
+      const subtotal = Number(o.subtotal || 0)
+      const discount = Number(o.discount || 0)
+      netRevenue += Math.max(0, subtotal - discount)
+      for (const item of o.items) {
+        totalCOGS += Number(item.quantity) * Number(item.variant?.costPrice || 0)
+      }
+    }
+    const grossProfit = netRevenue - totalCOGS
+    const margin = netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0
 
-    const totalCOGS = receivedPOs.reduce((sum, po) => sum + Number(po.totalCost), 0)
+    const expenses = await prisma.expense.findMany({
+      where: { date: { gte: fromDate } },
+      select: { amount: true, category: true },
+    })
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0)
-    const netProfit = totalRevenue - totalCOGS - totalExpenses
+    const netProfit = grossProfit - totalExpenses
 
     const expensesByCategory: Record<string, number> = {}
     expenses.forEach((e) => {
@@ -135,8 +146,10 @@ export async function GET(req: Request) {
         newCustomers,
       },
       pnl: {
-        revenue: totalRevenue,
+        revenue: netRevenue,
         cogs: totalCOGS,
+        grossProfit,
+        margin,
         expenses: totalExpenses,
         netProfit,
         expensesByCategory: Object.entries(expensesByCategory).map(([name, value]) => ({ name, value })),

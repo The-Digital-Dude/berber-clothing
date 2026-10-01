@@ -187,17 +187,26 @@ export function ReportsClient() {
             <Receipt className="w-4 h-4 text-zinc-900" />
             <h3 className="text-sm font-bold text-zinc-900">Profit &amp; Loss Overview (P&amp;L)</h3>
           </div>
-          <span className="text-xs text-zinc-600 font-medium">Simplified cash-basis breakdown</span>
+          <span className="text-xs text-zinc-600 font-medium">Net Revenue minus real COGS minus logged expenses</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/70">
-            <p className="text-xs font-semibold text-zinc-600">Total Revenue</p>
+            <p className="text-xs font-semibold text-zinc-600">Net Revenue</p>
             <p className="text-xl font-bold text-zinc-900 mt-1">৳{data.pnl.revenue.toLocaleString()}</p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">Subtotal minus discounts; excludes cancelled/returned</p>
           </div>
           <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/70">
             <p className="text-xs font-semibold text-zinc-600">Cost of Goods (COGS)</p>
             <p className="text-xl font-bold text-rose-700 mt-1">-৳{data.pnl.cogs.toLocaleString()}</p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">Units sold × actual unit cost</p>
+          </div>
+          <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/70">
+            <p className="text-xs font-semibold text-zinc-600">Gross Profit</p>
+            <p className={cn("text-xl font-bold mt-1", data.pnl.grossProfit >= 0 ? "text-emerald-700" : "text-rose-700")}>
+              ৳{data.pnl.grossProfit.toLocaleString()}
+            </p>
+            <p className="text-[11px] text-zinc-500 mt-0.5">{data.pnl.margin.toFixed(1)}% margin</p>
           </div>
           <div className="p-4 rounded-xl bg-zinc-50 border border-zinc-200/70">
             <p className="text-xs font-semibold text-zinc-600">Operating Expenses</p>
@@ -210,7 +219,7 @@ export function ReportsClient() {
                 : "bg-rose-50/50 border-rose-200 text-rose-950"
             }`}
           >
-            <p className="text-xs font-semibold text-zinc-700">Estimated Net Profit</p>
+            <p className="text-xs font-semibold text-zinc-700">Net Profit</p>
             <p
               className={`text-xl font-bold mt-1 ${
                 data.pnl.netProfit >= 0 ? "text-emerald-700" : "text-rose-700"

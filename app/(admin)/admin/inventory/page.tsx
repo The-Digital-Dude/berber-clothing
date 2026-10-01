@@ -84,7 +84,10 @@ export default async function InventoryPage({
       },
     }),
     prisma.order.findMany({
-      where: { status: { not: "CANCELLED" } },
+      // Cancelled and returned orders aren't real sales -- excluding both
+      // keeps this consistent with the Reports page P&L, which uses the same
+      // COGS/revenue methodology.
+      where: { status: { notIn: ["CANCELLED", "RETURNED"] } },
       select: {
         id: true,
         createdAt: true,
