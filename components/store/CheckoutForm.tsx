@@ -366,6 +366,11 @@ export default function CheckoutForm({
           deliveryDate: deliveryDate || null,
           manualTrxId: isManualPayment ? manualTrxId.trim() : null,
           manualScreenshotUrl: isManualPayment ? screenshotUrl : null,
+          // Lets the server mark this browser's AbandonedCart row as recovered
+          // even when the customer didn't click the recovery email's link --
+          // e.g. they abandoned, then just came back and checked out normally
+          // a few minutes later, well before any email could have fired.
+          cartSessionId: typeof window !== "undefined" ? localStorage.getItem("berber_cart_session") : null,
         }),
       })
       const orderData = await orderRes.json()

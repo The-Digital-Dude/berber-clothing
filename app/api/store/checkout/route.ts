@@ -21,7 +21,7 @@ export async function POST(req: Request) {
       loyaltyPointsRedeemed, loyaltyDiscount, storeCreditRedeemed, customFields,
       couponId, couponDiscount: clientCouponDiscount, deliveryDate,
       giftCardCode, giftCardDiscount: clientGCDiscount,
-      manualTrxId, manualScreenshotUrl } = body
+      manualTrxId, manualScreenshotUrl, cartSessionId } = body
     let { userId, isGuest, guestEmail } = body as { userId: string | null; isGuest: boolean; guestEmail: string | null }
 
     const isManualPayment = !!(manualTrxId || manualScreenshotUrl)
@@ -493,6 +493,19 @@ export async function POST(req: Request) {
     prisma.funnelEvent.create({
       data: { event: "purchase", orderId: order.id, metadata: JSON.stringify({ total: serverTotal, items: items.length }) },
     }).catch(() => {})
+
+    // Mark this browser's abandoned-cart row recovered, independent of the
+    // ?recover= email-link flow -- previously the only way isRecovered ever
+    // got set, so a customer who abandoned a cart and simply came back to
+    // check out normally a few minutes later (well before either reminder
+    // email could fire) showed up in the admin dashboard as permanently lost
+    // revenue even though the order genuinely went through.
+    if (cartSessionId) {
+      prisma.abandonedCart.updateMany({
+        where: { sessionId: cartSessionId, isRecovered: false },
+        data: { isRecovered: true, recoveredAt: new Date(), orderId: order.id },
+      }).catch(() => {})
+    }
 
     // Admin notification center (fire-and-forget)
     createAdminNotification({
