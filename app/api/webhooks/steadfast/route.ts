@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { revalidatePath } from "next/cache"
+import crypto from "crypto"
 import prisma from "@/lib/prisma"
 import { sendOrderStatusUpdate } from "@/lib/email"
 
@@ -79,50 +80,56 @@ import { getSteadfastConfig } from "@/lib/steadfast"
 export async function POST(req: Request) {
   try {
     const config = await getSteadfastConfig()
-    const expectedToken = config.webhookSecret || config.secretKey
+    const token = config.webhookSecret
 
-    // Check Bearer token or secret headers if a secret is configured
-    if (expectedToken) {
-      const authHeader = req.headers.get("authorization") || ""
-      const xToken =
-        req.headers.get("x-steadfast-token") ||
-        req.headers.get("x-webhook-secret") ||
-        req.headers.get("secret-key") ||
-        req.headers.get("x-api-key") ||
-        ""
+    // Per Steadfast's documented webhook spec: the auth token (when set) signs
+    // each request as X-Signature = HMAC-SHA256(raw body, token), hex-encoded.
+    // Must be computed over the raw, unparsed body -- not the re-serialized
+    // JSON, which can differ byte-for-byte from what was actually signed.
+    const rawBody = await req.text()
 
-      const token = authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7).trim()
-        : authHeader.trim() || xToken.trim()
+    if (token) {
+      const signature = req.headers.get("x-signature") || ""
+      const expectedSignature = crypto.createHmac("sha256", token).update(rawBody).digest("hex")
+      const sigBuf = Buffer.from(signature)
+      const expBuf = Buffer.from(expectedSignature)
+      const validSignature = sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)
 
-      if (token && token !== expectedToken && token !== config.apiKey) {
-        console.warn("[steadfast-webhook] Rejected unauthorized webhook request. Token mismatch.")
-        return NextResponse.json({ error: "Unauthorized: Invalid Bearer token" }, { status: 401 })
+      if (!validSignature) {
+        console.warn("[steadfast-webhook] Rejected: X-Signature mismatch")
+        return NextResponse.json({ error: "Unauthorized: Invalid signature" }, { status: 401 })
       }
     }
 
-    const rawBody = await req.json().catch(() => null)
-    if (!rawBody) {
+    const payload = JSON.parse(rawBody || "null")
+    if (!payload) {
       return NextResponse.json({ error: "Empty or invalid JSON body" }, { status: 400 })
     }
 
-    console.log("[steadfast-webhook] Received payload:", JSON.stringify(rawBody))
+    console.log("[steadfast-webhook] Received payload:", JSON.stringify(payload))
 
-    // Steadfast payload fields can vary based on webhook trigger
+    // Steadfast sends several notification_types (tracking_update,
+    // consignment_update, payment_request, etc.) -- only delivery_status maps
+    // to an order/delivery status change here. Acknowledge everything else
+    // with 2xx so Steadfast doesn't retry a payload we were never going to act on.
+    if (payload.notification_type && payload.notification_type !== "delivery_status") {
+      return NextResponse.json({ ok: true, ignored: payload.notification_type })
+    }
+
     const consignmentId = String(
-      rawBody.consignment_id || rawBody.consignmentId || rawBody.cid || ""
+      payload.consignment_id || payload.consignmentId || payload.cid || ""
     ).trim()
 
     const invoice = String(
-      rawBody.invoice || rawBody.order_id || rawBody.order_number || rawBody.orderNumber || ""
+      payload.invoice || payload.order_id || payload.order_number || payload.orderNumber || ""
     ).trim()
 
     const sfStatus = String(
-      rawBody.status || rawBody.delivery_status || rawBody.event || ""
+      payload.status || payload.delivery_status || payload.event || ""
     ).trim()
 
     const trackingCode = String(
-      rawBody.tracking_code || rawBody.trackingCode || rawBody.tracking_id || ""
+      payload.tracking_code || payload.trackingCode || payload.tracking_id || ""
     ).trim()
 
     if (!consignmentId && !invoice) {
