@@ -921,11 +921,13 @@ export async function sendContactReply({
   customerName,
   subject,
   replyMessage,
+  originalMessage,
 }: {
   to: string
   customerName: string
   subject?: string | null
   replyMessage: string
+  originalMessage?: string | null
 }) {
   const store = await getStoreMeta()
   const content = `
@@ -935,10 +937,42 @@ export async function sendContactReply({
     <div style="background:#f9f8f6;border-left:4px solid #b89b5e;padding:16px;margin-bottom:24px;border-radius:4px;color:#222;line-height:1.6;white-space:pre-wrap;">
 ${replyMessage}
     </div>
+    ${originalMessage ? `
+    <p style="color:#999;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Your original message</p>
+    <div style="border-left:3px solid #e5e2db;padding:12px 16px;margin-bottom:20px;color:#888;font-size:13px;line-height:1.6;white-space:pre-wrap;">
+${originalMessage}
+    </div>` : ""}
     <p style="color:#777;font-size:12px;">If you have any further questions, feel free to reply directly to this email.</p>
   `
   await sendMail(to, `Re: ${subject || "Your inquiry with " + store.name}`, baseTemplate(store, content)).catch((err) => {
     console.error("[sendContactReply] error:", err)
+  })
+}
+
+export async function sendContactConfirmation({
+  to,
+  customerName,
+  subject,
+  message,
+}: {
+  to: string
+  customerName: string
+  subject?: string | null
+  message: string
+}) {
+  const store = await getStoreMeta()
+  const content = `
+    <h2 style="font-size:20px;font-weight:700;margin-bottom:12px;color:#111;">We've received your message</h2>
+    <p style="margin-bottom:16px;color:#555;">Hello ${customerName || "there"},</p>
+    <p style="margin-bottom:20px;color:#555;">Thanks for reaching out to ${store.name}. Our team will get back to you shortly -- here's a copy of what you sent:</p>
+    <div style="background:#f9f8f6;border-left:4px solid #b89b5e;padding:16px;margin-bottom:20px;border-radius:4px;color:#222;line-height:1.6;">
+      ${subject ? `<p style="margin-bottom:6px;"><strong>Subject:</strong> ${subject}</p>` : ""}
+      <p style="margin-top:10px;white-space:pre-wrap;">${message}</p>
+    </div>
+    <p style="color:#777;font-size:12px;">No need to send this again -- we typically reply within 1-2 business days.</p>
+  `
+  await sendMail(to, `We got your message — ${store.name}`, baseTemplate(store, content)).catch((err) => {
+    console.error("[sendContactConfirmation] error:", err)
   })
 }
 

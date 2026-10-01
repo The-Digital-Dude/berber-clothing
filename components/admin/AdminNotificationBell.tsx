@@ -2,12 +2,12 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { Bell, ShoppingCart, PackageX, RotateCcw, Undo2, UserPlus, CheckCheck, Loader2 } from "lucide-react"
+import { Bell, ShoppingCart, PackageX, RotateCcw, Undo2, UserPlus, Mail, CheckCheck, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 type Notification = {
   id: string
-  type: "new_order" | "low_stock" | "order_cancelled" | "order_returned" | "new_customer"
+  type: "new_order" | "low_stock" | "order_cancelled" | "order_returned" | "new_customer" | "new_contact_message"
   title: string
   message: string
   link: string | null
@@ -21,6 +21,7 @@ const TYPE_ICON: Record<Notification["type"], any> = {
   order_cancelled: RotateCcw,
   order_returned: Undo2,
   new_customer: UserPlus,
+  new_contact_message: Mail,
 }
 
 const TYPE_COLOR: Record<Notification["type"], string> = {
@@ -29,6 +30,7 @@ const TYPE_COLOR: Record<Notification["type"], string> = {
   order_cancelled: "bg-rose-50 text-rose-600",
   order_returned: "bg-rose-50 text-rose-600",
   new_customer: "bg-blue-50 text-blue-600",
+  new_contact_message: "bg-indigo-50 text-indigo-600",
 }
 
 function timeAgo(iso: string): string {

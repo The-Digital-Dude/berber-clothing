@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
 
-export type AdminNotificationType = "new_order" | "low_stock" | "order_cancelled" | "order_returned" | "new_customer"
+export type AdminNotificationType = "new_order" | "low_stock" | "order_cancelled" | "order_returned" | "new_customer" | "new_contact_message"
 
 type CreateInput = {
   type: AdminNotificationType

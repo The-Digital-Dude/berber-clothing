@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { sendAdminContactMessageAlert } from "@/lib/email"
+import { sendAdminContactMessageAlert, sendContactConfirmation } from "@/lib/email"
+import { createAdminNotification } from "@/lib/adminNotifications"
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Notify admin
+    // Notify admin (email + notification center bell)
     sendAdminContactMessageAlert({
       name: contactMsg.name,
       email: contactMsg.email,
@@ -30,6 +31,24 @@ export async function POST(req: NextRequest) {
       message: contactMsg.message,
     }).catch((err) => {
       console.error("[sendAdminContactMessageAlert] error:", err)
+    })
+
+    createAdminNotification({
+      type: "new_contact_message",
+      title: `New message from ${contactMsg.name}`,
+      message: contactMsg.subject || contactMsg.message.slice(0, 100),
+      link: "/admin/contact",
+      entityId: contactMsg.id,
+    })
+
+    // Let the customer know their message actually went through
+    sendContactConfirmation({
+      to: contactMsg.email,
+      customerName: contactMsg.name,
+      subject: contactMsg.subject,
+      message: contactMsg.message,
+    }).catch((err) => {
+      console.error("[sendContactConfirmation] error:", err)
     })
 
     return NextResponse.json({ success: true, messageId: contactMsg.id })
