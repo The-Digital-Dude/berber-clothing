@@ -20,6 +20,15 @@ export async function POST(req: NextRequest) {
     const filename = `payment-screenshots/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
     const buffer = await file.arrayBuffer()
 
+    // The "uploads" bucket was never actually created -- every manual
+    // bKash/Nagad checkout attempt that tried to attach a payment screenshot
+    // has been hard-failing with "Bucket not found" (no catch around this
+    // call in CheckoutForm.tsx, so it blocks the whole checkout submit).
+    const { data: buckets } = await supabase.storage.listBuckets()
+    if (!buckets?.some((b) => b.name === "uploads")) {
+      await supabase.storage.createBucket("uploads", { public: true, fileSizeLimit: 5242880 })
+    }
+
     const { error } = await supabase.storage
       .from("uploads")
       .upload(filename, buffer, { contentType: file.type, upsert: false, cacheControl: "31536000" })
@@ -27,7 +36,13 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     const { data } = supabase.storage.from("uploads").getPublicUrl(filename)
-    return NextResponse.json({ url: data.publicUrl })
+    // Route through the Cloudflare Worker cache in front of Supabase Storage
+    // (same as every other upload endpoint) -- without this rewrite, every
+    // admin view of a payment-proof screenshot hit Supabase's origin
+    // directly, bypassing the cache layer that exists specifically to keep
+    // Cached Egress down.
+    const cdnUrl = data.publicUrl.replace(/^https:\/\/[^/]+\.supabase\.co/, "https://cdn.berber.clothing")
+    return NextResponse.json({ url: cdnUrl })
   } catch {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 })
   }
