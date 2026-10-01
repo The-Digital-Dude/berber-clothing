@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 
 export default function AbandonedCartsClient({
   initialCarts,
@@ -62,6 +63,25 @@ export default function AbandonedCartsClient({
       toast.error(err.message || "Failed to save")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const toggleOptOut = async () => {
+    if (!editingCart) return
+    const next = !editingCart.abandonedCartEmailsEnabled
+    try {
+      const res = await fetch(`/api/admin/abandoned-carts/${editingCart.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ abandonedCartEmailsEnabled: next }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to update")
+      toast.success(next ? "Recovery emails re-enabled" : "Recovery emails turned off for this customer")
+      setEditingCart((c: any) => ({ ...c, abandonedCartEmailsEnabled: next }))
+      setCarts((prev) => prev.map((c) => (c.email === editingCart.email ? { ...c, abandonedCartEmailsEnabled: next } : c)))
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update")
     }
   }
 
@@ -359,6 +379,27 @@ export default function AbandonedCartsClient({
             <p className="text-xs text-zinc-500">
               Fixing a typo'd email or missing phone number here lets recovery emails and WhatsApp outreach actually reach this customer.
             </p>
+
+            <div className="pt-1 border-t border-zinc-100">
+              {editingCart?.hasAccount ? (
+                <div className="flex items-center justify-between pt-3">
+                  <div>
+                    <p className="text-sm font-medium">Recovery Emails & Coupon</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      {editingCart.abandonedCartEmailsEnabled
+                        ? "This customer will be emailed the 5% coupon if they abandon a cart."
+                        : "Off — this customer will never receive abandoned-cart emails or the coupon."}
+                    </p>
+                  </div>
+                  <Switch checked={editingCart.abandonedCartEmailsEnabled} onCheckedChange={toggleOptOut} />
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-400 pt-3">
+                  This shopper has no account, so there's no per-customer opt-out — guest carts always follow the global abandoned-cart email setting.
+                </p>
+              )}
+            </div>
+
             <Button className="w-full" onClick={saveEdit} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
           </div>
         </DialogContent>

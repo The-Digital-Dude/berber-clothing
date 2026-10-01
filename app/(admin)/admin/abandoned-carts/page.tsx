@@ -14,6 +14,18 @@ export default async function AbandonedCartsPage() {
     take: 100,
   })
 
+  // Opt-out is a per-registered-customer preference (User.abandonedCartEmailsEnabled)
+  // -- guests have no account to attach it to, so only carts whose email
+  // matches a real customer get the toggle.
+  const emails = [...new Set(carts.map((c) => c.email).filter(Boolean))] as string[]
+  const users = emails.length
+    ? await prisma.user.findMany({
+        where: { email: { in: emails } },
+        select: { email: true, abandonedCartEmailsEnabled: true },
+      })
+    : []
+  const userMap = new Map(users.map((u) => [u.email.toLowerCase(), u.abandonedCartEmailsEnabled]))
+
   // Serialize dates and decimals for client
   const serialized = carts.map((c) => ({
     ...c,
@@ -25,6 +37,8 @@ export default async function AbandonedCartsPage() {
     email2SentAt: c.email2SentAt ? c.email2SentAt.toISOString() : null,
     email3SentAt: c.email3SentAt ? c.email3SentAt.toISOString() : null,
     recoveredAt: c.recoveredAt ? c.recoveredAt.toISOString() : null,
+    hasAccount: c.email ? userMap.has(c.email.toLowerCase()) : false,
+    abandonedCartEmailsEnabled: c.email ? (userMap.get(c.email.toLowerCase()) ?? true) : true,
   }))
 
   return <AbandonedCartsClient initialCarts={serialized} />
