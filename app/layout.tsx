@@ -94,7 +94,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     "@type": "Organization",
     name: storeName,
     url: SITE_URL,
-    logo: `${SITE_URL}/logo-icon.png`,
+    logo: `${SITE_URL}/logo-icon.webp`,
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer service",

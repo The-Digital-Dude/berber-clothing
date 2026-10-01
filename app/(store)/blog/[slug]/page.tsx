@@ -77,7 +77,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       "@type": "Organization",
       name: "Berber Clothing",
       url: SITE_URL,
-      logo: `${SITE_URL}/logo-icon.png`,
+      logo: `${SITE_URL}/logo-icon.webp`,
     },
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt?.toISOString(),
