@@ -73,13 +73,23 @@ export interface SteadfastConsignment {
   status: string
 }
 
+// Matches the REAL /fraud_check/score/{phone} response shape (confirmed
+// against a live call -- the previous version of this interface guessed
+// field names like total_parcels/delivered_parcels/success_rate that don't
+// exist anywhere in Steadfast's actual response, so every check silently
+// fell back to zeros no matter what Steadfast actually returned).
 export interface SteadfastFraudReport {
-  total_parcels?: number
-  delivered_parcels?: number
-  cancelled_parcels?: number
-  success_rate?: number
-  fraud_reports?: number
-  risk_level?: "LOW" | "MEDIUM" | "HIGH"
+  deliveryRatio: number | null // percentage, e.g. 95 = 95%
+  cancellationRatio: number | null
+  returnRatio: number | null
+  totalReports: number // fraud reports logged by other merchants on this network
+  doubtfulReports: boolean
+  fraudCategories: string[]
+  volumeBand: string | null // Steadfast's own qualitative parcel-volume bucket, e.g. "high" | "low"
+  score: number | null // Steadfast's own numeric fraud score, when it has enough data to produce one
+  level: string | null // Steadfast's own risk level, when available
+  scoringDisabled: boolean // true when Steadfast doesn't yet have enough history to score this phone
+  risk_level: "LOW" | "MEDIUM" | "HIGH"
   raw?: any
 }
 
@@ -219,32 +229,40 @@ export async function checkSteadfastFraud(phone: string, forceFresh = false): Pr
     if (!res.ok) return null
     const data = await res.json()
 
-    // Steadfast returns fraud metrics / scoring
-    const total = data.total_parcels ?? data.total_orders ?? data.total ?? 0
-    const delivered = data.delivered_parcels ?? data.delivered ?? 0
-    const cancelled = data.cancelled_parcels ?? data.cancelled ?? data.returned ?? 0
-    const reports = data.fraud_reports ?? data.reports ?? 0
+    const deliveryRatio = typeof data.delivery_ratio === "number" ? data.delivery_ratio : null
+    const cancellationRatio = typeof data.cancellation_ratio === "number" ? data.cancellation_ratio : null
+    const returnRatio = typeof data.return_ratio === "number" ? data.return_ratio : null
+    const totalReports = Number(data.total_reports || 0)
+    const doubtfulReports = !!data.doubtful_reports
+    const fraudCategories = Array.isArray(data.fraud_categories) ? data.fraud_categories : []
+    const volumeBand = data.volume_band ?? null
+    const score = typeof data.score === "number" ? data.score : null
+    const level = data.level ?? null
+    const scoringDisabled = !!data.scoring_disabled
 
-    let rate: number | undefined = undefined
-    if (total > 0) {
-      rate = delivered / total
-    } else if (data.success_rate !== undefined) {
-      rate = Number(data.success_rate) > 1 ? Number(data.success_rate) / 100 : Number(data.success_rate)
-    }
-
+    // Prefer Steadfast's own level/score when it has enough data to produce
+    // one; fall back to our own thresholds on the raw ratios otherwise.
     let risk: "LOW" | "MEDIUM" | "HIGH" = "LOW"
-    if (reports > 0 || (rate !== undefined && total >= 3 && rate < 0.5)) {
+    if (totalReports > 0 || doubtfulReports) {
       risk = "HIGH"
-    } else if (rate !== undefined && total >= 2 && rate < 0.8) {
-      risk = "MEDIUM"
+    } else if (level && ["LOW", "MEDIUM", "HIGH"].includes(String(level).toUpperCase())) {
+      risk = String(level).toUpperCase() as "LOW" | "MEDIUM" | "HIGH"
+    } else if (deliveryRatio !== null) {
+      if (deliveryRatio < 50) risk = "HIGH"
+      else if (deliveryRatio < 80) risk = "MEDIUM"
     }
 
     return {
-      total_parcels: total,
-      delivered_parcels: delivered,
-      cancelled_parcels: cancelled,
-      success_rate: rate,
-      fraud_reports: reports,
+      deliveryRatio,
+      cancellationRatio,
+      returnRatio,
+      totalReports,
+      doubtfulReports,
+      fraudCategories,
+      volumeBand,
+      score,
+      level,
+      scoringDisabled,
       risk_level: risk,
       raw: data,
     }

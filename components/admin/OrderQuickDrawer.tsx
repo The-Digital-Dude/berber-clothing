@@ -51,22 +51,10 @@ export default function OrderQuickDrawer({
     fetch(`/api/admin/orders/${orderId}`)
       .then((res) => res.json())
       .then((data) => {
-        if (active) {
-          setOrder(data)
-          if (data.shippingPhone) {
-            // Auto fetch risk score
-            fetch(`/api/admin/courier/steadfast/fraud-check`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ phone: data.shippingPhone }),
-            })
-              .then((r) => r.json())
-              .then((riskRes) => {
-                if (active && riskRes.risk) setRisk(riskRes.risk)
-              })
-              .catch(() => {})
-          }
-        }
+        // No auto-fetch here -- a real Steadfast network check costs an API
+        // call, so it only ever runs when the admin clicks "Fraud Check" /
+        // "Re-check" below, never automatically on open.
+        if (active) setOrder(data)
       })
       .catch(() => {
         if (active) toast.error("Failed to load order preview")
@@ -332,7 +320,7 @@ export default function OrderQuickDrawer({
                   className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition disabled:opacity-50"
                 >
                   <RefreshCw className={cn("w-3 h-3", checkingRisk && "animate-spin")} />
-                  <span>Re-check</span>
+                  <span>{risk ? "Re-check" : "Fraud Check"}</span>
                 </button>
               </div>
 
@@ -374,21 +362,26 @@ export default function OrderQuickDrawer({
                       <div className="flex justify-between font-semibold">
                         <span>Courier Success Rate:</span>
                         <span>
-                          {risk.steadfast.success_rate !== undefined
-                            ? `${Math.round(risk.steadfast.success_rate * 100)}%`
-                            : "No history"}
+                          {risk.steadfast.deliveryRatio !== null
+                            ? `${risk.steadfast.deliveryRatio}%`
+                            : risk.steadfast.scoringDisabled ? "Not enough history" : "No history"}
                         </span>
                       </div>
                       <div className="text-[10.5px] text-zinc-500">
-                        {risk.steadfast.delivered_parcels ?? 0} delivered / {risk.steadfast.cancelled_parcels ?? 0} returned (Total: {risk.steadfast.total_parcels ?? 0})
+                        {risk.steadfast.deliveryRatio ?? 0}% delivered / {risk.steadfast.cancellationRatio ?? 0}% cancelled / {risk.steadfast.returnRatio ?? 0}% returned
                       </div>
+                      {risk.steadfast.totalReports > 0 && (
+                        <div className="text-[10.5px] text-rose-700 font-semibold">
+                          {risk.steadfast.totalReports} fraud report(s) across the network
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="bg-zinc-50 rounded-xl border border-zinc-200/70 p-3 text-[11px] text-zinc-500 flex items-center justify-between">
-                  <span>Checking customer delivery record…</span>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-400" />
+                  <span>{checkingRisk ? "Checking customer delivery record…" : "Not checked yet"}</span>
+                  {checkingRisk && <Loader2 className="w-3.5 h-3.5 animate-spin text-zinc-400" />}
                 </div>
               )}
             </div>

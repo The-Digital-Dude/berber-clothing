@@ -1167,7 +1167,7 @@ export default function OrderDetailsClient({
                     className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-indigo-600 hover:text-indigo-800 transition disabled:opacity-50"
                   >
                     <RefreshCw className={cn("w-3 h-3", isRefreshingRisk && "animate-spin")} />
-                    <span>{isRefreshingRisk ? "Checking Steadfast…" : "Re-check Fraud Score"}</span>
+                    <span>{isRefreshingRisk ? "Checking Steadfast…" : riskData ? "Re-check Fraud Score" : "Fraud Check"}</span>
                   </button>
                 </div>
 
@@ -1202,16 +1202,23 @@ export default function OrderDetailsClient({
                         <div className="font-bold text-zinc-900 flex justify-between items-center">
                           <span>⚡ Steadfast Courier Network:</span>
                           <span className="text-zinc-600">
-                            {riskData.steadfast.success_rate !== undefined
-                              ? `${Math.round(riskData.steadfast.success_rate * 100)}% Success`
-                              : "No Prior Parcels"}
+                            {riskData.steadfast.deliveryRatio !== null
+                              ? `${riskData.steadfast.deliveryRatio}% Success`
+                              : riskData.steadfast.scoringDisabled ? "Not enough history yet" : "No Prior Parcels"}
                           </span>
                         </div>
                         <div className="text-zinc-600">
-                          Total Parcels: <strong>{riskData.steadfast.total_parcels ?? 0}</strong> (
-                          <span className="text-emerald-700 font-semibold">{riskData.steadfast.delivered_parcels ?? 0} delivered</span> /{" "}
-                          <span className="text-rose-700 font-semibold">{riskData.steadfast.cancelled_parcels ?? 0} returned</span>)
+                          <span className="text-emerald-700 font-semibold">{riskData.steadfast.deliveryRatio ?? 0}% delivered</span> /{" "}
+                          <span className="text-rose-700 font-semibold">{riskData.steadfast.cancellationRatio ?? 0}% cancelled</span> /{" "}
+                          <span className="text-orange-700 font-semibold">{riskData.steadfast.returnRatio ?? 0}% returned</span>
+                          {riskData.steadfast.volumeBand && <> · <span className="capitalize">{riskData.steadfast.volumeBand}</span> volume</>}
                         </div>
+                        {riskData.steadfast.totalReports > 0 && (
+                          <div className="text-rose-700 font-semibold">
+                            {riskData.steadfast.totalReports} fraud report(s) across the courier network
+                            {riskData.steadfast.fraudCategories.length > 0 && ` (${riskData.steadfast.fraudCategories.join(", ")})`}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1224,7 +1231,7 @@ export default function OrderDetailsClient({
                   </div>
                 ) : (
                   <div className="p-3 rounded-xl border border-zinc-200/70 bg-zinc-50/50 text-[11px] text-zinc-500">
-                    No negative delivery reports found for this customer.
+                    {riskData ? "No negative delivery reports found for this customer." : "Not checked yet — click \"Fraud Check\" to run a live Steadfast lookup."}
                   </div>
                 )}
               </div>
