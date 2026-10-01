@@ -23,7 +23,7 @@ export async function GET() {
       slug: w.product.slug,
       price: Number(w.product.price),
       comparePrice: w.product.comparePrice ? Number(w.product.comparePrice) : null,
-      image: w.product.images[0]?.url || "",
+      image: w.product.images[0]?.thumbnailUrl || w.product.images[0]?.url || "",
       category: w.product.category?.name || "",
     })),
   })

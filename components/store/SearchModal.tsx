@@ -11,7 +11,7 @@ interface SearchResult {
   slug: string
   price: number
   comparePrice?: number | null
-  images: { url: string }[]
+  images: { url: string; thumbnailUrl?: string | null }[]
   category?: { name: string }
 }
 
@@ -135,7 +135,7 @@ export default function SearchModal({ onClose }: { onClose: () => void }) {
                 >
                   <div className="w-14 h-16 shrink-0 rounded-md overflow-hidden bg-berber-muted">
                     <img
-                      src={product.images[0]?.url || "/placeholder.jpg"}
+                      src={product.images[0]?.thumbnailUrl || product.images[0]?.url || "/placeholder.jpg"}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />

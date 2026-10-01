@@ -13,7 +13,7 @@ type BundleItem = {
     name: string
     slug: string
     price: number
-    images: { url: string }[]
+    images: { url: string; thumbnailUrl?: string | null }[]
     variants: { id: string; size: string; color: string; stock: number }[]
   }
 }
@@ -58,7 +58,7 @@ export default function BundleAddToCart({ bundle }: { bundle: Bundle }) {
         price: Number(item.product.price),
         size: variant.size,
         color: variant.color,
-        image: item.product.images[0]?.url || "",
+        image: item.product.images[0]?.thumbnailUrl || item.product.images[0]?.url || "",
         quantity: item.quantity,
       })
     })

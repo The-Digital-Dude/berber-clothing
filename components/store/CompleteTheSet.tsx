@@ -14,7 +14,7 @@ type CompanionProduct = {
   name: string
   slug: string
   price: number
-  images: { url: string }[]
+  images: { url: string; thumbnailUrl?: string | null }[]
   variants: Variant[]
 }
 type BundleItem = { id: string; product: CompanionProduct }
@@ -95,7 +95,7 @@ export default function CompleteTheSet({
         price: Number(v.price ?? p.price),
         size: v.size,
         color: v.color,
-        image: p.images[0]?.url || "",
+        image: p.images[0]?.thumbnailUrl || p.images[0]?.url || "",
         quantity: 1,
         setGroupId,
       })
@@ -161,7 +161,7 @@ export default function CompleteTheSet({
                 {/* Image */}
                 {product.images[0] && (
                   <div className="relative w-12 h-14 rounded overflow-hidden shrink-0">
-                    <Image src={product.images[0].url} alt={product.name} fill className="object-cover" sizes="48px" />
+                    <Image src={product.images[0].thumbnailUrl || product.images[0].url} alt={product.name} fill className="object-cover" sizes="48px" />
                   </div>
                 )}
 

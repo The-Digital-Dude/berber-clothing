@@ -172,11 +172,16 @@ model Product {
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
-  productId String
-  url       String
-  alt       String?
-  sortOrder Int     @default(0)
+  id           String  @id @default(cuid())
+  productId    String
+  url          String
+  // Smaller (~720px) variant for grid/card thumbnails -- the main `url` is
+  // sized for the PDP gallery (up to ~900px) and is 2-3x oversized when the
+  // same image is shown in a ~320-440px homepage/shop grid card. Nullable so
+  // images uploaded before this existed just fall back to `url`.
+  thumbnailUrl String?
+  alt          String?
+  sortOrder    Int     @default(0)
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 

@@ -49,8 +49,8 @@ export default async function SetsPage() {
             const bundle = product.setBundle
             const companions = bundle?.items.map((i: any) => i.product) ?? []
             const allImages = [
-              product.images[0]?.url,
-              ...companions.map((c: any) => c.images[0]?.url).filter(Boolean),
+              product.images[0]?.thumbnailUrl || product.images[0]?.url,
+              ...companions.map((c: any) => c.images[0]?.thumbnailUrl || c.images[0]?.url).filter(Boolean),
             ].filter(Boolean) as string[]
 
             return (

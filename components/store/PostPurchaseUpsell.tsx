@@ -7,7 +7,7 @@ interface Product {
   id: string
   name: string
   slug: string
-  images: { url: string }[]
+  images: { url: string; thumbnailUrl?: string | null }[]
   variants: { id: string; price: number; stock: number }[]
 }
 
@@ -40,7 +40,7 @@ export default function PostPurchaseUpsell({ orderId }: { orderId: string }) {
       variantId: variant.id,
       name: product.name,
       price: variant.price,
-      image: product.images[0]?.url ?? "",
+      image: product.images[0]?.thumbnailUrl ?? product.images[0]?.url ?? "",
       quantity: 1,
       size: "",
       color: "",
@@ -62,7 +62,7 @@ export default function PostPurchaseUpsell({ orderId }: { orderId: string }) {
             return (
               <div key={p.id} className="flex items-center gap-4 border rounded-xl p-3">
                 <div className="relative h-16 w-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                  {p.images[0] && <Image src={p.images[0].url} alt={p.name} fill sizes="64px" className="object-cover" />}
+                  {p.images[0] && <Image src={p.images[0].thumbnailUrl || p.images[0].url} alt={p.name} fill sizes="64px" className="object-cover" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{p.name}</p>

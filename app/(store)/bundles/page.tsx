@@ -47,7 +47,7 @@ export default async function BundlesPage() {
                       {bundle.items.slice(0, 4).map((item) => (
                         <div key={item.id} className="relative overflow-hidden bg-gray-100">
                           {item.product.images[0] && (
-                            <Image src={item.product.images[0].url} alt={item.product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw" className="object-cover" />
+                            <Image src={item.product.images[0].thumbnailUrl || item.product.images[0].url} alt={item.product.name} fill sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 16vw" className="object-cover" />
                           )}
                         </div>
                       ))}

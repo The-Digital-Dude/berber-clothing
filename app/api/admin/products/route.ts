@@ -58,7 +58,7 @@ export async function POST(req: Request) {
         videoUrl: videoUrl || null,
         sizeChartImage: sizeChartImage || null,
         images: {
-          create: (images || []).map((img: any, i: number) => ({ url: img.url, alt: img.alt || "", sortOrder: i }))
+          create: (images || []).map((img: any, i: number) => ({ url: img.url, thumbnailUrl: img.thumbnailUrl || null, alt: img.alt || "", sortOrder: i }))
         },
         variants: {
           create: (variants || []).map((v: any, i: number) => ({

@@ -47,6 +47,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           data: images.map((img: any, i: number) => ({
             productId: id,
             url: img.url,
+            thumbnailUrl: img.thumbnailUrl || null,
             alt: img.alt || "",
             sortOrder: i,
           })),

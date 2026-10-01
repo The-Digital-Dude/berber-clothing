@@ -156,7 +156,7 @@ export default async function OrderConfirmationPage({
               {order.items.map((item) => (
                 <div key={item.id} className="flex gap-4">
                   <div className="relative h-20 w-16 bg-berber-muted shrink-0 rounded overflow-hidden">
-                    <Image src={item.product.images[0]?.url || "/placeholder.jpg"} alt={item.productName} fill sizes="64px" className="object-cover" />
+                    <Image src={item.product.images[0]?.thumbnailUrl || item.product.images[0]?.url || "/placeholder.jpg"} alt={item.productName} fill sizes="64px" className="object-cover" />
                   </div>
                   <div className="flex-1 text-sm flex flex-col justify-center">
                     <h4 className="font-medium line-clamp-1">{item.productName}</h4>

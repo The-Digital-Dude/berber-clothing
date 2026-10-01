@@ -491,7 +491,7 @@ export default function AccountPage() {
                                 <div className="relative w-14 h-16 rounded-xl bg-zinc-100 border border-zinc-200 overflow-hidden shrink-0">
                                   {item.product?.images?.[0]?.url ? (
                                     <Image
-                                      src={item.product.images[0].url}
+                                      src={item.product.images[0].thumbnailUrl || item.product.images[0].url}
                                       alt={item.productName}
                                       fill
                                       sizes="60px"

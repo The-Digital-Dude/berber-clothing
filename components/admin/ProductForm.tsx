@@ -195,8 +195,8 @@ export default function ProductForm({ initialData, categories }: { initialData?:
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<"general" | "media" | "seo" | "set">("general")
-  const [images, setImages] = useState<{ url: string; alt: string }[]>(
-    initialData?.images?.map((img: any) => ({ url: img.url, alt: img.alt || "" })) || []
+  const [images, setImages] = useState<{ url: string; alt: string; thumbnailUrl?: string | null }[]>(
+    initialData?.images?.map((img: any) => ({ url: img.url, alt: img.alt || "", thumbnailUrl: img.thumbnailUrl || null })) || []
   )
   const [newImageUrl, setNewImageUrl] = useState("")
   const [uploading, setUploading] = useState(false)
@@ -216,7 +216,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
       const res = await fetch("/api/admin/upload", { method: "POST", body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setImages(prev => [...prev, { url: data.url, alt: file.name.replace(/\.[^.]+$/, "") }])
+      setImages(prev => [...prev, { url: data.url, alt: file.name.replace(/\.[^.]+$/, ""), thumbnailUrl: data.thumbnailUrl || null }])
       toast.success("Image uploaded")
     } catch (e: any) { toast.error(e.message || "Upload failed") }
     finally { setUploading(false) }

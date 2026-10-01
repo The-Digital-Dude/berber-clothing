@@ -53,7 +53,7 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
 
             <div className="space-y-4">
               {bundle.items.map((item, idx) => {
-                const image = item.product.images[0]?.url
+                const image = item.product.images[0]?.thumbnailUrl || item.product.images[0]?.url
                 const price = Number(item.product.price)
                 const comparePrice = item.product.comparePrice ? Number(item.product.comparePrice) : null
                 return (

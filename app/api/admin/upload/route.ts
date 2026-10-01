@@ -15,11 +15,16 @@ const MAX_WIDTH_BY_BUCKET: Record<string, number> = {
 }
 const DEFAULT_MAX_WIDTH = 1200
 const WEBP_QUALITY = 82
+// product-images is the only bucket shown both large (PDP gallery, up to
+// ~900px) and small (homepage/shop grid cards, ~320-440px) -- one file can't
+// serve both well, so this bucket alone also gets a second, smaller variant.
+// 720px covers 2x retina at the widest grid card (~354px display).
+const THUMBNAIL_WIDTH = 720
 
-async function compressToWebP(buffer: ArrayBuffer, bucket: string): Promise<{ data: Buffer; contentType: string; ext: string }> {
+async function compressToWebP(buffer: ArrayBuffer, bucket: string, width?: number): Promise<{ data: Buffer; contentType: string; ext: string }> {
   try {
     const sharp = (await import("sharp")).default
-    const maxWidth = MAX_WIDTH_BY_BUCKET[bucket] ?? DEFAULT_MAX_WIDTH
+    const maxWidth = width ?? (MAX_WIDTH_BY_BUCKET[bucket] ?? DEFAULT_MAX_WIDTH)
     const data = await sharp(Buffer.from(buffer))
       .resize({ width: maxWidth, withoutEnlargement: true })
       .webp({ quality: WEBP_QUALITY })
@@ -73,7 +78,24 @@ export async function POST(req: NextRequest) {
       "https://cdn.berber.clothing"
     )
 
-    return NextResponse.json({ url: cdnUrl })
+    let thumbnailUrl: string | null = null
+    if (BUCKET === "product-images") {
+      try {
+        const { data: thumbData } = await compressToWebP(arrayBuffer, BUCKET, THUMBNAIL_WIDTH)
+        const thumbFilename = `${filename.replace(/\.\w+$/, "")}-thumb.webp`
+        const { error: thumbUploadError } = await supabase.storage
+          .from(BUCKET)
+          .upload(thumbFilename, thumbData, { contentType: "image/webp", upsert: false, cacheControl: "31536000" })
+        if (!thumbUploadError) {
+          const { data: { publicUrl: thumbPublicUrl } } = supabase.storage.from(BUCKET).getPublicUrl(thumbFilename)
+          thumbnailUrl = thumbPublicUrl.replace(/^https:\/\/[^/]+\.supabase\.co/, "https://cdn.berber.clothing")
+        }
+      } catch (err) {
+        console.error("Thumbnail generation failed (non-fatal)", err)
+      }
+    }
+
+    return NextResponse.json({ url: cdnUrl, thumbnailUrl })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

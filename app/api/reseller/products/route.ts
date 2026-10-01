@@ -45,7 +45,7 @@ export async function GET(req: Request) {
         retailPrice,
         wholesaleBasePrice,
         discountPct,
-        image: p.images[0]?.url || "/placeholder.jpg",
+        image: p.images[0]?.thumbnailUrl || p.images[0]?.url || "/placeholder.jpg",
         category: p.category?.name || "Apparel",
         variants: p.variants.map((v) => ({
           id: v.id,

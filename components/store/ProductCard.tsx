@@ -27,8 +27,11 @@ export default function ProductCard({
   const comparing = inCompare(product.id)
 
   const images = product.images || []
-  const thumbnail = images[0]?.url || "/placeholder.jpg"
-  const hoverImage = images[1]?.url || null
+  // thumbnailUrl is a smaller (~720px) variant generated specifically for
+  // grid cards -- falls back to the full-size url for images uploaded before
+  // this existed.
+  const thumbnail = images[0]?.thumbnailUrl || images[0]?.url || "/placeholder.jpg"
+  const hoverImage = images[1]?.thumbnailUrl || images[1]?.url || null
 
   const isNew = (Date.now() - new Date(product.createdAt).getTime()) < 1000 * 60 * 60 * 24 * 7
   const comparePriceNum = Number(product.comparePrice) || 0

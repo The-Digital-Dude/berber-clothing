@@ -7,7 +7,7 @@ import { ShoppingBag, Plus } from "lucide-react"
 import Link from "next/link"
 
 interface Variant { id: string; size: string | null; color: string | null; stock: number; price: number }
-interface Product { id: string; name: string; slug: string; price: number; images: { url: string }[]; variants: Variant[] }
+interface Product { id: string; name: string; slug: string; price: number; images: { url: string; thumbnailUrl?: string | null }[]; variants: Variant[] }
 interface BundleItem { id: string; quantity: number; product: Product }
 interface Bundle {
   id: string; name: string; slug: string; description: string | null
@@ -63,7 +63,7 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
         variantId: variant.id,
         name: item.product.name,
         price: Number(item.product.price), // individual product price is source of truth
-        image: item.product.images[0]?.url ?? "",
+        image: item.product.images[0]?.thumbnailUrl ?? item.product.images[0]?.url ?? "",
         quantity: item.quantity,
         size: variant.size ?? "",
         color: variant.color ?? "",
@@ -90,7 +90,7 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
             <div className="grid grid-cols-2 h-full gap-1 p-1">
               {bundle.items.slice(0, 4).map((item) => (
                 <div key={item.id} className="relative overflow-hidden rounded-xl bg-gray-100">
-                  {item.product.images[0] && <Image src={item.product.images[0].url} alt={item.product.name} fill sizes="(max-width: 1024px) 50vw, 256px" className="object-cover" />}
+                  {item.product.images[0] && <Image src={item.product.images[0].thumbnailUrl || item.product.images[0].url} alt={item.product.name} fill sizes="(max-width: 1024px) 50vw, 256px" className="object-cover" />}
                 </div>
               ))}
             </div>
@@ -137,7 +137,7 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
                   } ${isSelected ? "border-black bg-gray-50" : "border-gray-200 opacity-60"}`}
                 >
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                    {item.product.images[0] && <Image src={item.product.images[0].url} alt={item.product.name} fill sizes="56px" className="object-cover" />}
+                    {item.product.images[0] && <Image src={item.product.images[0].thumbnailUrl || item.product.images[0].url} alt={item.product.name} fill sizes="56px" className="object-cover" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{item.product.name}</p>

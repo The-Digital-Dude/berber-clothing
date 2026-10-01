@@ -53,7 +53,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
             <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-2">
               {product.images[0] ? (
                 <Image
-                  src={product.images[0].url}
+                  src={product.images[0].thumbnailUrl || product.images[0].url}
                   alt={product.name}
                   width={300}
                   height={300}

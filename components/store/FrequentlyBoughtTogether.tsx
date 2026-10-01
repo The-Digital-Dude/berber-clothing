@@ -22,7 +22,7 @@ export interface FBTProduct {
   name: string
   slug: string
   price: number
-  images: { url: string; alt?: string }[]
+  images: { url: string; alt?: string; thumbnailUrl?: string | null }[]
   variants: FBTVariant[]
   discountPct?: number
 }
@@ -129,7 +129,7 @@ export default function FrequentlyBoughtTogether({ primary, suggestions }: Props
           price: discountedPrice,
           size: variant.size || "Standard",
           color: variant.color || "Default",
-          image: p.images[0]?.url ?? "",
+          image: p.images[0]?.thumbnailUrl ?? p.images[0]?.url ?? "",
           quantity: 1,
         })
         addedCount++
@@ -209,7 +209,7 @@ export default function FrequentlyBoughtTogether({ primary, suggestions }: Props
                 <div className="w-20 h-24 sm:w-24 sm:h-28 rounded-lg overflow-hidden bg-berber-muted relative">
                   {p.images[0] ? (
                     <Image
-                      src={p.images[0].url}
+                      src={p.images[0].thumbnailUrl || p.images[0].url}
                       alt={p.name}
                       fill
                       sizes="112px"
