@@ -312,6 +312,7 @@ export default function ContactInboxClient({
                         {new Date(m.createdAt).toLocaleDateString("en-GB", {
                           day: "numeric",
                           month: "short",
+                          timeZone: "Asia/Dhaka",
                         })}
                       </span>
                     </div>
@@ -379,6 +380,7 @@ export default function ContactInboxClient({
                         year: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
+                        timeZone: "Asia/Dhaka",
                       })}
                     </span>
                   </div>

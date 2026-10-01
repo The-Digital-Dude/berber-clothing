@@ -55,7 +55,10 @@ export async function DELETE(req: NextRequest) {
   const { error } = await requireAdmin()
   if (error) return error
 
-  const { id } = await req.json()
+  // The client calls DELETE /api/admin/contact?id=X (no body) -- this used to
+  // read `await req.json()`, which throws on an empty body, so delete never
+  // actually worked.
+  const id = req.nextUrl.searchParams.get("id")
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
 
   await prisma.contactMessage.delete({
