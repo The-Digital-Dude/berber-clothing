@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { 
-  ShoppingCart, 
-  RotateCcw, 
-  TrendingUp, 
+import {
+  ShoppingCart,
+  RotateCcw,
+  TrendingUp,
   AlertCircle,
   MessageSquare,
   Package,
@@ -13,9 +13,13 @@ import {
   Send,
   Loader2,
   Tag,
-  Sparkles
+  Sparkles,
+  Pencil,
 } from "lucide-react"
 import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export default function AbandonedCartsClient({
   initialCarts,
@@ -24,6 +28,42 @@ export default function AbandonedCartsClient({
 }) {
   const [carts, setCarts] = useState(initialCarts)
   const [sendingId, setSendingId] = useState<string | null>(null)
+  const [editingCart, setEditingCart] = useState<any | null>(null)
+  const [editForm, setEditForm] = useState({ name: "", email: "", phone: "" })
+  const [editErrors, setEditErrors] = useState<{ email?: string }>({})
+  const [saving, setSaving] = useState(false)
+
+  const startEditing = (cart: any) => {
+    setEditingCart(cart)
+    setEditForm({ name: cart.name || "", email: cart.email || "", phone: cart.phone || "" })
+    setEditErrors({})
+  }
+
+  const saveEdit = async () => {
+    if (!editingCart) return
+    const email = editForm.email.trim()
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEditErrors({ email: "Enter a valid email" })
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/admin/abandoned-carts/${editingCart.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to save")
+      toast.success("Abandoned cart updated")
+      setCarts((prev) => prev.map((c) => (c.id === editingCart.id ? { ...c, ...data } : c)))
+      setEditingCart(null)
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const total = carts.reduce((s, c) => s + Number(c.subtotal || 0), 0)
   const recovered = carts.filter((c) => c.recoveredAt)
@@ -248,6 +288,14 @@ export default function AbandonedCartsClient({
 
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => startEditing(cart)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg border border-zinc-300 shadow-2xs transition"
+                            title="Edit customer contact details"
+                          >
+                            <Pencil className="w-3 h-3" /> Edit
+                          </button>
+
                           {cart.email && !isRecovered && (
                             <button
                               onClick={() => handleSendRecoveryEmail(cart.id, cart.email)}
@@ -290,6 +338,31 @@ export default function AbandonedCartsClient({
           </span>
         </div>
       </div>
+
+      <Dialog open={!!editingCart} onOpenChange={(open) => !open && setEditingCart(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Contact Details</DialogTitle></DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <Input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Customer name" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <Input value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} placeholder="customer@email.com" />
+              {editErrors.email && <p className="text-xs text-red-500 mt-1">{editErrors.email}</p>}
+            </div>
+            <div>
+              <label className="text-sm font-medium">Phone</label>
+              <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="01XXXXXXXXX" />
+            </div>
+            <p className="text-xs text-zinc-500">
+              Fixing a typo'd email or missing phone number here lets recovery emails and WhatsApp outreach actually reach this customer.
+            </p>
+            <Button className="w-full" onClick={saveEdit} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
