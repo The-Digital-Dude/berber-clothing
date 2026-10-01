@@ -51,17 +51,38 @@ type Order = {
   user?: { name: string; email?: string } | null
 }
 
-type RiskInfo = { riskLevel: string; successRate: number }
+type RiskInfo = { riskLevel: string; successRate: number | null; fraudWarning?: string | null; steadfast?: any }
 
 export default function OrdersBulkClient({
   orders: initialOrders,
-  riskByPhone,
 }: {
   orders: Order[]
-  riskByPhone: Record<string, RiskInfo>
 }) {
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>(initialOrders)
+  // On-demand only -- a real Steadfast network check costs an API call, so it
+  // never fires automatically on page load. Keyed by phone number.
+  const [liveRisk, setLiveRisk] = useState<Record<string, RiskInfo>>({})
+  const [checkingPhone, setCheckingPhone] = useState<string | null>(null)
+
+  const runFraudCheck = async (phone: string) => {
+    if (!phone || checkingPhone) return
+    setCheckingPhone(phone)
+    try {
+      const res = await fetch("/api/admin/courier/steadfast/fraud-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Fraud check failed")
+      setLiveRisk((prev) => ({ ...prev, [phone]: data.risk }))
+    } catch (err: any) {
+      toast.error(err.message || "Fraud check failed")
+    } finally {
+      setCheckingPhone(null)
+    }
+  }
 
   useEffect(() => {
     setOrders(initialOrders)
@@ -264,7 +285,8 @@ export default function OrdersBulkClient({
             ) : (
               orders.map((order) => {
                 const phone = (order as any).shippingPhone || ""
-                const risk = phone ? riskByPhone[phone] : null
+                const risk = phone ? liveRisk[phone] : null
+                const isChecking = checkingPhone === phone
                 const isSelected = selected.has(order.id)
                 const statusInfo = STATUS_COLORS[order.status] || { label: order.status, cls: "bg-zinc-100 text-zinc-700 border-zinc-200" }
                 const customerName = order.user?.name || order.shippingName || "Guest Customer"
@@ -388,21 +410,44 @@ export default function OrdersBulkClient({
                       </div>
                     </TableCell>
 
-                    {/* Fraud Risk Indicator */}
-                    <TableCell>
-                      {risk && risk.riskLevel !== "NEW" ? (
-                        <span
-                          className={cn(
-                            "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border",
-                            RISK_COLORS[risk.riskLevel]
-                          )}
+                    {/* Fraud Risk -- on-demand only, never auto-checked */}
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col items-start gap-1">
+                        {risk ? (
+                          risk.riskLevel !== "NEW" ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                                RISK_COLORS[risk.riskLevel]
+                              )}
+                            >
+                              {risk.riskLevel === "HIGH" && <AlertTriangle className="h-3 w-3" />}
+                              {risk.riskLevel}
+                              {risk.successRate !== null && ` · ${Math.round((risk.successRate ?? 0) * 100)}%`}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-zinc-400">No prior history found</span>
+                          )
+                        ) : (
+                          <span className="text-[11px] text-zinc-400">Not checked</span>
+                        )}
+                        {risk?.fraudWarning && (
+                          <span className="text-[10px] text-rose-600 max-w-[170px] leading-tight">{risk.fraudWarning}</span>
+                        )}
+                        {risk?.steadfast && (
+                          <span className="text-[10px] text-zinc-500">
+                            Steadfast: {risk.steadfast.deliveryRatio ?? 0}% delivered / {risk.steadfast.returnRatio ?? 0}% returned
+                          </span>
+                        )}
+                        <button
+                          onClick={() => runFraudCheck(phone)}
+                          disabled={!phone || isChecking}
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-700 hover:text-indigo-900 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {risk.riskLevel === "HIGH" && <AlertTriangle className="h-3 w-3" />}
-                          {risk.riskLevel} · {Math.round((risk.successRate ?? 0) * 100)}%
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-zinc-400">New Buyer</span>
-                      )}
+                          <ShieldCheck className="h-3 w-3" />
+                          {isChecking ? "Checking…" : risk ? "Re-check" : "Fraud Check"}
+                        </button>
+                      </div>
                     </TableCell>
 
                     {/* Action Triggers */}

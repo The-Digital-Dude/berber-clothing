@@ -3,7 +3,6 @@ import prisma from "@/lib/prisma"
 import OrdersFilters from "./OrdersFilters"
 import OrdersBulkClient from "./OrdersBulkClient"
 import AdminPagination from "@/components/admin/AdminPagination"
-import { getCustomerRiskBatch } from "@/lib/customerRisk"
 import { serialize } from "@/lib/utils"
 import { Download, PlusCircle, ShoppingCart, Clock, Truck, TrendingUp, AlertTriangle } from "lucide-react"
 import Link from "next/link"
@@ -93,11 +92,6 @@ export default async function OrdersPage({
   statusGroupCounts.forEach((item: any) => {
     statusCounts[item.status] = item._count._all
   })
-
-  // Customer fraud/risk analysis batch
-  const phones = orders.map((o: any) => o.shippingPhone).filter(Boolean)
-  const riskMap = await getCustomerRiskBatch(phones).catch(() => new Map<string, any>())
-  const riskByPhone = riskMap instanceof Map ? Object.fromEntries(riskMap) : (riskMap as Record<string, any>)
 
   const totalPages = Math.ceil(totalFiltered / limit) || 1
   const serializedOrders = serialize(orders)
@@ -227,7 +221,6 @@ export default async function OrdersPage({
         <OrdersBulkClient
           key={`orders-${page}-${limit}-${search}-${status}-${paymentMethod}-${courier}`}
           orders={serializedOrders as any}
-          riskByPhone={riskByPhone}
         />
         <div className="p-4 border-t border-zinc-100 bg-zinc-50/40">
           <AdminPagination

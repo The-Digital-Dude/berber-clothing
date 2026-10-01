@@ -2,7 +2,6 @@ import prisma from "@/lib/prisma"
 import { serialize } from "@/lib/utils"
 import { notFound } from "next/navigation"
 import OrderDetailsClient from "@/components/admin/OrderDetailsClient"
-import { getCustomerRisk } from "@/lib/customerRisk"
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -26,11 +25,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     notFound()
   }
 
-  const risk = await getCustomerRisk(order.shippingPhone).catch(() => null)
-
+  // No automatic Steadfast check on page load -- it's a real network-fraud
+  // API call, so it only ever runs when the admin clicks "Fraud Check" /
+  // "Re-check Fraud Score" in OrderDetailsClient.
   return (
     <div className="mx-auto max-w-7xl w-full">
-      <OrderDetailsClient initialOrder={serialize(order)} customerRisk={risk} />
+      <OrderDetailsClient initialOrder={serialize(order)} />
     </div>
   )
 }
