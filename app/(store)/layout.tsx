@@ -6,6 +6,7 @@ import BottomNav from "@/components/store/BottomNav";
 import { CompareBar } from "@/components/store/CompareBar";
 import WishlistSync from "@/components/store/WishlistSync";
 import AbandonedCartTracker from "@/components/store/AbandonedCartTracker";
+import WhatsAppConcierge from "@/components/store/WhatsAppConcierge";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
@@ -22,6 +23,7 @@ const SETTING_KEYS = [
   "social_instagram",
   "social_tiktok",
   "meta_pixel_id",
+  "whatsapp_concierge_number",
 ]
 
 export default async function StoreLayout({
@@ -111,6 +113,7 @@ export default async function StoreLayout({
       <Footer branding={branding} categories={categories} />
       <CompareBar />
       <BottomNav />
+      <WhatsAppConcierge phone={settingsMap.whatsapp_concierge_number || ""} />
     </div>
   );
 }

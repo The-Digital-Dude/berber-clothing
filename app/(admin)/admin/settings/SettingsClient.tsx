@@ -45,6 +45,7 @@ export function SettingsClient({
   const [storeDescription, setStoreDescription] = useState(initialSettings["store_description"] || "")
   const [supportEmail, setSupportEmail] = useState(initialSettings["support_email"] || "")
   const [supportPhone, setSupportPhone] = useState(initialSettings["support_phone"] || "")
+  const [whatsappConcierge, setWhatsappConcierge] = useState(initialSettings["whatsapp_concierge_number"] || "")
   const [socialFacebook, setSocialFacebook] = useState(initialSettings["social_facebook"] || "")
   const [socialInstagram, setSocialInstagram] = useState(initialSettings["social_instagram"] || "")
   const [socialTiktok, setSocialTiktok] = useState(initialSettings["social_tiktok"] || "")
@@ -130,6 +131,7 @@ export function SettingsClient({
       const ok = await patch({
         store_name: storeName, store_tagline: storeTagline, store_description: storeDescription,
         support_email: supportEmail, support_phone: supportPhone,
+        whatsapp_concierge_number: whatsappConcierge,
         social_facebook: socialFacebook, social_instagram: socialInstagram, social_tiktok: socialTiktok,
       })
       ok ? toast.success("General settings saved") : toast.error("Failed to save")
@@ -357,6 +359,9 @@ export function SettingsClient({
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Support Email"><Input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} placeholder="support@store.com" /></Field>
                   <Field label="Support Phone"><Input value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} placeholder="+880 1XXXXXXXXX" /></Field>
+                  <Field label="WhatsApp Concierge Number" hint="Powers the floating WhatsApp button on the storefront — leave blank to hide it">
+                    <Input value={whatsappConcierge} onChange={(e) => setWhatsappConcierge(e.target.value)} placeholder="+8801577825517" />
+                  </Field>
                 </div>
               </CardContent>
             </Card>

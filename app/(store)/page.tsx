@@ -58,7 +58,7 @@ export default async function StoreHomepage() {
             </p>
           </FadeIn>
           <FadeIn delay={0.4}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
+            <div id="hero-cta" className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
               <Link href={heroBanner.link || "/shop"} className="w-full sm:w-auto px-8 py-4 bg-berber-gold text-white font-medium hover:bg-yellow-600 transition-colors rounded-full">
                 Shop Now
               </Link>
