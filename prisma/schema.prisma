@@ -40,6 +40,9 @@ model User {
   referralsMade      ReferralLog[] @relation("Referrer")
   referralReceived   ReferralLog[] @relation("Referee")
   affiliates         Affiliate[]
+  measurementProfiles MeasurementProfile[]
+  bespokeOrders      BespokeOrder[]
+  bespokeAppointments BespokeAppointment[]
 
   @@map("users")
 }
@@ -1811,3 +1814,196 @@ model DraftOrder {
   @@index([userId])
   @@map("draft_orders")
 }
+
+// ─────────────────────────────────────────────
+// BESPOKE CUSTOM TAILORING SYSTEM
+// ─────────────────────────────────────────────
+
+enum BespokeGarmentType {
+  TWO_PIECE_SUIT
+  THREE_PIECE_SUIT
+  TUXEDO
+  BLAZER_ONLY
+  TROUSERS_ONLY
+  WAISTCOAT_ONLY
+  BESPOKE_SHIRT
+}
+
+enum BespokeOrderStatus {
+  CONSULTATION_BOOKED
+  MEASUREMENTS_PENDING
+  FABRIC_SOURCING
+  PATTERN_CUTTING
+  BASTE_FITTING_SCHEDULED
+  BASTE_FITTING_COMPLETED
+  FINAL_TAILORING
+  QUALITY_CONTROL
+  READY_FOR_PICKUP_OR_DELIVERY
+  DELIVERED
+  ALTERATION_REQUESTED
+  COMPLETED
+}
+
+enum AppointmentPurpose {
+  INITIAL_CONSULTATION_AND_MEASUREMENT
+  BASTE_TRIAL_FITTING
+  FINAL_FITTING_AND_PICKUP
+  GENERAL_STYLING
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+model MeasurementProfile {
+  id              String             @id @default(cuid())
+  userId          String
+  profileName     String             // e.g. "My Wedding Slim Fit"
+  isDefault       Boolean            @default(false)
+  
+  heightCm        Float?
+  weightKg        Float?
+  age             Int?
+  fitPreference   String             @default("SLIM") // SLIM, REGULAR, RELAXED
+  shoulderType    String             @default("NORMAL") // SQUARE, NORMAL, SLOPING
+  postureType     String             @default("REGULAR") // ERECT, REGULAR, STOOPED
+  
+  unit            String             @default("inch") // inch or cm
+  neck            Float?
+  chest           Float?
+  stomach         Float?
+  hips            Float?
+  shoulderWidth   Float?
+  sleeveLength    Float?
+  bicep           Float?
+  wrist           Float?
+  jacketLength    Float?
+  
+  trouserWaist    Float?
+  trouserHips     Float?
+  crotchDepth     Float?
+  inseam          Float?
+  outseam         Float?
+  thigh           Float?
+  knee            Float?
+  ankleOpening    Float?
+  
+  tailorNotes     String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bespokeOrders   BespokeOrder[]
+
+  @@map("measurement_profiles")
+}
+
+model BespokeFabric {
+  id              String             @id @default(cuid())
+  name            String
+  code            String             @unique
+  millName        String?
+  composition     String
+  superCount      String?
+  weightGsm       Int?
+  pattern         String
+  colorHex        String
+  textureImageUrl String
+  swatchImageUrl  String
+  pricePerMeter   Decimal
+  stockMeters     Float              @default(0)
+  isAvailable     Boolean            @default(true)
+  season          String?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@map("bespoke_fabrics")
+}
+
+model BespokeOrder {
+  id                    String              @id @default(cuid())
+  orderNumber           String              @unique
+  userId                String
+  orderId               String?
+  garmentType           BespokeGarmentType  @default(TWO_PIECE_SUIT)
+  status                BespokeOrderStatus @default(MEASUREMENTS_PENDING)
+  
+  designSpecs           String              @default("{}") // JSON string for flexibility across environments
+  fabricId              String?
+  measurementProfileId  String?
+  customMeasurements    String?             // JSON string
+  
+  basePrice             Decimal
+  customizationsPrice   Decimal             @default(0)
+  totalPrice            Decimal
+  depositAmount         Decimal?
+  depositPaid           Boolean             @default(false)
+  isFullyPaid           Boolean             @default(false)
+  
+  fulfillmentType       String              @default("OUTLET_PICKUP")
+  assignedTailorId      String?
+  targetDeliveryDate    DateTime?
+  trialFittingDate      DateTime?
+  
+  alterationNotes       String?
+  alterationRequestedAt DateTime?
+  
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  user                  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  measurementProfile    MeasurementProfile? @relation(fields: [measurementProfileId], references: [id])
+  timelineLogs          BespokeTimelineLog[]
+  appointments          BespokeAppointment[]
+
+  @@map("bespoke_orders")
+}
+
+model BespokeTimelineLog {
+  id              String              @id @default(cuid())
+  bespokeOrderId  String
+  status          BespokeOrderStatus
+  title           String
+  description     String?
+  photoUrl        String?
+  updatedByRole   String              // "TAILOR", "ADMIN", "SYSTEM"
+  createdAt       DateTime            @default(now())
+
+  bespokeOrder    BespokeOrder        @relation(fields: [bespokeOrderId], references: [id], onDelete: Cascade)
+
+  @@map("bespoke_timeline_logs")
+}
+
+model BespokeAppointment {
+  id                  String              @id @default(cuid())
+  userId              String?
+  bespokeOrderId      String?
+  purpose             AppointmentPurpose  @default(INITIAL_CONSULTATION_AND_MEASUREMENT)
+  status              AppointmentStatus   @default(CONFIRMED)
+  
+  scheduledDate       DateTime
+  timeSlot            String              // "02:00 PM - 02:45 PM"
+  
+  customerName        String
+  customerPhone       String
+  customerEmail       String?
+  notes               String?
+  
+  assignedTailorName  String?
+  
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  user                User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  bespokeOrder        BespokeOrder?       @relation(fields: [bespokeOrderId], references: [id])
+
+  @@index([scheduledDate])
+  @@index([customerPhone])
+  @@map("bespoke_appointments")
+}
+

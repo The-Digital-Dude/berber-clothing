@@ -41,6 +41,32 @@ export function buildWhatsAppMessage(params: {
   return msg
 }
 
+export function buildAppointmentWhatsAppMessage(params: {
+  customerName: string
+  purposeLabel: string
+  dateString: string
+  timeSlot: string
+  outletAddress?: string
+  outletPhone?: string
+}): string {
+  const { customerName, purposeLabel, dateString, timeSlot, outletAddress, outletPhone } = params
+  const address = outletAddress || "Berber Flagship Atelier, House 12, Road 11, Banani, Dhaka"
+  const phone = outletPhone || "+880 1700-000000"
+
+  let msg = `✨ *Berber Bespoke Atelier Appointment Confirmed*\n\n`
+  msg += `Dear ${customerName},\n\n`
+  msg += `Your private bespoke session has been booked successfully!\n\n`
+  msg += `📍 *Location:* ${address}\n`
+  msg += `📅 *Date:* ${dateString}\n`
+  msg += `⏰ *Time Slot:* ${timeSlot}\n`
+  msg += `👔 *Service:* ${purposeLabel}\n\n`
+  msg += `Our Master Tailor and VIP styling consultant look forward to hosting you. Complimentary fabric swatches and espresso will be prepared for your visit.\n\n`
+  msg += `Need to reschedule? Reply directly or call our atelier concierge at ${phone}.\n\n`
+  msg += `_Berber Bespoke Tailoring — Sartorial Excellence_`
+
+  return msg
+}
+
 export function buildWaLink(phone: string, message: string): string {
   // Normalize BD phone: strip leading 0, add 880
   const normalized = phone.replace(/\D/g, "").replace(/^0/, "880").replace(/^(?!880)/, "880")

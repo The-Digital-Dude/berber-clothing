@@ -28,8 +28,10 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   AlertCircle,
-  Save
+  Save,
+  Scissors
 } from "lucide-react"
 import { toast } from "sonner"
 import AddressList from "@/components/store/account/AddressList"
@@ -52,6 +54,7 @@ export default function AccountPage() {
 
   const [activeTab, setActiveTab] = useState("orders")
   const [orders, setOrders] = useState<any[]>([])
+  const [bespokeOrders, setBespokeOrders] = useState<any[]>([])
   const [loyaltyBalance, setLoyaltyBalance] = useState(0)
   const [storeCreditBalance, setStoreCreditBalance] = useState(0)
   const [affiliate, setAffiliate] = useState<any>(null)
@@ -104,6 +107,10 @@ export default function AccountPage() {
     fetch("/api/account/referral")
       .then((r) => r.json())
       .then((d) => setReferralData(d))
+      .catch(() => {})
+    fetch("/api/account/bespoke-orders")
+      .then((r) => r.json())
+      .then((d) => setBespokeOrders(d.orders || []))
       .catch(() => {})
   }, [status])
 
@@ -271,6 +278,7 @@ export default function AccountPage() {
         <div className="w-full md:w-64 shrink-0 bg-white border border-zinc-200/90 rounded-2xl p-2.5 space-y-1 shadow-2xs">
           {[
             { key: "orders", label: "My Orders & Tracking", icon: Package, badge: orders.length },
+            { key: "bespoke", label: "Bespoke Suiting", icon: Scissors, badge: bespokeOrders.length > 0 ? bespokeOrders.length : null, highlight: "Atelier" },
             { key: "loyalty", label: "Berber Club VIP", icon: Crown, highlight: `${loyaltyBalance} pt` },
             { key: "credit", label: "Store Credit Wallet", icon: Wallet, highlight: storeCreditBalance > 0 ? `৳${storeCreditBalance}` : null },
             { key: "referral", label: "Refer Friends", icon: Gift, promo: "৳100 Free" },
@@ -547,6 +555,101 @@ export default function AccountPage() {
                               </Link>
                             )}
                           </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BESPOKE SUITING COMMISSIONS TAB */}
+          {activeTab === "bespoke" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-zinc-900">Bespoke Sartorial Commissions</h2>
+                  <p className="text-xs text-zinc-500 mt-0.5">Track your made-to-measure suits, baste fitting dates, and atelier progress</p>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href="/bespoke/builder"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold rounded-xl shadow-2xs transition"
+                  >
+                    <Scissors className="w-3.5 h-3.5 text-amber-400" /> New Suit
+                  </Link>
+                  <Link
+                    href="/bespoke/measurements"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-800 text-xs font-semibold rounded-xl shadow-2xs transition"
+                  >
+                    My Measurements
+                  </Link>
+                </div>
+              </div>
+
+              {bespokeOrders.length === 0 ? (
+                <div className="p-12 rounded-3xl border border-dashed border-zinc-200 bg-white text-center space-y-4">
+                  <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center mx-auto">
+                    <Scissors className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-zinc-900 text-base">No Bespoke Commissions Yet</h3>
+                    <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1">
+                      Experience artisanal tailoring at our Banani Flagship Atelier. Customize fine Italian wools, lapels, and silk linings.
+                    </p>
+                  </div>
+                  <div className="pt-2 flex justify-center gap-3">
+                    <Link
+                      href="/bespoke/builder"
+                      className="px-4 py-2 bg-zinc-900 text-white text-xs font-bold rounded-xl hover:bg-zinc-800 transition"
+                    >
+                      Design Your Suit Online
+                    </Link>
+                    <Link
+                      href="/bespoke/book-appointment"
+                      className="px-4 py-2 border border-zinc-200 bg-white text-zinc-900 text-xs font-semibold rounded-xl hover:bg-zinc-50 transition"
+                    >
+                      Book Atelier Fitting
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {bespokeOrders.map((bo) => {
+                    const specs = typeof bo.designSpecs === "string" ? JSON.parse(bo.designSpecs) : bo.designSpecs || {}
+                    return (
+                      <div
+                        key={bo.id}
+                        className="bg-white border border-zinc-200/90 rounded-2xl p-5 shadow-2xs hover:border-amber-500/50 transition space-y-4"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-100">
+                          <div className="flex items-center gap-2.5">
+                            <span className="font-mono font-bold text-zinc-900 text-sm">#{bo.orderNumber}</span>
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                              {bo.status.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                          <span className="text-xs font-mono font-bold text-zinc-900">
+                            Total: ৳{Number(bo.totalPrice).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 text-xs">
+                          <div>
+                            <p className="font-bold text-zinc-900">{bo.garmentType.replace(/_/g, " ")}</p>
+                            <p className="text-zinc-500 text-[11px] mt-0.5">
+                              Cloth: <strong className="text-zinc-700">{specs.fabric?.name || "Bespoke Cloth"}</strong> ({specs.silhouette || "Slim"})
+                            </p>
+                          </div>
+
+                          <Link
+                            href={`/account/bespoke-orders/${bo.id}`}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-zinc-900 hover:bg-zinc-800 text-white font-semibold rounded-xl text-xs transition self-start sm:self-center"
+                          >
+                            <span>Live Progress Tracker</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Link>
                         </div>
                       </div>
                     )

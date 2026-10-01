@@ -5,6 +5,7 @@ import ProductCard from "@/components/store/ProductCard";
 import { Truck, CreditCard, RefreshCw, Star } from "lucide-react";
 import { serialize } from "@/lib/utils";
 import FadeIn from "@/components/ui/FadeIn";
+import BespokeShowcaseSection from "@/components/store/BespokeShowcaseSection";
 
 export default async function StoreHomepage() {
   const [banners, categories, newArrivals, featuredProducts] = await Promise.all([
@@ -141,6 +142,9 @@ export default async function StoreHomepage() {
           {serialize(newArrivals).map((product: any) => <ProductCard key={product.id} product={product} />)}
         </div>
       </section>
+
+      {/* BESPOKE ATELIER SHOWCASE */}
+      <BespokeShowcaseSection />
 
       {/* SECTION 4: Featured Banner */}
       <section className="w-full bg-[#F5F3EE] overflow-hidden my-16">

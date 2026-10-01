@@ -10,7 +10,7 @@ import {
   Globe, MessageSquare, Building2, Truck, Warehouse, Mail,
   ChevronRight, Star, Users2, Wallet, Award, ScrollText,
   Receipt, Download, Layers, Search, PlusCircle, PanelLeftClose, PanelLeftOpen,
-  Pin, Sparkles, HelpCircle, X, Image
+  Pin, Sparkles, HelpCircle, X, Image, Scissors, Palette
 } from "lucide-react"
 
 // ─── Navigation structure ───────────────────────────────────────────────────
@@ -25,6 +25,14 @@ export const primaryItems = [
 ]
 
 export const groups = [
+  {
+    label: "Bespoke & Tailoring",
+    items: [
+      { href: "/admin/bespoke/orders", label: "Workshop Orders", icon: Scissors },
+      { href: "/admin/bespoke/fabrics", label: "Fabric Inventory", icon: Palette },
+      { href: "/admin/bespoke/appointments", label: "Atelier Fittings", icon: Scissors },
+    ],
+  },
   {
     label: "Catalog",
     items: [

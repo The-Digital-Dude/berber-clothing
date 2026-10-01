@@ -213,9 +213,58 @@ export default function Navbar({
               )
             })}
 
-            <Link href="/shop?sort=newest" className="text-sm font-semibold text-berber-text/80 hover:text-berber-gold transition-colors">
-              New Arrivals
-            </Link>
+            {/* Bespoke Atelier Dropdown */}
+            <div className="relative group py-4">
+              <Link
+                href="/bespoke/builder"
+                className="text-sm font-semibold text-berber-text/80 hover:text-berber-gold transition-colors flex items-center gap-1 whitespace-nowrap"
+              >
+                <span>Bespoke</span>
+                <span className="text-[9px] transition-transform duration-200 group-hover:rotate-180 opacity-60">
+                  ▼
+                </span>
+              </Link>
+
+              <div className="absolute left-1/2 -translate-x-1/2 top-full pt-1 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-200 z-50">
+                <div className="bg-white/95 backdrop-blur-md text-berber-black border border-berber-border shadow-2xl rounded-2xl p-4 min-w-[260px] space-y-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-berber-gold mb-2 px-3">
+                    Bespoke Atelier
+                  </p>
+                  <Link
+                    href="/bespoke/builder"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold text-berber-black hover:bg-berber-muted hover:text-berber-gold transition-colors"
+                  >
+                    <div>
+                      <span className="block">Suit Customizer Studio</span>
+                      <span className="text-[10px] text-berber-text-muted font-normal">Live SVG Mannequin</span>
+                    </div>
+                    <span className="text-berber-gold font-mono text-xs">→</span>
+                  </Link>
+                  <Link
+                    href="/bespoke/lookbook"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-berber-text hover:bg-berber-muted hover:text-berber-gold transition-colors"
+                  >
+                    <span>Sartorial Lookbook</span>
+                    <span className="text-berber-text-muted text-[10px]">↳</span>
+                  </Link>
+                  <Link
+                    href="/bespoke/book-appointment"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-berber-text hover:bg-berber-muted hover:text-berber-gold transition-colors"
+                  >
+                    <span>Book Atelier Fitting</span>
+                    <span className="text-berber-text-muted text-[10px]">↳</span>
+                  </Link>
+                  <Link
+                    href="/bespoke/measurements"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-berber-text hover:bg-berber-muted hover:text-berber-gold transition-colors"
+                  >
+                    <span>14-Point Measurement Guide</span>
+                    <span className="text-berber-text-muted text-[10px]">↳</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+
             <Link href="/shop?sale=true" className="text-sm font-bold text-berber-error hover:text-berber-error/80 transition-colors">
               Sale
             </Link>
@@ -322,6 +371,42 @@ export default function Navbar({
               <Link href="/shop?sort=newest" onClick={() => setMobileOpen(false)} className="hover:text-berber-gold transition-colors py-1">
                 New Arrivals
               </Link>
+              <details className="group [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex items-center justify-between cursor-pointer hover:text-berber-gold transition-colors list-none py-1">
+                  <span className="text-berber-gold font-bold">Bespoke Atelier</span>
+                  <span className="transition duration-200 group-open:rotate-180 text-xs text-zinc-400">▼</span>
+                </summary>
+                <div className="flex flex-col gap-2.5 mt-2 pl-3 border-l-2 border-berber-gold/40">
+                  <Link
+                    href="/bespoke/builder"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-xs font-bold text-zinc-900 hover:text-berber-gold transition-colors"
+                  >
+                    Suit Customizer Studio
+                  </Link>
+                  <Link
+                    href="/bespoke/lookbook"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-xs font-medium text-zinc-600 hover:text-berber-gold transition-colors"
+                  >
+                    ↳ Sartorial Lookbook
+                  </Link>
+                  <Link
+                    href="/bespoke/book-appointment"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-xs font-medium text-zinc-600 hover:text-berber-gold transition-colors"
+                  >
+                    ↳ Book Atelier Fitting
+                  </Link>
+                  <Link
+                    href="/bespoke/measurements"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-xs font-medium text-zinc-600 hover:text-berber-gold transition-colors"
+                  >
+                    ↳ 14-Point Measurement Guide
+                  </Link>
+                </div>
+              </details>
               <Link href="/shop?sale=true" onClick={() => setMobileOpen(false)} className="text-rose-600 font-bold py-1">
                 Sale 🔥
               </Link>
