@@ -10,7 +10,7 @@ import {
   Globe, MessageSquare, Building2, Truck, Warehouse, Mail,
   ChevronRight, Star, Users2, Wallet, Award, ScrollText,
   Receipt, Download, Layers, Search, PlusCircle, PanelLeftClose, PanelLeftOpen,
-  Pin, Sparkles, HelpCircle, X
+  Pin, Sparkles, HelpCircle, X, Image
 } from "lucide-react"
 
 // ─── Navigation structure ───────────────────────────────────────────────────
@@ -44,6 +44,7 @@ export const groups = [
   {
     label: "Marketing & Promo",
     items: [
+      { href: "/admin/banners", label: "Banners", icon: Image },
       { href: "/admin/coupons", label: "Coupons", icon: Ticket },
       { href: "/admin/flash-sales", label: "Flash Sales", icon: Zap },
       { href: "/admin/gift-cards", label: "Gift Cards", icon: CreditCard },
