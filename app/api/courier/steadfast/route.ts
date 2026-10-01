@@ -122,16 +122,26 @@ export async function GET(req: NextRequest) {
   try {
     const result = await getConsignmentStatus(consignmentId)
 
-    // Map Steadfast statuses to our internal statuses
+    // Map Steadfast statuses to our internal statuses. Per Steadfast's own
+    // docs: "pending" = booked but not yet attempted, "in_review" = just
+    // created, awaiting their approval (every parcel starts here), "hold" =
+    // an address/payment problem needs attention -- none of these mean the
+    // parcel has actually been picked up, so none of them should read as
+    // "SHIPPED" (this previously caused orders to show Shipped, with a
+    // tracking link that 404s on Steadfast's own site, while the parcel was
+    // still just sitting in their queue unprocessed). Matches the mapping
+    // the webhook handler already uses correctly.
     const statusMap: Record<string, string> = {
       delivered: "DELIVERED",
       partial_delivered: "DELIVERED",
       cancelled: "CANCELLED",
       returned: "RETURNED",
       partial_returned: "RETURNED",
-      in_review: "SHIPPED",
-      pending: "SHIPPED",
-      hold: "SHIPPED",
+      in_transit: "SHIPPED",
+      picked_up: "SHIPPED",
+      in_review: "PENDING",
+      pending: "PENDING",
+      hold: "HOLD",
     }
     const internalStatus = statusMap[result.status?.toLowerCase()] ?? "SHIPPED"
 
