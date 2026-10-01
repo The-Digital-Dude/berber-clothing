@@ -52,6 +52,18 @@ function TrackOrderContent() {
     if (initialOrderNumber) {
       setOrderNumber(initialOrderNumber)
       fetchTracking(initialOrderNumber)
+      return
+    }
+    // Fallback for links shaped like /track#ORD-2026-0015 instead of
+    // /track?order=ORD-2026-0015 -- a # fragment is never sent to the server
+    // and useSearchParams() can't see it at all, so it has to be read
+    // directly off window.location on the client.
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hashOrder = decodeURIComponent(window.location.hash.slice(1))
+      if (hashOrder) {
+        setOrderNumber(hashOrder)
+        fetchTracking(hashOrder)
+      }
     }
   }, [initialOrderNumber])
 
