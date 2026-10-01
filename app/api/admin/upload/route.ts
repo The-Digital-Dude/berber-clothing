@@ -2,15 +2,26 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAdmin } from "@/lib/adminAuth"
 import { createAdminClient } from "@/lib/supabase"
 
-const ALLOWED_BUCKETS = ["product-images", "category-images", "brand-images", "bundle-images", "blog-images"]
-const MAX_WIDTH = 1200
+const ALLOWED_BUCKETS = ["product-images", "category-images", "brand-images", "bundle-images", "blog-images", "banner-images"]
+// Category tiles never render larger than ~350px on the storefront (home page
+// category grid, nav mega-menu) -- resizing product-images' 1200px ceiling
+// down here cut ~85KB per image with zero visible quality loss. product-images
+// keeps 1200px since the PDP gallery/lightbox actually displays up to ~900px
+// wide on desktop. banner-images gets a higher ceiling since the homepage
+// hero renders at sizes="100vw" and needs to stay sharp on large desktops.
+const MAX_WIDTH_BY_BUCKET: Record<string, number> = {
+  "category-images": 700,
+  "banner-images": 1920,
+}
+const DEFAULT_MAX_WIDTH = 1200
 const WEBP_QUALITY = 82
 
-async function compressToWebP(buffer: ArrayBuffer): Promise<{ data: Buffer; contentType: string; ext: string }> {
+async function compressToWebP(buffer: ArrayBuffer, bucket: string): Promise<{ data: Buffer; contentType: string; ext: string }> {
   try {
     const sharp = (await import("sharp")).default
+    const maxWidth = MAX_WIDTH_BY_BUCKET[bucket] ?? DEFAULT_MAX_WIDTH
     const data = await sharp(Buffer.from(buffer))
-      .resize({ width: MAX_WIDTH, withoutEnlargement: true })
+      .resize({ width: maxWidth, withoutEnlargement: true })
       .webp({ quality: WEBP_QUALITY })
       .toBuffer()
     return { data, contentType: "image/webp", ext: "webp" }
@@ -46,7 +57,7 @@ export async function POST(req: NextRequest) {
     }
 
     const arrayBuffer = await file.arrayBuffer()
-    const { data: compressed, contentType: compressedType, ext: compressedExt } = await compressToWebP(arrayBuffer)
+    const { data: compressed, contentType: compressedType, ext: compressedExt } = await compressToWebP(arrayBuffer, BUCKET)
 
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${compressedExt}`
 

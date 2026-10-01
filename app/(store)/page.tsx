@@ -37,7 +37,10 @@ export default async function StoreHomepage() {
       {/* SECTION 1: Hero Banner */}
       <section className="relative w-full h-[90vh] min-h-[500px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
-          <Image src={heroBanner.image} alt="Hero" fill sizes="100vw" className="object-cover" priority />
+          {/* priority alone no longer sets fetchpriority="high" on this Next
+              version -- it's a separate prop now, and without it the browser
+              doesn't learn this is the LCP image until much later. */}
+          <Image src={heroBanner.image} alt="Hero" fill sizes="100vw" className="object-cover" priority fetchPriority="high" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
         </div>
         <div className="relative z-10 text-center space-y-6 max-w-3xl px-4 mt-20">
