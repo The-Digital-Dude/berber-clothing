@@ -99,32 +99,50 @@ export default async function BulkPackingSlipPage({
         @media print {
           html, body {
             width: 3in !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #fff !important;
+            overflow: visible !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .print-bulk-slips-container {
             background: #fff !important;
             padding: 0 !important;
             margin: 0 !important;
+            width: 3in !important;
+            height: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
             display: block !important;
+            overflow: visible !important;
           }
           .slip-wrap {
             box-shadow: none !important;
             border-radius: 0 !important;
-            padding: 1mm 0 !important;
+            padding: 1.5mm 1mm !important;
             margin: 0 auto !important;
-            width: 100% !important;
-            max-width: 65mm !important;
+            width: 3in !important;
+            max-width: 3in !important;
             height: 3in !important;
             max-height: 3in !important;
             box-sizing: border-box !important;
             overflow: hidden !important;
-            page-break-after: always !important;
-            break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            display: block !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+          }
+          .slip-wrap:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
         }
       `}</style>
