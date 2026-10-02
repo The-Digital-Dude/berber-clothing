@@ -14,7 +14,6 @@ import ProductAddons from "@/components/store/ProductAddons"
 import ReviewMediaGallery from "@/components/store/ReviewMediaGallery"
 import ProductQA from "@/components/store/ProductQA"
 import StickyAddToCart from "@/components/store/StickyAddToCart"
-import CompleteTheSet from "@/components/store/CompleteTheSet"
 import TrackPageView from "@/components/store/TrackPageView"
 import ViewContentTracker from "@/components/store/ViewContentTracker"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -181,8 +180,8 @@ export default async function ProductDetailPage({
   const displayPrice = salePrice ?? Number(product.price)
   const hasCompareDiscount = Number(product.comparePrice) > Number(product.price)
 
-  // Fetch related products, FBT suggestions, settings, and set bundle in parallel
-  const [relatedProducts, fbtPairs, shippingSettings, bundle] = await Promise.all([
+  // Fetch related products, FBT suggestions, and settings in parallel
+  const [relatedProducts, fbtPairs, shippingSettings] = await Promise.all([
     prisma.product.findMany({
       where: { categoryId: product.categoryId, id: { not: product.id }, isActive: true },
       take: 4,
@@ -197,29 +196,10 @@ export default async function ProductDetailPage({
     prisma.setting.findMany({
       where: { key: { in: ["free_shipping_above"] } },
     }).catch(() => []),
-    // "Complete the Set" bundle
-    product.bundleId ? prisma.bundle.findUnique({
-      where: { id: product.bundleId },
-      include: {
-        items: {
-          orderBy: { sortOrder: "asc" },
-          include: {
-            product: {
-              select: {
-                id: true, name: true, slug: true, price: true,
-                images: { take: 1, orderBy: { sortOrder: "asc" } },
-                variants: true,
-              },
-            },
-          },
-        },
-      },
-    }).catch(() => null) : Promise.resolve(null),
   ])
 
   const settingsMap = Object.fromEntries(shippingSettings.map((s: any) => [s.key, s.value]))
   const freeShippingThreshold = settingsMap.free_shipping_above ? Number(settingsMap.free_shipping_above) : null
-  const setBundle = serialize(bundle) as any
 
   const productUrl = `${SITE_URL}/shop/${product.slug}`
   const priceValidUntil = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10)
@@ -392,16 +372,6 @@ export default async function ProductDetailPage({
               }}
               initialPackage={initialPackageParam}
             />
-
-            {/* Complete the Set */}
-            {setBundle && setBundle.items?.length > 0 && (
-              <CompleteTheSet
-                bundle={setBundle}
-                primaryName={product.name}
-                primaryPrice={displayPrice}
-                primaryColors={Array.from(new Set(product.variants.map((v: any) => v.color).filter(Boolean)))}
-              />
-            )}
 
             {/* Product Add-ons */}
             {product.addons.length > 0 && (
