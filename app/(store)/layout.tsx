@@ -35,12 +35,17 @@ export default async function StoreLayout({
   const [settings, categories, sitewideSale] = await Promise.all([
     prisma.setting.findMany({ where: { key: { in: SETTING_KEYS } } }),
     prisma.category.findMany({
-      where: { isActive: true, showOnNavbar: true, parentId: null },
+      where: {
+        isActive: true,
+        showOnNavbar: true,
+        parentId: null,
+        slug: { notIn: ["waistcoat", "trousers"] },
+      },
       orderBy: { sortOrder: "asc" },
       select: {
         id: true, name: true, slug: true, image: true, description: true,
         children: {
-          where: { isActive: true },
+          where: { isActive: true, slug: { notIn: ["waistcoat", "trousers"] } },
           orderBy: { sortOrder: "asc" },
           select: { id: true, name: true, slug: true, image: true, description: true },
         },

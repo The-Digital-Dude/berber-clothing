@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma"
 import { serialize } from "@/lib/utils"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import ProductGallery from "@/components/store/ProductGallery"
 import VariantSelector from "@/components/store/VariantSelector"
 import ProductCard from "@/components/store/ProductCard"
@@ -72,8 +72,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ProductDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams?: Promise<{ package?: string }>
+}) {
   const { slug } = await params;
+  const { package: initialPackageParam } = (await searchParams) || {};
   
   const product = await prisma.product.findUnique({
     where: { slug, isActive: true },
@@ -90,7 +97,65 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     notFound()
   }
 
-  const [reviewAgg, flashSale, attrConfig, reviews, qas] = await Promise.all([
+  // If a customer accesses a standalone Waistcoat or Trouser directly,
+  // redirect them to the corresponding parent Blazer page with pre-selected package
+  const isWaistcoat = product.category?.slug === "waistcoat" || product.name.toLowerCase().includes("waistcoat")
+  const isTrouser = product.category?.slug === "trousers" || product.name.toLowerCase().includes("trouser")
+
+  if (isWaistcoat || isTrouser) {
+    const colorPart = product.name.split(/[–—-]/)[1]?.trim() || ""
+    const isStudent = product.name.toLowerCase().includes("student")
+
+    const matchingBlazer = await prisma.product.findFirst({
+      where: {
+        category: { slug: "blazer" },
+        isActive: true,
+        AND: [
+          ...(colorPart ? [{ name: { contains: colorPart, mode: "insensitive" as const } }] : []),
+          { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" as const } },
+        ],
+      },
+      select: { slug: true },
+    }).catch(() => null)
+
+    if (matchingBlazer) {
+      redirect(`/shop/${matchingBlazer.slug}?package=${isWaistcoat ? "2-piece" : "3-piece"}`)
+    } else {
+      redirect("/shop")
+    }
+  }
+
+  // For Blazer products: discover matching Waistcoat and Trouser sibling products
+  const colorPart = product.name.split(/[–—-]/)[1]?.trim() || ""
+  const isStudent = product.name.toLowerCase().includes("student")
+
+  const [matchingWaistcoat, matchingTrouser, reviewAgg, flashSale, attrConfig, reviews, qas] = await Promise.all([
+    colorPart
+      ? prisma.product.findFirst({
+          where: {
+            category: { slug: "waistcoat" },
+            isActive: true,
+            AND: [
+              { name: { contains: colorPart, mode: "insensitive" } },
+              { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" } },
+            ],
+          },
+          include: { variants: { orderBy: { size: "asc" } }, images: true },
+        }).catch(() => null)
+      : Promise.resolve(null),
+    colorPart
+      ? prisma.product.findFirst({
+          where: {
+            category: { slug: "trousers" },
+            isActive: true,
+            AND: [
+              { name: { contains: colorPart, mode: "insensitive" } },
+              { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" } },
+            ],
+          },
+          include: { variants: { orderBy: { size: "asc" } }, images: true },
+        }).catch(() => null)
+      : Promise.resolve(null),
     prisma.review.aggregate({
       where: { productId: product.id, isApproved: true },
       _avg: { rating: true },
@@ -321,6 +386,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
               attr2Label={attrConfig?.attr2Label || "Color"}
               categoryId={product.categoryId}
               sizeChartImage={product.sizeChartImage || null}
+              matchingSet={{
+                waistcoat: matchingWaistcoat ? serialize(matchingWaistcoat) : null,
+                trouser: matchingTrouser ? serialize(matchingTrouser) : null,
+              }}
+              initialPackage={initialPackageParam}
             />
 
             {/* Complete the Set */}
