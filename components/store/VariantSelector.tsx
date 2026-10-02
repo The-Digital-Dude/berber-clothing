@@ -118,6 +118,27 @@ export default function VariantSelector({
     return blazerPrice
   }, [selectedPackage, blazerPrice, waistcoatPrice, trouserPrice])
 
+  // Sync package changes with top price header and sticky bottom bar
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const packageName =
+      selectedPackage === "3-piece"
+        ? `${product.name} (3-Piece Complete Suit)`
+        : selectedPackage === "2-piece"
+        ? `${product.name} (2-Piece Set)`
+        : `${product.name} (Single Blazer)`
+
+    window.dispatchEvent(
+      new CustomEvent("berber_package_change", {
+        detail: {
+          price: packageTotalPrice,
+          package: selectedPackage,
+          name: packageName,
+        },
+      })
+    )
+  }, [packageTotalPrice, selectedPackage, product.name])
+
   // Stock Checks
   const blazerStock = activeBlazerVariant?.stock || 0
   const waistcoatStock = activeWaistcoatVariant?.stock || 0
@@ -300,9 +321,6 @@ export default function VariantSelector({
               <Layers className="w-3.5 h-3.5 text-berber-gold" />
               Select Suit Package
             </h3>
-            <span className="text-[11px] font-mono font-bold text-berber-gold">
-              ৳{packageTotalPrice.toLocaleString()}
-            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

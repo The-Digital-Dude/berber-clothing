@@ -3,6 +3,7 @@ import { serialize } from "@/lib/utils"
 import { notFound, redirect } from "next/navigation"
 import ProductGallery from "@/components/store/ProductGallery"
 import VariantSelector from "@/components/store/VariantSelector"
+import DynamicProductHeader from "@/components/store/DynamicProductHeader"
 import ProductCard from "@/components/store/ProductCard"
 import ReviewSection from "@/components/store/ReviewSection"
 import FrequentlyBoughtTogether from "@/components/store/FrequentlyBoughtTogether"
@@ -307,50 +308,27 @@ export default async function ProductDetailPage({
           {/* Product Info */}
           <div className="w-full lg:w-2/5 flex flex-col pt-4 lg:pt-10 sticky top-20 h-max">
 
-            {/* Title & Price */}
-            <div className="mb-8">
-              {product.brand && (
-                <Link href={`/brands/${product.brand.slug}`} className="inline-block mb-3 text-xs font-bold uppercase tracking-widest text-berber-text-muted hover:text-berber-gold transition-colors border border-berber-border rounded-full px-3 py-1">
-                  {product.brand.name}
-                </Link>
-              )}
-              <h1 className="text-3xl lg:text-4xl font-heading font-bold text-berber-black mb-2 leading-tight">{product.name}</h1>
-              {reviewAgg._count.rating > 0 && (
-                <div className="flex items-center gap-2 mb-4 text-sm text-berber-text-muted">
-                  <span className="text-berber-gold font-bold">★ {(reviewAgg._avg.rating || 0).toFixed(1)}</span>
-                  <span>({reviewAgg._count.rating} review{reviewAgg._count.rating === 1 ? "" : "s"})</span>
-                </div>
-              )}
-              <div className="flex items-center gap-4">
-                <span className="font-mono text-2xl font-bold">৳{displayPrice.toLocaleString()}</span>
-                {(hasCompareDiscount || (flashSale && Number(product.price) !== displayPrice)) && (
-                  <span className="font-mono text-lg text-berber-text-muted line-through">
-                    ৳{Number(hasCompareDiscount ? product.comparePrice : product.price).toLocaleString()}
-                  </span>
-                )}
-                {flashSale && (
-                  <span className="bg-berber-error text-white px-2 py-1 text-xs font-bold rounded uppercase tracking-widest">
-                    {flashSale.discountType === "PERCENTAGE"
-                      ? `${flashSale.discountValue}% off`
-                      : `৳${flashSale.discountValue} off`}
-                  </span>
-                )}
-                {!flashSale && hasCompareDiscount && (
-                  <span className="bg-berber-error/10 text-berber-error px-2 py-1 text-xs font-bold rounded uppercase tracking-widest">Sale</span>
-                )}
+            {/* Title & Live Price Header */}
+            <DynamicProductHeader
+              productName={product.name}
+              initialPrice={displayPrice}
+              initialComparePrice={product.comparePrice ? Number(product.comparePrice) : null}
+              brand={product.brand ? { name: product.brand.name, slug: product.brand.slug } : null}
+              reviewRating={reviewAgg._avg.rating || 0}
+              reviewCount={reviewAgg._count.rating}
+              flashSale={flashSale ? serialize(flashSale) : null}
+            />
+            {flashSale && (
+              <div className="mb-6">
+                <FlashSaleCountdown
+                  saleName={flashSale.name}
+                  discountLabel={flashSale.discountType === "PERCENTAGE"
+                    ? `${flashSale.discountValue}% off`
+                    : `৳${flashSale.discountValue} off`}
+                  endsAt={flashSale.endsAt.toISOString()}
+                />
               </div>
-              {flashSale && (
-                <div className="mt-4">
-                  <FlashSaleCountdown
-                    saleName={flashSale.name}
-                    discountLabel={flashSale.discountType === "PERCENTAGE"
-                      ? `${flashSale.discountValue}% off`
-                      : `৳${flashSale.discountValue} off`}
-                    endsAt={flashSale.endsAt.toISOString()}
-                  />
-                </div>
-              )}
-            </div>
+            )}
 
             {/* Social proof */}
             <SocialProof productId={product.id} />
