@@ -16,8 +16,19 @@ export default function StickyAddToCart({
   const [visible, setVisible] = useState(false)
   const [btnDisabled, setBtnDisabled] = useState(false)
   const [btnLabel, setBtnLabel] = useState("Add to Bag")
+  const [currentPrice, setCurrentPrice] = useState(price)
+  const [currentPackageName, setCurrentPackageName] = useState(productName)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const mutationRef = useRef<MutationObserver | null>(null)
+
+  useEffect(() => {
+    const handlePackageChange = (e: any) => {
+      if (e.detail?.price) setCurrentPrice(e.detail.price)
+      if (e.detail?.name) setCurrentPackageName(e.detail.name)
+    }
+    window.addEventListener("berber_package_change", handlePackageChange)
+    return () => window.removeEventListener("berber_package_change", handlePackageChange)
+  }, [])
 
   useEffect(() => {
     const target = document.getElementById("add-to-bag-btn")
@@ -66,17 +77,17 @@ export default function StickyAddToCart({
       <div className="bg-white border-t border-berber-border shadow-2xl px-4 py-3 flex items-center gap-3 max-w-screen-xl mx-auto">
         {image && (
           <div className="relative w-11 h-13 shrink-0 overflow-hidden rounded">
-            <Image src={image} alt={productName} fill className="object-cover" sizes="44px" />
+            <Image src={image} alt={currentPackageName} fill className="object-cover" sizes="44px" />
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-berber-black truncate">{productName}</p>
-          <p className="text-sm font-mono font-bold text-berber-gold">৳{price.toLocaleString()}</p>
+          <p className="text-xs font-bold text-berber-black truncate">{currentPackageName}</p>
+          <p className="text-sm font-mono font-bold text-berber-gold">৳{currentPrice.toLocaleString()}</p>
         </div>
         <button
           onClick={handleClick}
           disabled={btnDisabled}
-          className="flex items-center gap-2 px-5 py-3 bg-berber-black text-white text-xs font-bold uppercase tracking-widest shrink-0 hover:bg-berber-gold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-5 py-3 bg-berber-black text-white text-xs font-bold uppercase tracking-widest shrink-0 hover:bg-berber-gold transition-colors disabled:opacity-50 disabled:cursor-not-allowed rounded-lg"
         >
           <ShoppingBag className="w-4 h-4" />
           <span className="hidden sm:inline">{btnLabel}</span>
