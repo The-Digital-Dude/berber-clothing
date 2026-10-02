@@ -92,10 +92,10 @@ export function DeliveryClient({
     setLoadingBalance(true)
     try {
       const res = await fetch("/api/admin/delivery/packzy/payouts")
-      const data = await res.json()
+      const json = await res.json()
       if (res.ok) {
-        setBalance(data.balance ?? 0)
-        setPayouts(data.payments || [])
+        setBalance(json.balance ?? 0)
+        setPayouts(json.payments || [])
       }
     } catch {
       // silently fallback
@@ -126,12 +126,12 @@ export function DeliveryClient({
     setRefreshing(consignmentId)
     try {
       const res = await fetch(`/api/courier/steadfast?consignmentId=${encodeURIComponent(consignmentId)}`)
-      const data = await res.json()
+      const json = await res.json()
       if (res.ok) {
-        toast.success(`Updated status: ${data.internalStatus || data.status}`)
+        toast.success(`Updated status: ${json.internalStatus || json.status}`)
         router.refresh()
       } else {
-        toast.error(data.error || "Failed to refresh status from Packzy")
+        toast.error(json.error || "Failed to refresh status from Packzy")
       }
     } catch (err: any) {
       toast.error(err.message || "Error refreshing courier status")
@@ -534,8 +534,8 @@ export function DeliveryClient({
                         </span>
                       </td>
 
-                      <td className="px-4 py-3.5 text-zinc-500 whitespace-nowrap">
-                        {format(new Date(delivery.createdAt), "MMM d, yyyy")}
+                      <td className="px-4 py-3.5 text-zinc-500 whitespace-nowrap" suppressHydrationWarning>
+                        {delivery.createdAt ? format(new Date(delivery.createdAt), "MMM d, yyyy") : "—"}
                       </td>
 
                       <td className="px-4 py-3.5 text-right">
@@ -625,7 +625,7 @@ export function DeliveryClient({
                         <td className="p-3 font-mono font-bold text-emerald-700">৳{Number(p.amount || 0).toLocaleString()}</td>
                         <td className="p-3 text-zinc-600">{p.parcels_count || p.parcels?.length || "—"}</td>
                         <td className="p-3"><span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">{p.status || "Settled"}</span></td>
-                        <td className="p-3 text-zinc-500">{p.created_at || p.date || "—"}</td>
+                        <td className="p-3 text-zinc-500" suppressHydrationWarning>{p.created_at || p.date || "—"}</td>
                       </tr>
                     ))
                   )}
@@ -759,7 +759,7 @@ export function DeliveryClient({
                         <td className="p-3 font-mono font-bold text-zinc-900">{r.consignment_id || r.id}</td>
                         <td className="p-3 text-zinc-600">{r.reason || "—"}</td>
                         <td className="p-3"><span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">{r.status || "Pending"}</span></td>
-                        <td className="p-3 text-zinc-500">{r.created_at || "—"}</td>
+                        <td className="p-3 text-zinc-500" suppressHydrationWarning>{r.created_at || "—"}</td>
                       </tr>
                     ))
                   )}
@@ -804,7 +804,7 @@ export function DeliveryClient({
                         {step.status ? String(step.status).replace(/_/g, " ") : "Update"}
                       </span>
                       {(step.updated_at || step.created_at || step.time) && (
-                        <span className="text-[10.5px] text-zinc-400 font-mono">
+                        <span className="text-[10.5px] text-zinc-400 font-mono" suppressHydrationWarning>
                           {new Date(step.updated_at || step.created_at || step.time).toLocaleString("en-BD", {
                             month: "short",
                             day: "numeric",

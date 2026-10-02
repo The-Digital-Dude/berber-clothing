@@ -69,6 +69,11 @@ export async function generateMetadata(): Promise<Metadata> {
     verification: {
       google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || "QEPFzdJXen7lrD9nntkbv-ylTtE-a-NPIG6wKfRewVw",
     },
+    icons: {
+      icon: "/favicon.png",
+      shortcut: "/favicon.png",
+      apple: "/logo-icon.webp",
+    },
   };
 }
 
@@ -118,8 +123,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   }
 
   return (
-    <html lang="en" className={cn("font-sans", inter.variable, playfair.variable, spaceGrotesk.variable)}>
-      <body className="antialiased text-berber-text bg-berber-bg selection:bg-berber-gold/30">
+    <html lang="en" className={cn("font-sans", inter.variable, playfair.variable, spaceGrotesk.variable)} suppressHydrationWarning>
+      <body className="antialiased text-berber-text bg-berber-bg selection:bg-berber-gold/30" suppressHydrationWarning>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}

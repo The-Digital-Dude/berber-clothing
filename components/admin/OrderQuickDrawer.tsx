@@ -511,7 +511,7 @@ export default function OrderQuickDrawer({
         {order && (
           <div className="p-4 border-t border-zinc-100 bg-zinc-50 flex items-center justify-between gap-3">
             <Link
-              href={`/print/orders/packing-slip?id=${order.id}`}
+              href={`/print/orders/${order.id}/packing-slip`}
               target="_blank"
               className="text-xs font-semibold text-zinc-600 hover:text-zinc-900 transition-colors"
             >
