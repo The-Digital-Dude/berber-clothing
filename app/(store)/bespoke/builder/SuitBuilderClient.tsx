@@ -212,6 +212,26 @@ const WAISTCOAT_FABRICS = [
   },
 ]
 
+// Monogram Studio Customization Options
+const MONOGRAM_FONTS = [
+  { id: "SCRIPT", name: "Classic Calligraphic Script", desc: "Traditional British bespoke cursive", fontClass: "font-serif italic tracking-widest font-semibold" },
+  { id: "SERIF", name: "Imperial Roman Serif", desc: "Trajan-style capital serif monogram", fontClass: "font-serif uppercase tracking-[0.25em] font-bold" },
+  { id: "BLOCK", name: "Modern Architectural Block", desc: "Clean geometric sans-serif lettering", fontClass: "font-sans uppercase tracking-[0.2em] font-extrabold" },
+]
+
+const MONOGRAM_THREADS = [
+  { id: "GOLD", name: "Imperial Gold", hex: "#C9A24B", grad: "linear-gradient(135deg, #F9D976 0%, #C9A24B 50%, #947120 100%)", textColor: "#E5B84B" },
+  { id: "SILVER", name: "Platinum Sterling Silver", hex: "#E0E0E0", grad: "linear-gradient(135deg, #FFFFFF 0%, #D4D4D8 50%, #A1A1AA 100%)", textColor: "#E4E4E7" },
+  { id: "CHAMPAGNE", name: "Royal Champagne", hex: "#F7E7CE", grad: "linear-gradient(135deg, #FFF6E5 0%, #F7E7CE 50%, #C4A47C 100%)", textColor: "#F7E7CE" },
+  { id: "CRIMSON", name: "Burgundy Crimson", hex: "#8A1C2C", grad: "linear-gradient(135deg, #B91C1C 0%, #8A1C2C 50%, #450A0A 100%)", textColor: "#EF4444" },
+  { id: "NAVY", name: "Midnight Navy Silk", hex: "#1E293B", grad: "linear-gradient(135deg, #334155 0%, #1E293B 50%, #0F172A 100%)", textColor: "#94A3B8" },
+]
+
+const MONOGRAM_POSITIONS = [
+  { id: "RIGHT_WELT", name: "Inside Right Chest Welt (Classic)", desc: "Traditional British bespoke placement on interior breast pocket." },
+  { id: "LEFT_FACING", name: "Inside Left Facing Lapel (Discreet)", desc: "Discreet sartorial placement along the internal lapel facing." },
+]
+
 // Preset Quick Recipes
 const PRESETS = [
   {
@@ -285,6 +305,7 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
   const [monogramText, setMonogramText] = useState("")
   const [monogramFont, setMonogramFont] = useState("SCRIPT")
   const [monogramColor, setMonogramColor] = useState("GOLD")
+  const [monogramPosition, setMonogramPosition] = useState("RIGHT_WELT")
 
   // Sizing Mode
   const [fittingMethod, setFittingMethod] = useState<"OUTLET_FITTING" | "SMART_FIT" | "SELF_MEASURE">("OUTLET_FITTING")
@@ -487,7 +508,7 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
         pleats: pleat.name,
         hem: hem.name,
       },
-      monogram: hasMonogram ? { text: monogramText, font: monogramFont, color: monogramColor } : null,
+      monogram: hasMonogram && monogramText ? { text: monogramText, font: monogramFont, color: monogramColor, position: monogramPosition } : null,
       fittingMethod,
       measurements:
         fittingMethod === "OUTLET_FITTING"
@@ -973,52 +994,95 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
                   </div>
                 )}
 
-                {/* 3. INSIDE LINING & MONOGRAM VIEW */}
+                {/* 3. INSIDE LINING & MONOGRAM EMBROIDERY STUDIO VIEW */}
                 {previewAngle === "INSIDE" && (
                   <div className="relative z-10 w-full h-full flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-300">
+                    {/* Inner Jacket Half-Opened Silk Lining Panel */}
                     <div
-                      className="w-56 h-72 rounded-2xl border-2 border-berber-gold/50 p-6 flex flex-col justify-between relative shadow-2xl overflow-hidden"
+                      className="w-64 h-84 rounded-2xl border-2 border-berber-gold/40 p-5 flex flex-col justify-between relative shadow-2xl overflow-hidden transition-all duration-500"
                       style={{ backgroundColor: liningColor }}
                     >
-                      {/* Floating Canvas Pattern Lines */}
-                      <div className="absolute inset-0 opacity-15 border border-dashed border-white pointer-events-none" />
+                      {/* Floating Canvas Stitch Grid Overlay */}
+                      <div
+                        className="absolute inset-0 opacity-10 pointer-events-none"
+                        style={{
+                          backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
+                          backgroundSize: "12px 12px",
+                        }}
+                      />
 
-                      <div>
-                        <div className="flex justify-between items-center pb-2 border-b border-white/20">
-                          <span className="text-[10px] uppercase tracking-wider font-bold text-white/90">
-                            {canvasType === "FULL" ? "Full Floating Canvas" : "Half Canvas Interior"}
+                      {/* Header: Construction & Cloth Mill Tag */}
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-start pb-2 border-b border-white/20">
+                          <div>
+                            <span className="text-[10px] uppercase tracking-wider font-extrabold text-white block">
+                              {canvasType === "FULL" ? "Full Floating Canvas" : "Half Canvas Architecture"}
+                            </span>
+                            <span className="text-[9px] text-amber-300 font-mono block">
+                              100% Cupro Bemberg Silk
+                            </span>
+                          </div>
+                          <span className="text-[9px] bg-black/40 border border-white/20 text-white/90 px-2 py-0.5 rounded font-mono">
+                            {lining.name.split(" ")[0]}
                           </span>
-                          <span className="text-[9px] text-amber-300 font-mono">Bemberg Silk</span>
                         </div>
-                        <p className="text-[11px] text-white/80 font-medium mt-1">{lining.name}</p>
                       </div>
 
-                      {/* Embroidered Monogram Pocket Welt */}
-                      <div className="bg-black/60 border border-amber-400/40 rounded-xl p-3 text-center space-y-1 shadow-lg">
-                        <span className="text-[9px] uppercase tracking-widest text-neutral-400 block">
-                          Interior Pocket Welt
-                        </span>
+                      {/* Genuine Berber Atelier Woven Brand Crest */}
+                      <div className="relative z-10 bg-neutral-950/80 border border-amber-500/40 rounded-xl p-3 text-center shadow-lg space-y-1 my-auto">
+                        <div className="flex items-center justify-center gap-1.5 text-amber-400">
+                          <Scissors className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-serif font-bold tracking-[0.2em] uppercase text-white">
+                            BERBER BESPOKE
+                          </span>
+                        </div>
+                        <p className="text-[8px] text-neutral-400 uppercase tracking-wider">
+                          Flagship Atelier • Banani, Dhaka
+                        </p>
+                      </div>
+
+                      {/* Piped Silk Pocket Welt with Monogram Embroidery */}
+                      <div className="relative z-10 bg-black/70 border border-amber-400/50 rounded-xl p-3.5 text-center shadow-2xl backdrop-blur-sm space-y-1.5">
+                        <div className="flex items-center justify-between text-[8px] uppercase tracking-widest text-neutral-400 border-b border-neutral-800 pb-1">
+                          <span>{monogramPosition === "LEFT_FACING" ? "Inside Facing" : "Chest Pocket Welt"}</span>
+                          <span className="text-amber-400 font-mono">AMF Stitched</span>
+                        </div>
+
+                        {/* Pocket Welt Double Jet Lines */}
+                        <div className="w-full h-1 bg-neutral-800 rounded-full mb-1 border-t border-b border-neutral-700" />
+
                         {hasMonogram && monogramText ? (
-                          <div
-                            className={`text-sm tracking-widest font-bold ${
-                              monogramColor === "GOLD"
-                                ? "text-amber-400"
-                                : monogramColor === "SILVER"
-                                ? "text-neutral-200"
-                                : "text-rose-400"
-                            } ${monogramFont === "SCRIPT" ? "font-serif italic" : "font-sans uppercase"}`}
-                          >
-                            {monogramText}
+                          <div className="py-1">
+                            {(() => {
+                              const activeThread = MONOGRAM_THREADS.find((t) => t.id === monogramColor) || MONOGRAM_THREADS[0]
+                              const activeFont = MONOGRAM_FONTS.find((f) => f.id === monogramFont) || MONOGRAM_FONTS[0]
+
+                              return (
+                                <div
+                                  className={`text-base tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transition-all duration-300 ${activeFont.fontClass}`}
+                                  style={{
+                                    color: activeThread.textColor,
+                                    textShadow: "0 0 1px rgba(255,255,255,0.4), 0 1px 2px rgba(0,0,0,0.9)",
+                                  }}
+                                >
+                                  {monogramText}
+                                </div>
+                              )
+                            })()}
+                            <div className="text-[8px] text-amber-300/80 font-mono mt-0.5">
+                              Hand-Embroidered {MONOGRAM_THREADS.find((t) => t.id === monogramColor)?.name} Thread
+                            </div>
                           </div>
                         ) : (
-                          <div className="text-[10px] text-neutral-400 italic">
-                            (Add custom monogram in Sizing Step)
+                          <div className="py-2 text-[10px] text-neutral-400 italic">
+                            (No monogram selected — Add in Sizing Step)
                           </div>
                         )}
                       </div>
 
-                      <div className="text-[9px] text-center text-white/60">
-                        Hand-stitched in Banani Atelier
+                      {/* Footer Guarantee */}
+                      <div className="relative z-10 text-[9px] text-center text-white/70 font-sans">
+                        Handcrafted by Master Tailor
                       </div>
                     </div>
                   </div>
@@ -1951,49 +2015,160 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
                 </div>
 
                 {/* Monogram Section */}
-                <div className="bg-berber-muted/60 border border-berber-border rounded-2xl p-5 space-y-4">
+                <div className="bg-berber-muted/60 border border-berber-border rounded-2xl p-5 space-y-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-bold text-berber-black block">Custom Monogram Embroidery (+৳800)</span>
-                      <span className="text-xs text-berber-text-muted">Embroidered on the interior chest pocket welt.</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-berber-black block">Custom Monogram Embroidery (+৳800)</span>
+                        <span className="text-[10px] bg-berber-gold/15 text-berber-black font-bold border border-berber-gold/30 px-2 py-0.5 rounded-full">
+                          Hand-Stitched
+                        </span>
+                      </div>
+                      <span className="text-xs text-berber-text-muted">
+                        Embroidered with luxury metallic silk thread on your interior pocket welt.
+                      </span>
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={hasMonogram}
-                      onChange={(e) => setHasMonogram(e.target.checked)}
-                      className="w-5 h-5 accent-berber-gold cursor-pointer"
-                    />
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextVal = !hasMonogram
+                        setHasMonogram(nextVal)
+                        if (nextVal) {
+                          setPreviewAngle("INSIDE")
+                          if (!monogramText) setMonogramText("M.R.")
+                        }
+                      }}
+                      className={`px-4 py-1.5 rounded-full text-xs font-bold transition border ${
+                        hasMonogram
+                          ? "bg-berber-gold text-white border-berber-gold shadow-sm"
+                          : "bg-white border-berber-border text-berber-text hover:border-berber-gold"
+                      }`}
+                    >
+                      {hasMonogram ? "✓ Monogram Added" : "+ Add Monogram"}
+                    </button>
                   </div>
 
                   {hasMonogram && (
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                      <input
-                        type="text"
-                        placeholder="Your Initials / Name (e.g. M.R.)"
-                        maxLength={20}
-                        value={monogramText}
-                        onChange={(e) => setMonogramText(e.target.value.toUpperCase())}
-                        className="bg-white border border-berber-border rounded-xl px-3 py-2 text-xs text-berber-black uppercase focus:outline-none focus:border-berber-gold"
-                      />
-                      <select
-                        value={monogramFont}
-                        onChange={(e) => setMonogramFont(e.target.value)}
-                        className="bg-white border border-berber-border rounded-xl px-3 py-2 text-xs text-berber-black focus:outline-none"
-                      >
-                        <option value="SCRIPT">Classic English Script</option>
-                        <option value="BLOCK">Modern Block Sans</option>
-                        <option value="SERIF">Roman Serif</option>
-                      </select>
-                      <select
-                        value={monogramColor}
-                        onChange={(e) => setMonogramColor(e.target.value)}
-                        className="bg-white border border-berber-border rounded-xl px-3 py-2 text-xs text-berber-black focus:outline-none"
-                      >
-                        <option value="GOLD">Imperial Gold Thread</option>
-                        <option value="SILVER">Platinum Silver Thread</option>
-                        <option value="CRIMSON">Burgundy Silk Thread</option>
-                        <option value="NAVY">Tone-on-Tone Navy</option>
-                      </select>
+                    <div className="space-y-4 pt-2 border-t border-berber-border animate-in fade-in">
+                      {/* Text Input & Quick Preview Jump */}
+                      <div className="flex flex-col sm:flex-row gap-3 items-center">
+                        <div className="relative flex-1 w-full">
+                          <label className="text-[10px] uppercase font-bold text-berber-text-muted block mb-1">
+                            Your Initials or Name (Up to 20 Characters)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. M.R. or RAFIUL HASAN"
+                            maxLength={20}
+                            value={monogramText}
+                            onChange={(e) => {
+                              setMonogramText(e.target.value.toUpperCase())
+                              setPreviewAngle("INSIDE")
+                            }}
+                            className="w-full bg-white border border-berber-border rounded-xl px-4 py-2.5 text-sm text-berber-black uppercase focus:outline-none focus:border-berber-gold font-mono tracking-wider"
+                          />
+                          <span className="absolute right-3 top-7 text-[10px] text-neutral-400">
+                            {monogramText.length}/20
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setPreviewAngle("INSIDE")}
+                          className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-berber-gold/40 bg-berber-gold/10 hover:bg-berber-gold/20 text-xs font-bold text-berber-black transition mt-4 sm:mt-0"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-berber-gold" />
+                          <span>View on Lining</span>
+                        </button>
+                      </div>
+
+                      {/* Font Typography Style Cards */}
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-berber-text-muted block mb-2">
+                          1. Embroidery Typography Style
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          {MONOGRAM_FONTS.map((font) => (
+                            <button
+                              key={font.id}
+                              type="button"
+                              onClick={() => {
+                                setMonogramFont(font.id)
+                                setPreviewAngle("INSIDE")
+                              }}
+                              className={`p-3 rounded-xl border text-left transition ${
+                                monogramFont === font.id
+                                  ? "bg-berber-gold/10 border-berber-gold text-berber-black ring-1 ring-berber-gold font-bold"
+                                  : "bg-white border-berber-border text-berber-text-muted hover:text-berber-black"
+                              }`}
+                            >
+                              <div className={`text-base text-berber-black mb-1 ${font.fontClass}`}>
+                                {monogramText || "A.B.C."}
+                              </div>
+                              <span className="block text-[11px] font-bold text-berber-black">{font.name}</span>
+                              <span className="text-[9px] text-berber-text-muted">{font.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Thread Color Palette */}
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-berber-text-muted block mb-2">
+                          2. Metallic Silk Thread Shade
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                          {MONOGRAM_THREADS.map((th) => (
+                            <button
+                              key={th.id}
+                              type="button"
+                              onClick={() => {
+                                setMonogramColor(th.id)
+                                setPreviewAngle("INSIDE")
+                              }}
+                              className={`p-2.5 rounded-xl border flex flex-col items-center gap-1.5 transition text-center ${
+                                monogramColor === th.id
+                                  ? "bg-berber-gold/10 border-berber-gold text-berber-black ring-1 ring-berber-gold"
+                                  : "bg-white border-berber-border text-berber-text-muted hover:text-berber-black"
+                              }`}
+                            >
+                              <span
+                                className="w-6 h-6 rounded-full border border-neutral-300 shadow-sm shrink-0"
+                                style={{ background: th.grad }}
+                              />
+                              <span className="text-[11px] font-bold text-berber-black">{th.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Embroidery Placement */}
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-berber-text-muted block mb-2">
+                          3. Monogram Placement
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {MONOGRAM_POSITIONS.map((pos) => (
+                            <button
+                              key={pos.id}
+                              type="button"
+                              onClick={() => {
+                                setMonogramPosition(pos.id)
+                                setPreviewAngle("INSIDE")
+                              }}
+                              className={`p-3 rounded-xl border text-left transition ${
+                                monogramPosition === pos.id
+                                  ? "bg-berber-gold/10 border-berber-gold text-berber-black ring-1 ring-berber-gold"
+                                  : "bg-white border-berber-border text-berber-text-muted hover:text-berber-black"
+                              }`}
+                            >
+                              <span className="block text-xs font-bold text-berber-black">{pos.name}</span>
+                              <span className="text-[10px] text-berber-text-muted">{pos.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
