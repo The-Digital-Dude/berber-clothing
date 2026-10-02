@@ -29,6 +29,26 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
+
+  // Instant zero-DB redirect for standalone garment URLs to their matching parent blazer package
+  if (pathname.startsWith("/shop/")) {
+    const slug = pathname.replace("/shop/", "")
+    const isTrouser = slug.includes("trouser") || slug.includes("trousers")
+    const isWaistcoat = slug.includes("waistcoat") || slug.includes("waistcoats")
+
+    if (isTrouser || isWaistcoat) {
+      const targetSlug = slug
+        .replace("trousers", "blazer")
+        .replace("trouser", "blazer")
+        .replace("waistcoats", "blazer")
+        .replace("waistcoat", "blazer")
+
+      const targetUrl = new URL(`/shop/${targetSlug}`, request.url)
+      targetUrl.searchParams.set("package", isTrouser ? "3-piece" : "2-piece")
+      return NextResponse.redirect(targetUrl, 308)
+    }
+  }
+
   const isAdminRoute = pathname.startsWith("/admin")
   const isAccountRoute = pathname.startsWith("/account")
 

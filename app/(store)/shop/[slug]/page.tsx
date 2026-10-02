@@ -26,6 +26,19 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothin
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
+
+  // Instant redirect for standalone garment URLs
+  const isTrouserSlug = slug.includes("trouser") || slug.includes("trousers")
+  const isWaistcoatSlug = slug.includes("waistcoat") || slug.includes("waistcoats")
+  if (isTrouserSlug || isWaistcoatSlug) {
+    const targetSlug = slug
+      .replace("trousers", "blazer")
+      .replace("trouser", "blazer")
+      .replace("waistcoats", "blazer")
+      .replace("waistcoat", "blazer")
+    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "3-piece" : "2-piece"}`)
+  }
+
   const product = await prisma.product.findUnique({
     where: { slug, isActive: true },
     include: { images: { take: 1, orderBy: { sortOrder: "asc" } }, category: true },
@@ -80,6 +93,18 @@ export default async function ProductDetailPage({
 }) {
   const { slug } = await params;
   const { package: initialPackageParam } = (await searchParams) || {};
+
+  // Instant zero-DB redirect for standalone garment URLs
+  const isTrouserSlug = slug.includes("trouser") || slug.includes("trousers")
+  const isWaistcoatSlug = slug.includes("waistcoat") || slug.includes("waistcoats")
+  if (isTrouserSlug || isWaistcoatSlug) {
+    const targetSlug = slug
+      .replace("trousers", "blazer")
+      .replace("trouser", "blazer")
+      .replace("waistcoats", "blazer")
+      .replace("waistcoat", "blazer")
+    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "3-piece" : "2-piece"}`)
+  }
   
   const product = await prisma.product.findUnique({
     where: { slug, isActive: true },
@@ -94,34 +119,6 @@ export default async function ProductDetailPage({
 
   if (!product) {
     notFound()
-  }
-
-  // If a customer accesses a standalone Waistcoat or Trouser directly,
-  // redirect them to the corresponding parent Blazer page with pre-selected package
-  const isWaistcoat = product.category?.slug === "waistcoat" || product.name.toLowerCase().includes("waistcoat")
-  const isTrouser = product.category?.slug === "trousers" || product.name.toLowerCase().includes("trouser")
-
-  if (isWaistcoat || isTrouser) {
-    const colorPart = product.name.split(/[–—-]/)[1]?.trim() || ""
-    const isStudent = product.name.toLowerCase().includes("student")
-
-    const matchingBlazer = await prisma.product.findFirst({
-      where: {
-        category: { slug: "blazer" },
-        isActive: true,
-        AND: [
-          ...(colorPart ? [{ name: { contains: colorPart, mode: "insensitive" as const } }] : []),
-          { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" as const } },
-        ],
-      },
-      select: { slug: true },
-    }).catch(() => null)
-
-    if (matchingBlazer) {
-      redirect(`/shop/${matchingBlazer.slug}?package=${isWaistcoat ? "2-piece" : "3-piece"}`)
-    } else {
-      redirect("/shop")
-    }
   }
 
   // For Blazer products: discover matching Waistcoat and Trouser sibling products
