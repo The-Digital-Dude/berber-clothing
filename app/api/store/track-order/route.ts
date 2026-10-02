@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { getConsignmentStatus } from "@/lib/steadfast"
+import { getConsignmentStatus, getTrackingTimeline } from "@/lib/steadfast"
 
 export const dynamic = "force-dynamic"
 
@@ -48,31 +48,39 @@ async function handleTrackOrder(orderNumber: string) {
 
     let liveCourierStatus: string | null = null
     let liveCourierMessage: string | null = null
+    let trackingTimeline: any[] = []
 
-    // If order has a Steadfast consignment, check real-time status from Steadfast API
-    if (order.delivery?.consignmentId) {
+    // If order has a Steadfast/Packzy consignment, check real-time status and timeline
+    if (order.delivery?.consignmentId || order.delivery?.trackingCode) {
       try {
-        const sfResult = await getConsignmentStatus(order.delivery.consignmentId)
-        if (sfResult?.status) {
-          liveCourierStatus = sfResult.status
+        const [sfResult, timelineResult] = await Promise.allSettled([
+          order.delivery?.consignmentId ? getConsignmentStatus(order.delivery.consignmentId) : Promise.resolve(null),
+          getTrackingTimeline(order.orderNumber),
+        ])
+
+        if (sfResult.status === "fulfilled" && sfResult.value?.status) {
+          liveCourierStatus = sfResult.value.status
           
-          // Map to human friendly message
           const msgMap: Record<string, string> = {
             in_review: "Consignment created, awaiting rider pickup from warehouse.",
             pending: "Rider assigned, parcel scheduled for pickup.",
-            picked_up: "Picked up by Steadfast rider, en route to sorting hub.",
+            picked_up: "Picked up by courier rider, en route to sorting hub.",
             in_transit: "In transit to destination delivery branch.",
-            out_for_delivery: "Out for delivery with your local Steadfast rider.",
+            out_for_delivery: "Out for delivery with your local courier rider.",
             delivered: "Parcel delivered successfully.",
             partial_delivered: "Parcel partially delivered.",
             cancelled: "Delivery cancelled.",
             returned: "Parcel returned to warehouse.",
             hold: "Delivery placed on temporary hold by courier.",
+            exceptional: "Delivery exception noted. Our team is monitoring.",
           }
-          liveCourierMessage = msgMap[sfResult.status.toLowerCase()] || `Steadfast Status: ${sfResult.status}`
+          liveCourierMessage = msgMap[sfResult.value.status.toLowerCase()] || `Courier Status: ${sfResult.value.status}`
+        }
+
+        if (timelineResult.status === "fulfilled" && Array.isArray(timelineResult.value)) {
+          trackingTimeline = timelineResult.value
         }
       } catch (sfErr) {
-        // Fallback gracefully to database delivery status if API fails
         liveCourierStatus = order.delivery.status
       }
     }
@@ -109,12 +117,13 @@ async function handleTrackOrder(orderNumber: string) {
       })),
       delivery: order.delivery
         ? {
-            courier: order.delivery.courier || "STEADFAST",
+            courier: order.delivery.courier || "PACKZY",
             consignmentId: order.delivery.consignmentId,
             trackingCode: order.delivery.trackingCode,
             status: order.delivery.status,
             liveCourierStatus,
             liveCourierMessage,
+            timeline: trackingTimeline,
           }
         : null,
       statusLogs: order.statusLogs.map((l) => ({ status: l.status, createdAt: l.createdAt })),

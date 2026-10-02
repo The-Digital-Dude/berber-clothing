@@ -6,7 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import {
   Search, ShoppingBag, Check, Package, Truck, Home, Ban,
-  Zap, Clock, ShieldCheck, ExternalLink, RefreshCw, AlertCircle
+  Zap, Clock, ShieldCheck, ExternalLink, RefreshCw, AlertCircle, MapPin, ChevronRight
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,7 @@ const STATUS_STEPS = [
   { key: "PENDING", label: "Order Placed", icon: ShoppingBag },
   { key: "CONFIRMED", label: "Confirmed", icon: Check },
   { key: "PACKED", label: "Packed & Ready", icon: Package },
-  { key: "SHIPPED", label: "With Steadfast", icon: Truck },
+  { key: "SHIPPED", label: "With Courier", icon: Truck },
   { key: "DELIVERED", label: "Delivered", icon: Home },
 ]
 
@@ -54,10 +54,6 @@ function TrackOrderContent() {
       fetchTracking(initialOrderNumber)
       return
     }
-    // Fallback for links shaped like /track#ORD-2026-0015 instead of
-    // /track?order=ORD-2026-0015 -- a # fragment is never sent to the server
-    // and useSearchParams() can't see it at all, so it has to be read
-    // directly off window.location on the client.
     if (typeof window !== "undefined" && window.location.hash) {
       const hashOrder = decodeURIComponent(window.location.hash.slice(1))
       if (hashOrder) {
@@ -230,7 +226,7 @@ function TrackOrderContent() {
               </div>
             )}
 
-            {/* Steadfast Live Courier Details */}
+            {/* Packzy / Steadfast Live Courier Details */}
             {order.delivery && (
               <div className="mt-6 p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
                 <div className="flex items-start gap-2.5">
@@ -239,7 +235,7 @@ function TrackOrderContent() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-zinc-900">Steadfast Courier</span>
+                      <span className="font-bold text-zinc-900">Packzy / Steadfast Courier</span>
                       {order.delivery.consignmentId && (
                         <span className="text-[10.5px] font-mono font-bold bg-white px-2 py-0.5 rounded border border-indigo-200 text-indigo-800">
                           CID: {order.delivery.consignmentId}
@@ -258,6 +254,40 @@ function TrackOrderContent() {
                     <span className="font-mono font-bold text-zinc-900">{order.delivery.trackingCode}</span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Live Movement Timeline */}
+            {order.delivery?.timeline && order.delivery.timeline.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-berber-border">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-700 mb-3 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-600" />
+                  Live Courier Tracking History
+                </h3>
+                <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
+                  {order.delivery.timeline.map((step: any, sIdx: number) => (
+                    <div key={sIdx} className="relative text-xs">
+                      <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-4 ring-indigo-50" />
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-bold text-zinc-900 capitalize">
+                          {step.status ? String(step.status).replace(/_/g, " ") : "Movement Update"}
+                        </span>
+                        {(step.updated_at || step.created_at || step.time) && (
+                          <span className="text-[10.5px] text-zinc-400 font-mono">
+                            {new Date(step.updated_at || step.created_at || step.time).toLocaleString("en-BD", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        )}
+                      </div>
+                      {step.message && <p className="text-zinc-600 mt-0.5">{step.message}</p>}
+                      {step.hub && <p className="text-[11px] text-zinc-400 mt-0.5">Hub: {step.hub}</p>}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
