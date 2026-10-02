@@ -26,6 +26,7 @@ type SearchResult = {
 
 const quickActions = [
   { id: "act-new-order", label: "Create Manual Order", sub: "Start a new customer draft/order", href: "/admin/orders/new", icon: ShoppingCart, type: "action" as const },
+  { id: "act-delivery", label: "Courier & Deliveries", sub: "Packzy dispatch, pickups & payouts", href: "/admin/delivery", icon: Zap, type: "action" as const },
   { id: "act-new-product", label: "Add New Product", sub: "Upload images, variants & pricing", href: "/admin/products/new", icon: PlusCircle, type: "action" as const },
   { id: "act-new-coupon", label: "Create Coupon Code", sub: "Set discounts & minimum thresholds", href: "/admin/coupons", icon: Tag, type: "action" as const },
   { id: "act-stock-alerts", label: "Check Stock Alerts", sub: "Review low stock & replenishment needs", href: "/admin/stock-alerts", icon: Bell, type: "action" as const },

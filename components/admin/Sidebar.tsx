@@ -17,6 +17,7 @@ import {
 export const primaryItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/delivery", label: "Deliveries", icon: Truck },
   { href: "/admin/products", label: "Products", icon: ShoppingBag },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/inventory", label: "Inventory", icon: Package },
@@ -82,8 +83,9 @@ export const groups = [
   {
     label: "Fulfillment & Logistics",
     items: [
+      { href: "/admin/delivery", label: "Packzy Courier Hub", icon: Zap },
+      { href: "/admin/shipping-labels", label: "Shipping Labels", icon: Receipt },
       { href: "/admin/shipping-zones", label: "Shipping Zones", icon: Truck },
-      { href: "/admin/delivery", label: "Delivery Methods", icon: Truck },
       { href: "/admin/locations", label: "Warehouses / Locations", icon: Warehouse },
     ],
   },
