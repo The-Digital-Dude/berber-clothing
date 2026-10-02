@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
   if (sort === "price-asc")  orderBy = { price: "asc" }
   if (sort === "price-desc") orderBy = { price: "desc" }
 
-  const where: any = { isActive: true }
+  const where: any = {
+    isActive: true,
+    category: { slug: { notIn: ["waistcoat", "trousers"] } },
+  }
   if (search) {
     where.OR = [
       { name:        { contains: search, mode: "insensitive" } },
@@ -29,6 +32,10 @@ export async function GET(req: NextRequest) {
     ]
   }
   if (category) {
+    if (category === "waistcoat" || category === "trousers") {
+      // Standalone waistcoats and trousers are not sold separately
+      return NextResponse.json({ products: [], total: 0, hasMore: false })
+    }
     const cat = await prisma.category.findUnique({
       where: { slug: category },
       include: { children: { select: { id: true } } },

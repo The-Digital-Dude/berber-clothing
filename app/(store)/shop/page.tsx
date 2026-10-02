@@ -92,12 +92,15 @@ export default async function ShopPage({
 
   const [categories, brands, activeCategory] = await Promise.all([
     prisma.category.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        slug: { notIn: ["waistcoat", "trousers"] },
+      },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: {
         parent: { select: { id: true, name: true, slug: true } },
         children: {
-          where: { isActive: true },
+          where: { isActive: true, slug: { notIn: ["waistcoat", "trousers"] } },
           orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
           select: { id: true, name: true, slug: true },
         },

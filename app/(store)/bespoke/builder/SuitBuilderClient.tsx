@@ -36,11 +36,9 @@ import Link from "next/link"
 
 // Config Options
 const GARMENT_TYPES = [
-  { id: "TWO_PIECE_SUIT", name: "Two-Piece Suit", desc: "Tailored Jacket & Trousers", basePrice: 22000 },
-  { id: "THREE_PIECE_SUIT", name: "Three-Piece Suit", desc: "Jacket, Trousers & Bespoke Waistcoat", basePrice: 28000 },
-  { id: "TUXEDO", name: "Formal Black Tie Tuxedo", desc: "Satin Silk Lapels & Trousers Galon", basePrice: 26000 },
-  { id: "BLAZER_ONLY", name: "Artisan Blazer / Sport Coat", desc: "Standalone Handcrafted Jacket", basePrice: 16000 },
-  { id: "TROUSERS_ONLY", name: "Bespoke Trousers", desc: "Single Tailored Trouser", basePrice: 7500 },
+  { id: "BLAZER_ONLY", name: "Artisan Blazer / Sport Coat", desc: "1-Piece Standalone Tailored Jacket", basePrice: 16000 },
+  { id: "BLAZER_WAISTCOAT", name: "Blazer with Waistcoat", desc: "2-Piece Set: Tailored Jacket & Bespoke Waistcoat", basePrice: 22000 },
+  { id: "THREE_PIECE_SUIT", name: "Blazer with Waistcoat & Trousers", desc: "3-Piece Complete Suit: Jacket, Waistcoat & Trousers", basePrice: 28000 },
 ]
 
 const SILHOUETTES = [
@@ -217,43 +215,7 @@ const WAISTCOAT_FABRICS = [
 // Preset Quick Recipes
 const PRESETS = [
   {
-    name: "Royal Black Tie",
-    tag: "Gala",
-    garmentId: "TUXEDO",
-    fabricCode: "SCB-130-BLK",
-    breastingId: "SB_1",
-    lapelId: "SHAWL",
-    pocketId: "JETTED",
-    buttonId: "MOP_SMOKE",
-    liningId: "SILK_CRIMSON",
-    waistbandId: "GURKHA",
-  },
-  {
-    name: "Savile Row Executive",
-    tag: "Boardroom",
-    garmentId: "TWO_PIECE_SUIT",
-    fabricCode: "VBC-150-NVY",
-    breastingId: "DB_6_2",
-    lapelId: "PEAK",
-    pocketId: "SLANTED_TICKET",
-    buttonId: "HORN_DARK",
-    liningId: "PAISLEY_GOLD",
-    waistbandId: "SIDE_ADJUSTERS",
-  },
-  {
-    name: "Riviera Summer Linen",
-    tag: "Destination",
-    garmentId: "TWO_PIECE_SUIT",
-    fabricCode: "HL-LIN-SND",
-    breastingId: "SB_2",
-    lapelId: "NOTCH",
-    pocketId: "PATCH",
-    buttonId: "HORN_AMBER",
-    liningId: "SILK_NAVY",
-    waistbandId: "SIDE_ADJUSTERS",
-  },
-  {
-    name: "Mayfair 3-Piece",
+    name: "Royal Mayfair 3-Piece",
     tag: "Royal Ascot",
     garmentId: "THREE_PIECE_SUIT",
     fabricCode: "LP-160-CHR",
@@ -263,6 +225,30 @@ const PRESETS = [
     buttonId: "HORN_DARK",
     liningId: "SILK_NAVY",
     waistbandId: "GURKHA",
+  },
+  {
+    name: "Savile Row 2-Piece Vest Set",
+    tag: "Boardroom",
+    garmentId: "BLAZER_WAISTCOAT",
+    fabricCode: "VBC-150-NVY",
+    breastingId: "DB_6_2",
+    lapelId: "PEAK",
+    pocketId: "SLANTED_TICKET",
+    buttonId: "HORN_DARK",
+    liningId: "PAISLEY_GOLD",
+    waistbandId: "SIDE_ADJUSTERS",
+  },
+  {
+    name: "Riviera Summer Artisan Blazer",
+    tag: "Destination",
+    garmentId: "BLAZER_ONLY",
+    fabricCode: "HL-LIN-SND",
+    breastingId: "SB_2",
+    lapelId: "NOTCH",
+    pocketId: "PATCH",
+    buttonId: "HORN_AMBER",
+    liningId: "SILK_NAVY",
+    waistbandId: "SIDE_ADJUSTERS",
   },
 ]
 
@@ -323,16 +309,12 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
   const steps = [
     { id: "GARMENT", label: "Garment Style", subtitle: "Commission" },
     { id: "FABRIC", label: "Cloth & Mill", subtitle: "European Wools" },
-    ...(garmentType.id !== "TROUSERS_ONLY"
-      ? [{ id: "JACKET", label: "Jacket Cut", subtitle: "Lapel & Pockets" }]
-      : []),
-    ...(garmentType.id === "THREE_PIECE_SUIT"
+    { id: "JACKET", label: "Jacket Cut", subtitle: "Lapel & Pockets" },
+    ...(garmentType.id === "BLAZER_WAISTCOAT" || garmentType.id === "THREE_PIECE_SUIT"
       ? [{ id: "WAISTCOAT", label: "Waistcoat Craft", subtitle: "Vest Architecture" }]
       : []),
-    ...(garmentType.id !== "TROUSERS_ONLY"
-      ? [{ id: "LINING", label: "Silk Lining", subtitle: "Canvassing" }]
-      : []),
-    ...(garmentType.id !== "BLAZER_ONLY"
+    { id: "LINING", label: "Silk Lining", subtitle: "Canvassing" },
+    ...(garmentType.id === "THREE_PIECE_SUIT"
       ? [{ id: "TROUSERS", label: "Trousers Cut", subtitle: "Waist & Pleats" }]
       : []),
     { id: "SIZING", label: "Monogram & Sizing", subtitle: "Atelier Fitting" },
@@ -449,7 +431,7 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
   const monogramAddon = hasMonogram && monogramText.trim() ? 800 : 0
 
   const waistcoatAddon =
-    garmentType.id === "THREE_PIECE_SUIT"
+    garmentType.id === "BLAZER_WAISTCOAT" || garmentType.id === "THREE_PIECE_SUIT"
       ? (waistcoatStyle.price || 0) +
         (waistcoatPocket.price || 0) +
         (waistcoatBack.price || 0) +
@@ -572,7 +554,7 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
               <span className="text-berber-text-muted">Selected Cloth:</span>
               <span className="font-semibold text-berber-black">{selectedFabric?.name}</span>
             </div>
-            {garmentType.id === "THREE_PIECE_SUIT" && (
+            {(garmentType.id === "BLAZER_WAISTCOAT" || garmentType.id === "THREE_PIECE_SUIT") && (
               <div className="flex justify-between border-b border-berber-border pb-2">
                 <span className="text-berber-text-muted">Waistcoat Architecture:</span>
                 <span className="font-semibold text-berber-black">{waistcoatStyle.name}</span>
@@ -733,7 +715,7 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
                     </button>
                   ))}
 
-                  {garmentType.id === "THREE_PIECE_SUIT" && (
+                  {(garmentType.id === "BLAZER_WAISTCOAT" || garmentType.id === "THREE_PIECE_SUIT") && (
                     <button
                       type="button"
                       onClick={() => setPreviewAngle("WAISTCOAT")}
@@ -787,8 +769,8 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
                       <polygon points="120,40 150,85 180,40" fill="#ffffff" stroke="#e5e5e5" strokeWidth="1" />
                       <polygon points="150,75 140,160 160,160" fill="#1e293b" /> {/* Silk Tie */}
 
-                      {/* Three-Piece Vest Layer (Rendered beneath jacket) */}
-                      {garmentType.id === "THREE_PIECE_SUIT" && (
+                      {/* Waistcoat Layer (Rendered beneath jacket) */}
+                      {(garmentType.id === "BLAZER_WAISTCOAT" || garmentType.id === "THREE_PIECE_SUIT") && (
                         <g>
                           {waistcoatStyle.type === "HORSESHOE" ? (
                             <path
@@ -2114,15 +2096,13 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
                     <span className="text-berber-text-muted">Selected Cloth:</span>
                     <span className="text-berber-black font-semibold">{selectedFabric?.name}</span>
                   </div>
-                  {garmentType.id !== "TROUSERS_ONLY" && (
-                    <div className="flex justify-between border-b border-berber-border pb-2">
-                      <span className="text-berber-text-muted">Jacket Architecture:</span>
-                      <span className="text-berber-black font-medium">
-                        {breasting.name} • {lapel.name} • {pocket.name}
-                      </span>
-                    </div>
-                  )}
-                  {garmentType.id === "THREE_PIECE_SUIT" && (
+                  <div className="flex justify-between border-b border-berber-border pb-2">
+                    <span className="text-berber-text-muted">Jacket Architecture:</span>
+                    <span className="text-berber-black font-medium">
+                      {breasting.name} • {lapel.name} • {pocket.name}
+                    </span>
+                  </div>
+                  {(garmentType.id === "BLAZER_WAISTCOAT" || garmentType.id === "THREE_PIECE_SUIT") && (
                     <div className="flex justify-between border-b border-berber-border pb-2">
                       <span className="text-berber-text-muted">Waistcoat Architecture:</span>
                       <span className="text-berber-gold font-semibold">
@@ -2130,7 +2110,7 @@ export default function SuitBuilderClient({ initialFabrics = [] }: { initialFabr
                       </span>
                     </div>
                   )}
-                  {garmentType.id !== "BLAZER_ONLY" && (
+                  {garmentType.id === "THREE_PIECE_SUIT" && (
                     <div className="flex justify-between border-b border-berber-border pb-2">
                       <span className="text-berber-text-muted">Trousers Details:</span>
                       <span className="text-berber-black font-medium">
