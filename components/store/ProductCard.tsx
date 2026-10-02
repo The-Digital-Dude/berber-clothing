@@ -100,11 +100,19 @@ export default function ProductCard({
     toast.success(wishlisted ? "Removed from wishlist" : "Added to wishlist")
   }
 
+  const isTrouserSlug = product.slug?.includes("trouser") || product.slug?.includes("trousers")
+  const isWaistcoatSlug = product.slug?.includes("waistcoat") || product.slug?.includes("waistcoats")
+  const productHref = isTrouserSlug
+    ? `/shop/${product.slug.replace("trousers", "blazer").replace("trouser", "blazer")}?package=3-piece`
+    : isWaistcoatSlug
+    ? `/shop/${product.slug.replace("waistcoats", "blazer").replace("waistcoat", "blazer")}?package=2-piece`
+    : `/shop/${product.slug}`
+
   return (
     <FadeIn className="group relative flex flex-col gap-3">
       {/* Image Box */}
       <div className="relative aspect-[3/4] bg-berber-muted rounded-xl overflow-hidden cursor-pointer">
-        <Link href={`/shop/${product.slug}`} className="absolute inset-0">
+        <Link href={productHref} className="absolute inset-0">
           <Image
             src={thumbnail}
             alt={product.name}
@@ -180,7 +188,7 @@ export default function ProductCard({
               Size {selectedSize} out of stock
             </button>
           ) : (
-            <Link href={`/shop/${product.slug}`}>
+            <Link href={productHref}>
               <button className="w-full bg-white/90 backdrop-blur-sm text-berber-black font-medium py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-berber-gold hover:text-white transition-colors text-sm shadow-sm">
                 <ShoppingBag className="w-4 h-4" /> Notify Me
               </button>
@@ -192,7 +200,7 @@ export default function ProductCard({
       {/* Info Box */}
       <div className="flex flex-col gap-1 px-1">
         <p className="text-[10px] uppercase tracking-widest text-berber-text-muted">{product.category?.name}</p>
-        <Link href={`/shop/${product.slug}`} className="font-medium text-sm line-clamp-1 group-hover:text-berber-gold transition-colors">
+        <Link href={productHref} className="font-medium text-sm line-clamp-1 group-hover:text-berber-gold transition-colors">
           {product.name}
         </Link>
         <div className="flex items-center gap-2 mt-0.5">
