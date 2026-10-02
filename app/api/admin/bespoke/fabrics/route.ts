@@ -93,10 +93,18 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json()
-    const { id, ...updates } = body
+    const { id, deltaStock, ...updates } = body
 
     if (!id) {
       return NextResponse.json({ error: "Fabric ID is required" }, { status: 400 })
+    }
+
+    const currentFabric = await prisma.bespokeFabric.findUnique({
+      where: { id },
+    })
+
+    if (!currentFabric) {
+      return NextResponse.json({ error: "Fabric not found" }, { status: 404 })
     }
 
     const updateData: any = {}
@@ -111,16 +119,44 @@ export async function PATCH(req: Request) {
     if (updates.textureImageUrl !== undefined) updateData.textureImageUrl = updates.textureImageUrl.trim()
     if (updates.swatchImageUrl !== undefined) updateData.swatchImageUrl = updates.swatchImageUrl.trim()
     if (updates.pricePerMeter !== undefined) updateData.pricePerMeter = parseFloat(updates.pricePerMeter)
-    if (updates.stockMeters !== undefined) updateData.stockMeters = parseFloat(updates.stockMeters)
-    if (updates.isAvailable !== undefined) updateData.isAvailable = updates.isAvailable
     if (updates.season !== undefined) updateData.season = updates.season.trim()
+
+    // Handle stock and deltaStock
+    if (deltaStock !== undefined) {
+      const newStock = Math.max(0, Number(currentFabric.stockMeters) + Number(deltaStock))
+      updateData.stockMeters = newStock
+      if (newStock === 0) {
+        updateData.isAvailable = false
+      } else if (Number(currentFabric.stockMeters) === 0 && newStock > 0 && updates.isAvailable === undefined) {
+        updateData.isAvailable = true
+      }
+    } else if (updates.stockMeters !== undefined) {
+      const parsedStock = Math.max(0, parseFloat(updates.stockMeters))
+      updateData.stockMeters = parsedStock
+      if (parsedStock === 0) {
+        updateData.isAvailable = false
+      } else if (Number(currentFabric.stockMeters) === 0 && parsedStock > 0 && updates.isAvailable === undefined) {
+        updateData.isAvailable = true
+      }
+    }
+
+    if (updates.isAvailable !== undefined) {
+      updateData.isAvailable = updates.isAvailable
+    }
 
     const updated = await prisma.bespokeFabric.update({
       where: { id },
       data: updateData,
     })
 
-    return NextResponse.json({ success: true, fabric: updated })
+    return NextResponse.json({
+      success: true,
+      fabric: {
+        ...updated,
+        pricePerMeter: Number(updated.pricePerMeter),
+        stockMeters: Number(updated.stockMeters),
+      },
+    })
   } catch (error) {
     console.error("[ADMIN_BESPOKE_FABRICS_PATCH]", error)
     return NextResponse.json({ error: "Failed to update fabric" }, { status: 500 })
