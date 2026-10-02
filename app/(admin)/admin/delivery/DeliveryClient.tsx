@@ -43,6 +43,13 @@ type Delivery = {
   createdAt: string
 }
 
+type TimelineOrderInfo = {
+  invoice: string
+  consignmentId?: string | null
+  trackingCode?: string | null
+  liveStatus?: string | null
+}
+
 export function DeliveryClient({
   data,
   stats,
@@ -77,7 +84,7 @@ export function DeliveryClient({
   const [submittingReturn, setSubmittingReturn] = useState(false)
 
   // Live Timeline State
-  const [timelineOrder, setTimelineOrder] = useState<{ invoice: string; consignmentId?: string | null } | null>(null)
+  const [timelineOrder, setTimelineOrder] = useState<TimelineOrderInfo | null>(null)
   const [timelineSteps, setTimelineSteps] = useState<any[]>([])
   const [loadingTimeline, setLoadingTimeline] = useState(false)
 
@@ -141,7 +148,12 @@ export function DeliveryClient({
   }
 
   const openTimeline = async (delivery: Delivery) => {
-    setTimelineOrder({ invoice: delivery.orderNumber, consignmentId: delivery.consignmentId })
+    setTimelineOrder({
+      invoice: delivery.orderNumber,
+      consignmentId: delivery.consignmentId,
+      trackingCode: delivery.trackingCode,
+      liveStatus: delivery.status,
+    })
     setTimelineSteps([])
     setLoadingTimeline(true)
     try {
@@ -149,6 +161,14 @@ export function DeliveryClient({
       const json = await res.json()
       if (res.ok && Array.isArray(json.timeline)) {
         setTimelineSteps(json.timeline)
+        if (json.consignmentId || json.trackingCode || json.liveStatus) {
+          setTimelineOrder({
+            invoice: delivery.orderNumber,
+            consignmentId: json.consignmentId || delivery.consignmentId,
+            trackingCode: json.trackingCode || delivery.trackingCode,
+            liveStatus: json.liveStatus || delivery.status,
+          })
+        }
       } else {
         setTimelineSteps([])
       }
@@ -783,7 +803,44 @@ export function DeliveryClient({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="pt-3 max-h-96 overflow-y-auto">
+          {/* Quick Parcel Metadata Badges & Live Tracker Link */}
+          {timelineOrder && (
+            <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 flex flex-col gap-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600 font-medium">Consignment ID:</span>
+                <span className="font-mono font-bold text-zinc-900">{timelineOrder.consignmentId || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600 font-medium">Tracking Code:</span>
+                <span className="font-mono font-bold text-indigo-700">{timelineOrder.trackingCode || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-600 font-medium">Live Courier Status:</span>
+                <span className="font-bold uppercase text-[10.5px] px-2 py-0.5 rounded bg-white text-indigo-800 border border-indigo-200">
+                  {timelineOrder.liveStatus || "PENDING"}
+                </span>
+              </div>
+              {timelineOrder.trackingCode && (
+                <div className="pt-2 border-t border-indigo-100 flex justify-end">
+                  <a
+                    href={
+                      timelineOrder.trackingCode.startsWith("http")
+                        ? timelineOrder.trackingCode
+                        : `https://steadfast.com.bd/t/${timelineOrder.trackingCode}`
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 hover:underline"
+                  >
+                    <span>Open Live Courier Tracker</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="pt-2 max-h-96 overflow-y-auto">
             {loadingTimeline ? (
               <div className="py-8 text-center text-xs text-zinc-400">
                 <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-indigo-600" />
