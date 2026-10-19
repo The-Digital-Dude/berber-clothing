@@ -89,8 +89,8 @@ export async function getSteadfastConfig(): Promise<SteadfastConfig> {
       return acc
     }, {} as Record<string, string>)
 
-    const apiKey = map["steadfast_api_key"] || process.env.STEADFAST_API_KEY || "REDACTED"
-    const secretKey = map["steadfast_secret_key"] || process.env.STEADFAST_SECRET_KEY || "REDACTED"
+    const apiKey = map["steadfast_api_key"] || process.env.STEADFAST_API_KEY || ""
+    const secretKey = map["steadfast_secret_key"] || process.env.STEADFAST_SECRET_KEY || ""
     const baseUrl = map["steadfast_base_url"] || process.env.STEADFAST_BASE_URL || DEFAULT_PACKZY_BASE_URL
     const webhookSecret = map["steadfast_webhook_secret"] || process.env.STEADFAST_WEBHOOK_SECRET || ""
 
@@ -103,8 +103,8 @@ export async function getSteadfastConfig(): Promise<SteadfastConfig> {
   } catch {
     return {
       baseUrl: (process.env.STEADFAST_BASE_URL || DEFAULT_PACKZY_BASE_URL).replace(/\/+$/, ""),
-      apiKey: (process.env.STEADFAST_API_KEY || "REDACTED").trim(),
-      secretKey: (process.env.STEADFAST_SECRET_KEY || "REDACTED").trim(),
+      apiKey: (process.env.STEADFAST_API_KEY || "").trim(),
+      secretKey: (process.env.STEADFAST_SECRET_KEY || "").trim(),
       webhookSecret: (process.env.STEADFAST_WEBHOOK_SECRET || "").trim(),
     }
   }
