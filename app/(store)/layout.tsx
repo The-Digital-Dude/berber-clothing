@@ -10,6 +10,7 @@ import WhatsAppConcierge from "@/components/store/WhatsAppConcierge";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
 import { Suspense } from "react";
 import prisma from "@/lib/prisma";
+import { getSettings, getNavCategories } from "@/lib/siteData";
 import { getActiveFlashSaleBatch, applyFlashSaleDiscount } from "@/lib/flashSale";
 
 const SETTING_KEYS = [
@@ -32,32 +33,15 @@ export default async function StoreLayout({
   children: React.ReactNode;
 }) {
   const now = new Date()
-  const [settings, categories, sitewideSale] = await Promise.all([
-    prisma.setting.findMany({ where: { key: { in: SETTING_KEYS } } }),
-    prisma.category.findMany({
-      where: {
-        isActive: true,
-        showOnNavbar: true,
-        parentId: null,
-        slug: { notIn: ["waistcoat", "trousers"] },
-      },
-      orderBy: { sortOrder: "asc" },
-      select: {
-        id: true, name: true, slug: true, image: true, description: true,
-        children: {
-          where: { isActive: true, slug: { notIn: ["waistcoat", "trousers"] } },
-          orderBy: { sortOrder: "asc" },
-          select: { id: true, name: true, slug: true, image: true, description: true },
-        },
-      },
-    }),
+  const [settingsMap, categories, sitewideSale] = await Promise.all([
+    getSettings(SETTING_KEYS),
+    getNavCategories(),
     prisma.flashSale.findFirst({
       where: { scope: "SITEWIDE", isActive: true, startsAt: { lte: now }, endsAt: { gte: now } },
       orderBy: { createdAt: "desc" },
     }),
   ])
 
-  const settingsMap = Object.fromEntries(settings.map((s) => [s.key, s.value]))
   const freeShippingThreshold = settingsMap.free_shipping_above ? parseInt(settingsMap.free_shipping_above, 10) : null
   const metaPixelId = settingsMap.meta_pixel_id ?? process.env.NEXT_PUBLIC_META_PIXEL_ID ?? ""
 

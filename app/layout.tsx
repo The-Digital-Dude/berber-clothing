@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Analytics from "@/components/Analytics";
-import prisma from "@/lib/prisma";
+import { getSettings } from "@/lib/siteData";
 import NextTopLoader from "nextjs-toploader";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -27,10 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
   let storeName = "Berber Clothing"
 
   try {
-    const settings = await prisma.setting.findMany({
-      where: { key: { in: ["meta_title", "meta_description", "store_name"] } },
-    })
-    const map = Object.fromEntries(settings.map((s) => [s.key, s.value]))
+    const map = await getSettings(["meta_title", "meta_description", "store_name"])
     if (map["meta_title"]) siteTitle = map["meta_title"]
     if (map["meta_description"]) siteDescription = map["meta_description"]
     if (map["store_name"]) storeName = map["store_name"]
@@ -84,10 +81,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   let sameAs: string[] = []
 
   try {
-    const settings = await prisma.setting.findMany({
-      where: { key: { in: ["store_name", "support_email", "support_phone", "social_facebook", "social_instagram", "social_tiktok"] } },
-    })
-    const map = Object.fromEntries(settings.map((s) => [s.key, s.value]))
+    const map = await getSettings(["store_name", "support_email", "support_phone", "social_facebook", "social_instagram", "social_tiktok"])
     if (map.store_name) storeName = map.store_name
     if (map.support_email) supportEmail = map.support_email
     if (map.support_phone) supportPhone = map.support_phone
@@ -135,11 +129,12 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         />
         <NextTopLoader
           color="#F59E0B"
-          height={3}
+          height={4}
           crawl={true}
-          showSpinner={false}
+          showSpinner={true}
           shadow="0 0 12px #F59E0B, 0 0 4px #F59E0B"
           speed={200}
+          zIndex={99999}
         />
         <VercelAnalytics />
         <SpeedInsights />
