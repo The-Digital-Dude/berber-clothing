@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import AdminPagination from "@/components/admin/AdminPagination"
+import FraudCheckButton from "@/components/admin/FraudCheckButton"
 
 type Order = {
   id: string
@@ -290,6 +291,7 @@ export function CustomerClient({
                             <div className="flex items-center gap-1.5 text-zinc-600 font-mono text-[11px]">
                               <Phone className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                               <span>{c.phone}</span>
+                              <FraudCheckButton phone={c.phone} />
                             </div>
                           )}
                         </div>

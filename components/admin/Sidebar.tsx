@@ -10,7 +10,7 @@ import {
   Globe, MessageSquare, Building2, Truck, Warehouse, Mail,
   ChevronRight, Star, Users2, Wallet, Award, ScrollText,
   Receipt, Download, Layers, Search, PlusCircle, PanelLeftClose, PanelLeftOpen,
-  Pin, Sparkles, HelpCircle, X, Image, Scissors, Palette
+  Pin, Sparkles, HelpCircle, X, Image, Scissors, Palette, ShieldCheck
 } from "lucide-react"
 
 // ─── Navigation structure ───────────────────────────────────────────────────
@@ -18,6 +18,7 @@ export const primaryItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
   { href: "/admin/delivery", label: "Deliveries", icon: Truck },
+  { href: "/admin/fraud-checker", label: "Fraud Checker", icon: ShieldCheck },
   { href: "/admin/products", label: "Products", icon: ShoppingBag },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/inventory", label: "Inventory", icon: Package },

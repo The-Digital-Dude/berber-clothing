@@ -1222,6 +1222,17 @@ export default function OrderDetailsClient({
                       </div>
                     )}
 
+                    {riskData.network && (
+                      <div className="pt-1 text-[11px] text-zinc-600">
+                        <span className="font-semibold">Courier network:</span> {riskData.network.status} · {riskData.network.score ?? "?"}% delivered across {riskData.network.totalParcel} parcels
+                        {riskData.network.unresolvedReports > 0 && <span className="font-semibold text-rose-700"> · {riskData.network.unresolvedReports} fraud report(s)</span>}
+                        {riskData.network.couriers.length > 0 && (
+                          <span className="block text-zinc-500">
+                            {riskData.network.couriers.filter((c) => c.total > 0).map((c) => c.courier + " " + c.success + "/" + c.total).join(" · ")}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {riskData.totalOrders > 0 && (
                       <p className="text-[10px] text-zinc-600">
                         Store History: <strong>{riskData.delivered}</strong> delivered of{" "}

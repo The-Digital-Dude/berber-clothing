@@ -523,12 +523,12 @@ export async function checkSteadfastFraud(phone: string, forceFresh = false): Pr
     const cancellationRatio = typeof data.cancellation_ratio === "number" ? data.cancellation_ratio : null
     const returnRatio = typeof data.return_ratio === "number" ? data.return_ratio : null
     const totalReports = Number(data.total_reports || 0)
-    const doubtfulReports = !data.doubtful_reports
+    const doubtfulReports = !!data.doubtful_reports
     const fraudCategories = Array.isArray(data.fraud_categories) ? data.fraud_categories : []
     const volumeBand = data.volume_band ?? null
     const score = typeof data.score === "number" ? data.score : null
     const level = data.level ?? null
-    const scoringDisabled = !data.scoring_disabled
+    const scoringDisabled = !!data.scoring_disabled
 
     let risk: "LOW" | "MEDIUM" | "HIGH" = "LOW"
     if (totalReports > 0 || doubtfulReports) {

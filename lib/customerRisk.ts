@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import { checkSteadfastFraud, type SteadfastFraudReport } from "@/lib/steadfast"
+import { checkFraudNetwork, type FraudNetworkReport } from "@/lib/fraudChecker"
 
 export type RiskLevel = "NEW" | "LOW" | "MEDIUM" | "HIGH"
 
@@ -12,6 +13,7 @@ export type CustomerRisk = {
   successRate: number | null // null when not enough history to judge
   riskLevel: RiskLevel
   steadfast?: SteadfastFraudReport | null
+  network?: FraudNetworkReport | null // multi-courier fraud screening API
   fraudWarning?: string | null
 }
 
@@ -25,12 +27,13 @@ const SETTLED_STATUSES = ["DELIVERED", "CANCELLED", "RETURNED"] as const
 export async function getCustomerRisk(phone: string, forceFresh = false): Promise<CustomerRisk> {
   const normalizedPhone = phone.trim()
 
-  const [orders, sfFraud] = await Promise.all([
+  const [orders, sfFraud, network] = await Promise.all([
     prisma.order.findMany({
       where: { shippingPhone: normalizedPhone },
       select: { status: true },
     }),
     checkSteadfastFraud(normalizedPhone, forceFresh),
+    checkFraudNetwork(normalizedPhone, forceFresh),
   ])
 
   const totalOrders = orders.length
@@ -73,6 +76,19 @@ export async function getCustomerRisk(phone: string, forceFresh = false): Promis
     }
   }
 
+  // 3. Evaluate the multi-courier fraud screening API (Steadfast, Pathao, RedX, CarryBee, Paperfly).
+  // Only escalate — never lower — the level from the sources above.
+  if (network && (network.totalParcel > 0 || network.unresolvedReports > 0)) {
+    const rank = { NEW: 0, LOW: 1, MEDIUM: 2, HIGH: 3 } as const
+    if (rank[network.riskLevel] > rank[riskLevel]) {
+      riskLevel = network.riskLevel
+      fraudWarning =
+        network.unresolvedReports > 0
+          ? `Courier network: ${network.unresolvedReports} unresolved fraud complaint(s) against this number.`
+          : `Courier network: ${network.status} (${network.score ?? "?"}% delivered across ${network.totalParcel} parcels).`
+    }
+  }
+
   return {
     phone: normalizedPhone,
     totalOrders,
@@ -82,6 +98,7 @@ export async function getCustomerRisk(phone: string, forceFresh = false): Promis
     successRate: internalSuccessRate,
     riskLevel,
     steadfast: sfFraud,
+    network,
     fraudWarning,
   }
 }

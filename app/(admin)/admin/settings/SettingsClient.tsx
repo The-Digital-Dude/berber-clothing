@@ -22,7 +22,7 @@ type Staff = { id: string; name: string; email: string; role: string }
 const TABS = [
   { id: "general", label: "General", icon: Store },
   { id: "payments", label: "Payments", icon: CreditCard },
-  { id: "courier", label: "Steadfast Courier", icon: Zap },
+  { id: "courier", label: "Courier & Fraud Check", icon: Zap },
   { id: "shipping", label: "Shipping & Tax", icon: Truck },
   { id: "email", label: "Email / SMTP", icon: Mail },
   { id: "tracking", label: "Tracking & SEO", icon: BarChart2 },
@@ -73,6 +73,14 @@ export function SettingsClient({
   const [steadfastBaseUrl, setSteadfastBaseUrl] = useState(initialSettings["steadfast_base_url"] || "https://portal.packzy.com/api/v1")
   const [steadfastWebhookSecret, setSteadfastWebhookSecret] = useState(initialSettings["steadfast_webhook_secret"] || "")
   const [showApiKey, setShowApiKey] = useState(false)
+
+  // Multi-courier fraud screening API
+  const [fraudApiKey, setFraudApiKey] = useState(initialSettings["fraud_api_key"] || "")
+  const [fraudApiBaseUrl, setFraudApiBaseUrl] = useState(initialSettings["fraud_api_base_url"] || "https://fraudchecker.smartposbd.com")
+  const [fraudApiDomain, setFraudApiDomain] = useState(initialSettings["fraud_api_domain"] || "")
+  const [showFraudKey, setShowFraudKey] = useState(false)
+  const [isFraudSaving, setIsFraudSaving] = useState(false)
+  const [isFraudTesting, setIsFraudTesting] = useState(false)
   const [showSecretKey, setShowSecretKey] = useState(false)
   const [isSteadfastSaving, setIsSteadfastSaving] = useState(false)
   const [isTestingConnection, setIsTestingConnection] = useState(false)
@@ -152,6 +160,44 @@ export function SettingsClient({
       ok ? toast.success("Payment settings saved") : toast.error("Failed to save")
       if (ok) router.refresh()
     } catch { toast.error("Error saving") } finally { setIsPaymentSaving(false) }
+  }
+
+  const handleSaveFraud = async () => {
+    setIsFraudSaving(true)
+    try {
+      const ok = await patch({
+        fraud_api_key: fraudApiKey.trim(),
+        fraud_api_base_url: fraudApiBaseUrl.trim(),
+        fraud_api_domain: fraudApiDomain.trim(),
+      })
+      ok ? toast.success("Fraud checker settings saved") : toast.error("Failed to save fraud checker settings")
+      if (ok) router.refresh()
+    } catch {
+      toast.error("Error saving fraud checker settings")
+    } finally {
+      setIsFraudSaving(false)
+    }
+  }
+
+  const handleTestFraud = async () => {
+    if (!fraudApiKey.trim()) {
+      toast.error("Enter the fraud API key first")
+      return
+    }
+    setIsFraudTesting(true)
+    try {
+      const res = await fetch("/api/admin/fraud-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: fraudApiKey.trim(), baseUrl: fraudApiBaseUrl.trim(), domain: fraudApiDomain.trim() }),
+      })
+      const data = await res.json()
+      data.success ? toast.success(data.message) : toast.error(data.message || "Fraud API test failed")
+    } catch {
+      toast.error("Could not reach the fraud API")
+    } finally {
+      setIsFraudTesting(false)
+    }
   }
 
   const handleSaveSteadfast = async () => {
@@ -548,6 +594,46 @@ export function SettingsClient({
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <h2 className="text-lg font-semibold">Fraud Checker (Steadfast, Pathao, RedX, CarryBee, Paperfly)</h2>
+                <p className="text-sm text-zinc-500">
+                  One click on any customer phone number checks delivery history across five couriers, combined with Steadfast and your own store history.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Field label="Fraud API Key" hint="Sent as the X-API-KEY header. Stored in your database, never shown publicly.">
+                  <div className="relative flex items-center">
+                    <Input
+                      type={showFraudKey ? "text" : "password"}
+                      value={fraudApiKey}
+                      onChange={(e) => setFraudApiKey(e.target.value)}
+                      placeholder="Paste your fraud API token"
+                      className="pr-10 font-mono text-xs"
+                    />
+                    <button type="button" onClick={() => setShowFraudKey(!showFraudKey)} className="absolute right-3 text-zinc-400 hover:text-zinc-600">
+                      {showFraudKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </Field>
+                <Field label="API Base URL" hint="Leave as default unless your provider gave you another host">
+                  <Input value={fraudApiBaseUrl} onChange={(e) => setFraudApiBaseUrl(e.target.value)} className="font-mono text-xs" />
+                </Field>
+                <Field label="Locked Domain (optional)" hint="Only needed if you enabled Domain Lock on the key, e.g. berber.clothing">
+                  <Input value={fraudApiDomain} onChange={(e) => setFraudApiDomain(e.target.value)} placeholder="berber.clothing" className="font-mono text-xs" />
+                </Field>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button onClick={handleSaveFraud} disabled={isFraudSaving} className="bg-zinc-900 hover:bg-zinc-800 text-white font-semibold">
+                    {isFraudSaving ? "Saving…" : "Save Fraud Checker"}
+                  </Button>
+                  <Button variant="outline" onClick={handleTestFraud} disabled={isFraudTesting} className="border-zinc-300 font-semibold gap-2">
+                    <RefreshCw className={cn("w-3.5 h-3.5", isFraudTesting && "animate-spin")} />
+                    {isFraudTesting ? "Testing…" : "Test Key"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 

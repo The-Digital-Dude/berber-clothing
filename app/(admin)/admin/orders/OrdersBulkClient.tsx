@@ -51,7 +51,7 @@ type Order = {
   user?: { name: string; email?: string } | null
 }
 
-type RiskInfo = { riskLevel: string; successRate: number | null; fraudWarning?: string | null; steadfast?: any }
+type RiskInfo = { riskLevel: string; successRate: number | null; fraudWarning?: string | null; steadfast?: any; network?: any }
 
 export default function OrdersBulkClient({
   orders: initialOrders,
@@ -437,6 +437,12 @@ export default function OrdersBulkClient({
                         {risk?.steadfast && (
                           <span className="text-[10px] text-zinc-500">
                             Steadfast: {risk.steadfast.deliveryRatio ?? 0}% delivered / {risk.steadfast.returnRatio ?? 0}% returned
+                          </span>
+                        )}
+                        {risk?.network && (
+                          <span className="text-[10px] text-zinc-500">
+                            Network: {risk.network.score ?? "?"}% over {risk.network.totalParcel} parcels
+                            {risk.network.unresolvedReports > 0 && " · " + risk.network.unresolvedReports + " report(s)"}
                           </span>
                         )}
                         <button

@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import OrderItemsEditorModal from "@/components/admin/OrderItemsEditorModal"
+import FraudCheckButton from "@/components/admin/FraudCheckButton"
 import type { CustomerRisk } from "@/lib/customerRisk"
 
 const STATUS_OPTIONS = [
@@ -400,6 +401,7 @@ export default function OrderQuickDrawer({
                   <span className="text-zinc-500">Phone:</span>
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-medium text-zinc-900">{order.shippingPhone}</span>
+                    <FraudCheckButton phone={order.shippingPhone} />
                     <button
                       onClick={copyPhone}
                       title="Copy Phone"
