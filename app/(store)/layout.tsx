@@ -1,4 +1,5 @@
-export const dynamic = 'force-dynamic'
+// Layout data is cached for 60s (lib/siteData.ts); nothing here reads cookies/headers.
+export const revalidate = 60
 
 import Navbar from "@/components/store/Navbar";
 import Footer from "@/components/store/Footer";
@@ -9,8 +10,7 @@ import AbandonedCartTracker from "@/components/store/AbandonedCartTracker";
 import WhatsAppConcierge from "@/components/store/WhatsAppConcierge";
 import MetaPixelTracker from "@/components/MetaPixelTracker";
 import { Suspense } from "react";
-import prisma from "@/lib/prisma";
-import { getSettings, getNavCategories } from "@/lib/siteData";
+import { getSettings, getNavCategories, getSitewideSale } from "@/lib/siteData";
 import { getActiveFlashSaleBatch, applyFlashSaleDiscount } from "@/lib/flashSale";
 
 const SETTING_KEYS = [
@@ -32,14 +32,10 @@ export default async function StoreLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const now = new Date()
   const [settingsMap, categories, sitewideSale] = await Promise.all([
     getSettings(SETTING_KEYS),
     getNavCategories(),
-    prisma.flashSale.findFirst({
-      where: { scope: "SITEWIDE", isActive: true, startsAt: { lte: now }, endsAt: { gte: now } },
-      orderBy: { createdAt: "desc" },
-    }),
+    getSitewideSale(),
   ])
 
   const freeShippingThreshold = settingsMap.free_shipping_above ? parseInt(settingsMap.free_shipping_above, 10) : null
@@ -87,12 +83,7 @@ export default async function StoreLayout({
         storeName={branding.storeName}
         storeTagline={branding.storeTagline}
         categories={categories}
-        activeFlashSale={sitewideSale ? {
-          name: sitewideSale.name,
-          discountType: sitewideSale.discountType,
-          discountValue: Number(sitewideSale.discountValue),
-          endsAt: sitewideSale.endsAt.toISOString(),
-        } : null}
+        activeFlashSale={sitewideSale}
       />
       <WishlistSync />
       <AbandonedCartTracker />

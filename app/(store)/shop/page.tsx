@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma"
+import { getShopFilters } from "@/lib/siteData"
 import ShopFilters from "@/components/store/ShopFilters"
 import ShopTopControls from "@/components/store/ShopTopControls"
 import ShopProductGrid from "@/components/store/ShopProductGrid"
@@ -90,23 +91,8 @@ export default async function ShopPage({
 }) {
   const { category } = await searchParams
 
-  const [categories, brands, activeCategory] = await Promise.all([
-    prisma.category.findMany({
-      where: {
-        isActive: true,
-        slug: { notIn: ["waistcoat", "trousers"] },
-      },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      include: {
-        parent: { select: { id: true, name: true, slug: true } },
-        children: {
-          where: { isActive: true, slug: { notIn: ["waistcoat", "trousers"] } },
-          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-          select: { id: true, name: true, slug: true },
-        },
-      },
-    }).catch(() => []),
-    prisma.brand.findMany({ where: { isActive: true }, orderBy: { name: "asc" } }).catch(() => []),
+  const [{ categories, brands }, activeCategory] = await Promise.all([
+    getShopFilters(),
     category ? prisma.category.findUnique({ where: { slug: category } }).catch(() => null) : null,
   ])
 

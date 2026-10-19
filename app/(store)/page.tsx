@@ -7,6 +7,9 @@ import { serialize } from "@/lib/utils";
 import FadeIn from "@/components/ui/FadeIn";
 import BespokeShowcaseSection from "@/components/store/BespokeShowcaseSection";
 
+// Rebuilt at most once a minute instead of on every visit.
+export const revalidate = 60
+
 export default async function StoreHomepage() {
   const [banners, categories, newArrivals, featuredProducts] = await Promise.all([
     prisma.banner.findMany({ where: { isActive: true }, orderBy: { sortOrder: 'asc' } }).catch(() => []),

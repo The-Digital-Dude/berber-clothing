@@ -88,5 +88,8 @@ export async function GET(req: NextRequest) {
     }
   })
 
-  return NextResponse.json({ products: enriched, total, hasMore: total > take })
+  return NextResponse.json(
+    { products: enriched, total, hasMore: total > take },
+    { headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120" } }
+  )
 }
