@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/adminAuth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 
@@ -5,6 +6,9 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { id } = await params
     const order = await prisma.bespokeOrder.findUnique({

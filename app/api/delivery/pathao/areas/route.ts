@@ -1,7 +1,11 @@
+import { requireAdmin } from "@/lib/adminAuth"
 import { NextResponse } from "next/server"
 import { getCities, getZones, getAreas } from "@/lib/pathao"
 
 export async function GET(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(req.url)
     const type = searchParams.get("type")

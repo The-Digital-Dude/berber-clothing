@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/adminAuth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { trackParcel } from "@/lib/pathao"
@@ -6,6 +7,9 @@ import { clawbackPointsForOrder } from "@/lib/loyalty"
 import { createAdminNotification } from "@/lib/adminNotifications"
 
 export async function GET(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(req.url)
     const orderId = searchParams.get("orderId")

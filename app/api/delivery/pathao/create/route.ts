@@ -1,8 +1,12 @@
+import { requireAdmin } from "@/lib/adminAuth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { createParcel } from "@/lib/pathao"
 
 export async function POST(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { orderId } = await req.json()
 

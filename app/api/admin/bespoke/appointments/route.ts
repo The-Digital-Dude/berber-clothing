@@ -1,8 +1,12 @@
+import { requireAdmin } from "@/lib/adminAuth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { AppointmentStatus } from "@prisma/client"
 
 export async function GET(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status")
@@ -45,6 +49,9 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const body = await req.json()
     const { id, status, assignedTailorName, notes } = body

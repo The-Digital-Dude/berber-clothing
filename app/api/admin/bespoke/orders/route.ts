@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/adminAuth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { BespokeOrderStatus } from "@prisma/client"
@@ -5,6 +6,9 @@ import { buildWaLink, sendWhatsAppMessage } from "@/lib/whatsapp"
 
 // GET: Fetch bespoke orders with filtering
 export async function GET(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get("status")
@@ -53,6 +57,9 @@ export async function GET(req: Request) {
 
 // PATCH: Update order status, assigned tailor, deposit, or record atelier measurements
 export async function PATCH(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const body = await req.json()
     const {

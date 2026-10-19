@@ -1,8 +1,12 @@
+import { requireAdmin } from "@/lib/adminAuth"
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 
 // GET: Fetch all bespoke fabrics with optional filtering
 export async function GET(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(req.url)
     const season = searchParams.get("season")
@@ -34,6 +38,9 @@ export async function GET(req: Request) {
 
 // POST: Create a new bespoke fabric
 export async function POST(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const body = await req.json()
     const {
@@ -91,6 +98,9 @@ export async function POST(req: Request) {
 
 // PATCH: Update an existing fabric
 export async function PATCH(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const body = await req.json()
     const { id, deltaStock, ...updates } = body
@@ -165,6 +175,9 @@ export async function PATCH(req: Request) {
 
 // DELETE: Remove a fabric
 export async function DELETE(req: Request) {
+  const { error: authError } = await requireAdmin()
+  if (authError) return authError
+
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get("id")

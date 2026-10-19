@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
+import { auth } from "@/lib/auth"
 import { createAdminClient } from "@/lib/supabase"
 import { brevoSubscribe } from "@/lib/brevo"
 import { sendWelcomeEmail } from "@/lib/email"
@@ -18,9 +19,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "id, name and email are required" }, { status: 400 })
     }
 
+    // This endpoint is unauthenticated, so never trust the body alone: the id
+    // must be a real Supabase auth user whose email matches what was sent.
+    const admin = createAdminClient()
+    const { data: authData, error: authLookupError } = await admin.auth.admin.getUserById(id)
+    if (authLookupError || !authData?.user || authData.user.email?.toLowerCase() !== String(email).toLowerCase()) {
+      return NextResponse.json({ error: "Invalid registration" }, { status: 400 })
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } })
     if (existing && existing.id !== id) {
       return NextResponse.json({ error: "An account with this email already exists" }, { status: 409 })
+    }
+
+    // An already-registered profile may only be edited by its signed-in owner.
+    if (existing) {
+      const session = await auth()
+      if (session?.user.id !== id) {
+        return NextResponse.json({ id: existing.id, name: existing.name, email: existing.email }, { status: 200 })
+      }
     }
 
     const user = await prisma.user.upsert({
@@ -29,7 +46,6 @@ export async function POST(req: Request) {
       create: { id, name, email, phone: phone || null, role: "CUSTOMER" },
     })
 
-    const admin = createAdminClient()
     await admin.auth.admin.updateUserById(id, {
       app_metadata: { role: user.role },
       user_metadata: { name },
@@ -55,6 +71,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ id: user.id, name: user.name, email: user.email }, { status: 201 })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("[register]", error)
+    return NextResponse.json({ error: "Registration failed" }, { status: 500 })
   }
 }
