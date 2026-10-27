@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import Image from "next/image"
 import BundleAddToCart from "./BundleAddToCart"
 import type { Metadata } from "next"
+import { isValidFixedSuitBundle } from "@/lib/suitPurchasePolicy"
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
@@ -23,7 +24,8 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
             select: {
               id: true, name: true, slug: true, price: true, comparePrice: true,
               images: { orderBy: { sortOrder: "asc" }, take: 1 },
-              variants: { select: { id: true, size: true, color: true, stock: true } },
+              variants: { select: { id: true, size: true, color: true, stock: true, price: true } },
+              category: { select: { slug: true } },
             },
           },
         },
@@ -31,7 +33,7 @@ export default async function BundlePage({ params }: { params: Promise<{ slug: s
     },
   }).catch(() => null)
 
-  if (!bundle) notFound()
+  if (!bundle || bundle.type !== "FIXED" || !isValidFixedSuitBundle(bundle.items)) notFound()
 
   // Pricing derived purely from individual product prices — no bundle-level override
   const setTotal = bundle.items.reduce((s, item) => s + Number(item.product.price) * item.quantity, 0)

@@ -6,8 +6,8 @@ import { toast } from "sonner"
 import { ShoppingBag, Plus } from "lucide-react"
 import Link from "next/link"
 
-interface Variant { id: string; size: string | null; color: string | null; stock: number; price: number }
-interface Product { id: string; name: string; slug: string; price: number; images: { url: string; thumbnailUrl?: string | null }[]; variants: Variant[] }
+interface Variant { id: string; size: string | null; color: string | null; stock: number; price: number | null }
+interface Product { id: string; name: string; slug: string; price: number; comparePrice?: number | null; category?: { slug: string } | null; images: { url: string; thumbnailUrl?: string | null }[]; variants: Variant[] }
 interface BundleItem { id: string; quantity: number; product: Product }
 interface Bundle {
   id: string; name: string; slug: string; description: string | null
@@ -25,9 +25,13 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
   // Per-item variant selection
   const [variantMap, setVariantMap] = useState<Record<string, string>>({})
 
-  const setTotal = bundle.items.reduce((s, i) => s + Number(i.product.price) * i.quantity, 0)
+  const setTotal = bundle.items.reduce((sum, item) => {
+    const selectedVariant = item.product.variants.find((variant) => variant.id === variantMap[item.id])
+      || item.product.variants.find((variant) => variant.stock > 0)
+    return sum + Number(selectedVariant?.price ?? item.product.price) * item.quantity
+  }, 0)
   const wasTotal = bundle.items.reduce((s, i) => {
-    const was = (i.product as any).comparePrice ? Number((i.product as any).comparePrice) : Number(i.product.price)
+    const was = i.product.comparePrice ? Number(i.product.comparePrice) : Number(i.product.price)
     return s + was * i.quantity
   }, 0)
   const savings = wasTotal > setTotal ? wasTotal - setTotal : null
@@ -49,6 +53,7 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
 
   const handleAddAll = () => {
     const itemsToAdd = bundle.items.filter((i) => selected.has(i.id))
+    const setGroupId = crypto.randomUUID()
     let allOk = true
     for (const item of itemsToAdd) {
       const variantId = variantMap[item.id]
@@ -62,11 +67,12 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
         productSlug: item.product.slug,
         variantId: variant.id,
         name: item.product.name,
-        price: Number(item.product.price), // individual product price is source of truth
+        price: Number(variant.price ?? item.product.price), // current item/variant price is the source of truth
         image: item.product.images[0]?.thumbnailUrl ?? item.product.images[0]?.url ?? "",
         quantity: item.quantity,
         size: variant.size ?? "",
         color: variant.color ?? "",
+        setGroupId,
       })
     }
     if (allOk) toast.success(`${itemsToAdd.length} items added to bag!`)
@@ -177,7 +183,7 @@ export default function BundleDetail({ bundle }: { bundle: Bundle }) {
           </button>
 
           <p className="text-xs text-gray-400 text-center">
-            Items are added separately to your bag — you can adjust quantities at checkout.
+            This suit is kept together in your bag. Removing one piece removes the complete set.
           </p>
         </div>
       </div>

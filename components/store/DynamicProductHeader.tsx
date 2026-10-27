@@ -28,7 +28,7 @@ export default function DynamicProductHeader({
       if (e.detail?.price) setCurrentPrice(e.detail.price)
       if (e.detail?.package) {
         if (e.detail.package === "3-piece") setPackageLabel("3-Piece Complete Suit")
-        else if (e.detail.package === "2-piece") setPackageLabel("2-Piece Set")
+        else if (e.detail.package === "2-piece") setPackageLabel("2-Piece Suit")
         else setPackageLabel("1-Piece Blazer")
       }
     }

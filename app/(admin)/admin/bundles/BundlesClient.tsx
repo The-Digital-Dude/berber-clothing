@@ -123,7 +123,10 @@ export default function BundlesClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error("Failed to save bundle")
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.error || "Failed to save bundle")
+      }
       toast.success(editing ? "Bundle updated" : "Bundle created")
       setOpen(false)
       const listRes = await fetch("/api/admin/bundles")
@@ -402,7 +405,6 @@ export default function BundlesClient({
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-zinc-900/10 focus:border-zinc-900 bg-white"
                 >
                   <option value="FIXED">Fixed (Pre-curated package)</option>
-                  <option value="PICK_N">Pick-N (Shopper selects N items)</option>
                 </select>
               </div>
 

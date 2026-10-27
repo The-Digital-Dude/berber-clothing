@@ -49,6 +49,10 @@ export default function ProductCard({
     : 0
   const sizes = Array.from(new Set((product.variants || []).map((v: any) => v.size))) as string[]
   const sizeInStock = (size: string) => (product.variants || []).some((v: any) => v.size === size && v.stock > 0)
+  const categorySlug = product.category?.slug?.toLowerCase() || ""
+  const isTrouser = categorySlug.includes("trouser") || product.slug?.includes("trouser")
+  const isWaistcoat = categorySlug.includes("waistcoat") || product.slug?.includes("waistcoat")
+  const isPackageOnlyPiece = isTrouser || isWaistcoat
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
 
@@ -100,12 +104,10 @@ export default function ProductCard({
     toast.success(wishlisted ? "Removed from wishlist" : "Added to wishlist")
   }
 
-  const isTrouserSlug = product.slug?.includes("trouser") || product.slug?.includes("trousers")
-  const isWaistcoatSlug = product.slug?.includes("waistcoat") || product.slug?.includes("waistcoats")
-  const productHref = isTrouserSlug
-    ? `/shop/${product.slug.replace("trousers", "blazer").replace("trouser", "blazer")}?package=3-piece`
-    : isWaistcoatSlug
-    ? `/shop/${product.slug.replace("waistcoats", "blazer").replace("waistcoat", "blazer")}?package=2-piece`
+  const productHref = isTrouser
+    ? `/shop/${product.slug.replace("trousers", "blazer").replace("trouser", "blazer")}?package=2-piece`
+    : isWaistcoat
+    ? `/shop/${product.slug.replace("waistcoats", "blazer").replace("waistcoat", "blazer")}?package=3-piece`
     : `/shop/${product.slug}`
 
   return (
@@ -173,7 +175,11 @@ export default function ProductCard({
 
         {/* Quick Add (Desktop) */}
         <div className="absolute bottom-0 left-0 w-full p-4 translate-y-full opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hidden md:block">
-          {quickAddVariant ? (
+          {isPackageOnlyPiece ? (
+            <Link href={productHref} className="w-full bg-white/90 backdrop-blur-sm text-berber-black font-medium py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-berber-gold hover:text-white transition-colors text-sm shadow-sm">
+              <ShoppingBag className="w-4 h-4" /> Choose Suit Package
+            </Link>
+          ) : quickAddVariant ? (
             <button
               onClick={handleQuickAdd}
               className="w-full bg-white/90 backdrop-blur-sm text-berber-black font-medium py-2.5 rounded-full flex items-center justify-center gap-2 hover:bg-berber-gold hover:text-white transition-colors text-sm shadow-sm"
@@ -218,7 +224,7 @@ export default function ProductCard({
             </>
           )}
         </div>
-        <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {!isPackageOnlyPiece && <div className="flex gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           {sizes.map((size, i) => {
             const inStock = sizeInStock(size)
             const active = selectedSize === size
@@ -241,7 +247,7 @@ export default function ProductCard({
               </button>
             )
           })}
-        </div>
+        </div>}
       </div>
     </FadeIn>
   )

@@ -13,8 +13,8 @@ import { Switch } from "@/components/ui/switch"
 // Renders cart items, grouping items that share a setGroupId
 function CartItemList({ items, removeItem, updateQuantity }: {
   items: CartItem[]
-  removeItem: (variantId: string) => void
-  updateQuantity: (variantId: string, qty: number) => void
+  removeItem: (variantId: string, setGroupId?: string) => void
+  updateQuantity: (variantId: string, qty: number, setGroupId?: string) => void
 }) {
   // Split into set groups and standalone items
   const setGroups: Record<string, CartItem[]> = {}
@@ -29,7 +29,7 @@ function CartItemList({ items, removeItem, updateQuantity }: {
   }
 
   const renderItem = (item: CartItem) => (
-    <div key={item.variantId} className="flex gap-4">
+    <div key={`${item.setGroupId || "single"}:${item.variantId}`} className="flex gap-4">
       <Link href={`/shop/${item.productSlug}`} className="relative h-32 w-24 shrink-0 overflow-hidden bg-berber-muted rounded-sm block">
         <Image src={item.image || "/placeholder.jpg"} alt={item.name} fill sizes="96px" className="object-cover" />
       </Link>
@@ -71,9 +71,21 @@ function CartItemList({ items, removeItem, updateQuantity }: {
         <div key={groupId} className="border border-berber-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-2 bg-berber-gold/10 border-b border-berber-border">
             <Layers className="w-3.5 h-3.5 text-berber-gold" />
-            <span className="text-xs font-bold uppercase tracking-widest text-berber-gold">
+            <span className="flex-1 text-xs font-bold uppercase tracking-widest text-berber-gold">
               Set — {groupItems.length} pieces
             </span>
+            <div className="flex items-center border border-berber-gold/30 rounded-full overflow-hidden bg-white">
+              <button className="px-2 py-1.5" onClick={() => updateQuantity(groupItems[0].variantId, Math.max(1, groupItems[0].quantity - 1), groupId)} aria-label="Decrease set quantity">
+                <Minus className="h-3 w-3" />
+              </button>
+              <span className="w-5 text-center text-[10px] font-bold">{groupItems[0].quantity}</span>
+              <button className="px-2 py-1.5" onClick={() => updateQuantity(groupItems[0].variantId, groupItems[0].quantity + 1, groupId)} aria-label="Increase set quantity">
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+            <button onClick={() => removeItem(groupItems[0].variantId, groupId)} className="p-1.5 text-berber-text-muted hover:text-berber-error transition-colors" aria-label="Remove complete set" title="Remove complete set">
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
           <div className="divide-y divide-berber-border/50 px-3">
             {groupItems.map((item) => (
@@ -84,9 +96,6 @@ function CartItemList({ items, removeItem, updateQuantity }: {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-1">
                     <Link href={`/shop/${item.productSlug}`} className="text-xs font-medium line-clamp-1 hover:text-berber-gold transition-colors">{item.name}</Link>
-                    <button onClick={() => removeItem(item.variantId)} className="p-1.5 -mr-1 text-berber-text-muted hover:text-berber-error transition-colors shrink-0" aria-label="Remove item">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
                   </div>
                   <p className="text-[10px] text-berber-text-muted uppercase tracking-wide mt-0.5">{item.size} / {item.color}</p>
                   <p className="text-xs font-mono font-medium mt-1">৳{(item.price * item.quantity).toLocaleString()}</p>

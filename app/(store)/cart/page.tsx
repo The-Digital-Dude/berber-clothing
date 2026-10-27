@@ -110,7 +110,7 @@ export default function CartPage() {
         {/* Cart Items */}
         <div className="lg:w-2/3 space-y-8">
           {items.map((item) => (
-            <div key={item.variantId} className="flex gap-6 border-b border-berber-border pb-8">
+            <div key={`${item.setGroupId || "single"}:${item.variantId}`} className={`flex gap-6 border-b border-berber-border pb-8 ${item.setGroupId ? "bg-berber-gold/5 rounded-xl p-4" : ""}`}>
               <Link href={`/shop/${item.productSlug}`} className="relative w-32 md:w-40 aspect-[3/4] shrink-0 bg-berber-muted rounded-md overflow-hidden block">
                 <Image src={item.image || "/placeholder.jpg"} alt={item.name} fill sizes="160px" className="object-cover" />
               </Link>
@@ -123,6 +123,7 @@ export default function CartPage() {
                     </h3>
                     <p className="text-sm text-berber-text-muted mt-2">Color: {item.color}</p>
                     <p className="text-sm text-berber-text-muted mt-1">Size: {item.size}</p>
+                    {item.setGroupId && <p className="text-xs font-bold uppercase tracking-widest text-berber-gold mt-2">Suit package · quantities stay linked</p>}
                   </div>
                   <p className="font-mono font-bold text-lg">৳{(item.price * item.quantity).toLocaleString()}</p>
                 </div>
@@ -131,24 +132,24 @@ export default function CartPage() {
                   <div className="flex items-center border border-berber-border rounded-full overflow-hidden">
                     <button 
                       className="px-4 py-2 text-berber-text-muted hover:bg-berber-muted hover:text-berber-black transition-colors"
-                      onClick={() => updateQuantity(item.variantId, Math.max(1, item.quantity - 1))}
+                      onClick={() => updateQuantity(item.variantId, Math.max(1, item.quantity - 1), item.setGroupId)}
                     >
                       <Minus className="w-4 h-4" />
                     </button>
                     <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
                     <button 
                       className="px-4 py-2 text-berber-text-muted hover:bg-berber-muted hover:text-berber-black transition-colors"
-                      onClick={() => updateQuantity(item.variantId, item.quantity + 1)}
+                      onClick={() => updateQuantity(item.variantId, item.quantity + 1, item.setGroupId)}
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
                   
                   <button 
-                    onClick={() => removeItem(item.variantId)} 
+                    onClick={() => removeItem(item.variantId, item.setGroupId)}
                     className="text-sm text-berber-text-muted underline underline-offset-4 hover:text-berber-error transition-colors flex items-center gap-1"
                   >
-                    <Trash2 className="w-4 h-4" /> Remove
+                    <Trash2 className="w-4 h-4" /> {item.setGroupId ? "Remove Set" : "Remove"}
                   </button>
                 </div>
               </div>

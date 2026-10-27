@@ -22,6 +22,7 @@ import { Truck, RefreshCw, ShieldCheck } from "lucide-react"
 import type { Metadata } from "next"
 import { getActiveFlashSale, applyFlashSaleDiscount } from "@/lib/flashSale"
 import Link from "next/link"
+import { getSuitGarment } from "@/lib/suitPurchasePolicy"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
@@ -37,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       .replace("trouser", "blazer")
       .replace("waistcoats", "blazer")
       .replace("waistcoat", "blazer")
-    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "3-piece" : "2-piece"}`)
+    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "2-piece" : "3-piece"}`)
   }
 
   const product = await prisma.product.findUnique({
@@ -104,7 +105,7 @@ export default async function ProductDetailPage({
       .replace("trouser", "blazer")
       .replace("waistcoats", "blazer")
       .replace("waistcoat", "blazer")
-    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "3-piece" : "2-piece"}`)
+    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "2-piece" : "3-piece"}`)
   }
   
   const product = await prisma.product.findUnique({
@@ -122,9 +123,26 @@ export default async function ProductDetailPage({
     notFound()
   }
 
-  // For Blazer products: discover matching Waistcoat and Trouser sibling products
   const colorPart = product.name.split(/[–—-]/)[1]?.trim() || ""
   const isStudent = product.name.toLowerCase().includes("student")
+
+  // Trousers and waistcoats are catalog components, not standalone offers.
+  // Route them to the matching blazer configurator even when their slug does
+  // not contain the garment name.
+  const garment = getSuitGarment(product.category?.slug, product.slug)
+  if (garment === "trouser" || garment === "waistcoat") {
+    const matchingBlazer = await prisma.product.findFirst({
+      where: {
+        category: { slug: { in: ["blazer", "blazers"] } },
+        isActive: true,
+        ...(colorPart ? { name: { contains: colorPart, mode: "insensitive" } } : {}),
+      },
+      select: { slug: true },
+    }).catch(() => null)
+    redirect(matchingBlazer ? `/shop/${matchingBlazer.slug}?package=${garment === "trouser" ? "2-piece" : "3-piece"}` : "/shop")
+  }
+
+  // For Blazer products: discover matching Waistcoat and Trouser sibling products
 
   const [matchingWaistcoat, matchingTrouser, reviewAgg, flashSale, attrConfig, reviews, qas] = await Promise.all([
     colorPart

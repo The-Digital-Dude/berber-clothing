@@ -45,16 +45,18 @@ export default function VariantSelector({
   const waistcoat = matchingSet?.waistcoat
   const trouser = matchingSet?.trouser
   const hasMatchingSet = !!(waistcoat && trouser)
-  const hasWaistcoatOnly = !!(waistcoat && !trouser)
+  const hasTwoPieceSet = !!trouser
 
   // Package Tier State
   const defaultPackage: PackageTier =
     initialPackage === "3-piece" && hasMatchingSet
       ? "3-piece"
-      : initialPackage === "2-piece" && (hasMatchingSet || hasWaistcoatOnly)
+      : initialPackage === "2-piece" && hasTwoPieceSet
       ? "2-piece"
       : hasMatchingSet
       ? "3-piece" // Default to complete suit if available for superior customer experience
+      : hasTwoPieceSet
+      ? "2-piece"
       : "1-piece"
 
   const [selectedPackage, setSelectedPackage] = useState<PackageTier>(defaultPackage)
@@ -113,7 +115,7 @@ export default function VariantSelector({
       return blazerPrice + waistcoatPrice + trouserPrice
     }
     if (selectedPackage === "2-piece") {
-      return blazerPrice + waistcoatPrice
+      return blazerPrice + trouserPrice
     }
     return blazerPrice
   }, [selectedPackage, blazerPrice, waistcoatPrice, trouserPrice])
@@ -146,17 +148,17 @@ export default function VariantSelector({
 
   const isOutOfStock = useMemo(() => {
     if (selectedPackage === "1-piece") return blazerStock <= 0
-    if (selectedPackage === "2-piece") return blazerStock <= 0 || waistcoatStock <= 0
+    if (selectedPackage === "2-piece") return blazerStock <= 0 || trouserStock <= 0
     if (selectedPackage === "3-piece") return blazerStock <= 0 || waistcoatStock <= 0 || trouserStock <= 0
     return false
   }, [selectedPackage, blazerStock, waistcoatStock, trouserStock])
 
   const outOfStockReason = useMemo(() => {
     if (blazerStock <= 0) return `Blazer Size ${selectedBlazerSize} is out of stock`
-    if ((selectedPackage === "2-piece" || selectedPackage === "3-piece") && waistcoatStock <= 0) {
+    if (selectedPackage === "3-piece" && waistcoatStock <= 0) {
       return `Waistcoat Size ${selectedWaistcoatSize} is out of stock`
     }
-    if (selectedPackage === "3-piece" && trouserStock <= 0) {
+    if ((selectedPackage === "2-piece" || selectedPackage === "3-piece") && trouserStock <= 0) {
       return `Trouser Waist Size ${selectedTrouserSize} is out of stock`
     }
     return null
@@ -174,8 +176,8 @@ export default function VariantSelector({
       toast.error("Please select a Blazer size.")
       return false
     }
-    if (selectedPackage === "2-piece" && !activeWaistcoatVariant) {
-      toast.error("Please select a Waistcoat size.")
+    if (selectedPackage === "2-piece" && !activeTrouserVariant) {
+      toast.error("Please select a Trouser waist size.")
       return false
     }
     if (selectedPackage === "3-piece" && (!activeWaistcoatVariant || !activeTrouserVariant)) {
@@ -208,8 +210,8 @@ export default function VariantSelector({
       return true
     }
 
-    // 2. Blazer with Waistcoat (2-Piece)
-    if (selectedPackage === "2-piece" && waistcoat && activeWaistcoatVariant) {
+    // 2. Blazer with Trousers (2-Piece)
+    if (selectedPackage === "2-piece" && trouser && activeTrouserVariant) {
       addItem({
         id: activeBlazerVariant.id,
         variantId: activeBlazerVariant.id,
@@ -225,15 +227,15 @@ export default function VariantSelector({
       })
 
       addItem({
-        id: activeWaistcoatVariant.id,
-        variantId: activeWaistcoatVariant.id,
-        productId: waistcoat.id,
-        productSlug: waistcoat.slug,
-        name: `${waistcoat.name}`,
-        price: waistcoatPrice,
-        size: selectedWaistcoatSize!,
+        id: activeTrouserVariant.id,
+        variantId: activeTrouserVariant.id,
+        productId: trouser.id,
+        productSlug: trouser.slug,
+        name: `${trouser.name}`,
+        price: trouserPrice,
+        size: selectedTrouserSize!,
         color: selectedColor!,
-        image: waistcoat.images?.[0]?.url || blazerImage,
+        image: trouser.images?.[0]?.url || blazerImage,
         quantity: 1,
         setGroupId,
       })
@@ -295,7 +297,7 @@ export default function VariantSelector({
         selectedPackage === "3-piece"
           ? `3-Piece Suit (Blazer: ${selectedBlazerSize}, Waistcoat: ${selectedWaistcoatSize}, Trouser: ${selectedTrouserSize})`
           : selectedPackage === "2-piece"
-          ? `2-Piece Set (Blazer: ${selectedBlazerSize}, Waistcoat: ${selectedWaistcoatSize})`
+          ? `2-Piece Suit (Blazer: ${selectedBlazerSize}, Trouser: ${selectedTrouserSize})`
           : `Single Blazer (${selectedBlazerSize})`
 
       toast.success(`Added to bag!`, { description: packageLabel })
@@ -314,7 +316,7 @@ export default function VariantSelector({
       {/* ─────────────────────────────────────────────────────────────
           1. PACKAGE TIER SELECTOR (Single Blazer / 2-Piece / 3-Piece)
           ───────────────────────────────────────────────────────────── */}
-      {(hasMatchingSet || hasWaistcoatOnly) && (
+      {hasTwoPieceSet && (
         <div className="space-y-3 pb-2 border-b border-berber-border">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-widest text-berber-black flex items-center gap-1.5">
@@ -348,8 +350,8 @@ export default function VariantSelector({
               </span>
             </button>
 
-            {/* 2-Piece: Blazer + Waistcoat */}
-            {(hasMatchingSet || hasWaistcoatOnly) && (
+            {/* 2-Piece: Blazer + Trousers */}
+            {hasTwoPieceSet && (
               <button
                 type="button"
                 onClick={() => setSelectedPackage("2-piece")}
@@ -365,11 +367,11 @@ export default function VariantSelector({
                     {selectedPackage === "2-piece" && <Check className="w-3.5 h-3.5 text-berber-gold" />}
                   </div>
                   <p className={`text-[11px] font-medium leading-tight ${selectedPackage === "2-piece" ? "text-neutral-300" : "text-berber-text-muted"}`}>
-                    Blazer + Waistcoat
+                    Blazer + Trouser
                   </p>
                 </div>
                 <span className={`text-xs font-mono font-bold mt-2 ${selectedPackage === "2-piece" ? "text-berber-gold" : "text-berber-black"}`}>
-                  ৳{(blazerPrice + waistcoatPrice).toLocaleString()}
+                  ৳{(blazerPrice + trouserPrice).toLocaleString()}
                 </span>
               </button>
             )}
@@ -394,7 +396,7 @@ export default function VariantSelector({
                     {selectedPackage === "3-piece" && <Check className="w-3.5 h-3.5 text-berber-gold" />}
                   </div>
                   <p className={`text-[11px] font-medium leading-tight ${selectedPackage === "3-piece" ? "text-neutral-300" : "text-berber-text-muted"}`}>
-                    Blazer + Waistcoat + Trouser
+                    Blazer + Trouser + Waistcoat
                   </p>
                 </div>
                 <span className={`text-xs font-mono font-bold mt-2 ${selectedPackage === "3-piece" ? "text-berber-gold" : "text-berber-black"}`}>
@@ -504,8 +506,8 @@ export default function VariantSelector({
           </div>
         </div>
 
-        {/* B. WAISTCOAT SIZE (Shown for 2-Piece and 3-Piece) */}
-        {(selectedPackage === "2-piece" || selectedPackage === "3-piece") && waistcoatSizes.length > 0 && (
+        {/* B. WAISTCOAT SIZE (Shown only for the 3-Piece suit) */}
+        {selectedPackage === "3-piece" && waistcoatSizes.length > 0 && (
           <div className="space-y-2.5 pt-3 border-t border-berber-border/70 animate-in fade-in duration-300">
             <div className="flex items-baseline justify-between gap-3">
               <h3 className="text-xs font-bold uppercase tracking-widest text-berber-black flex items-center gap-1.5">
@@ -548,8 +550,8 @@ export default function VariantSelector({
           </div>
         )}
 
-        {/* C. TROUSER SIZE (Shown for 3-Piece) */}
-        {selectedPackage === "3-piece" && trouserSizes.length > 0 && (
+        {/* C. TROUSER SIZE (Shown for 2-Piece and 3-Piece suits) */}
+        {(selectedPackage === "2-piece" || selectedPackage === "3-piece") && trouserSizes.length > 0 && (
           <div className="space-y-2.5 pt-3 border-t border-berber-border/70 animate-in fade-in duration-300">
             <div className="flex items-baseline justify-between gap-3">
               <h3 className="text-xs font-bold uppercase tracking-widest text-berber-black flex items-center gap-1.5">
@@ -604,7 +606,7 @@ export default function VariantSelector({
             <p className="text-xs font-medium text-berber-error">{outOfStockReason || "Selected combination is currently out of stock."}</p>
           </div>
         ) : (
-          (blazerStock <= 5 || (selectedPackage !== "1-piece" && waistcoatStock <= 5) || (selectedPackage === "3-piece" && trouserStock <= 5)) && (
+          (blazerStock <= 5 || (selectedPackage === "3-piece" && waistcoatStock <= 5) || (selectedPackage !== "1-piece" && trouserStock <= 5)) && (
             <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse" />
               <p className="text-xs font-medium text-amber-800">

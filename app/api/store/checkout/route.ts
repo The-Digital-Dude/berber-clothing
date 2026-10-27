@@ -12,6 +12,7 @@ import { sendPurchaseEvent } from "@/lib/metaConversionsApi"
 import { createAdminClient } from "@/lib/supabase"
 import { linkReferralIfPresent } from "@/lib/referral"
 import { createAdminNotification } from "@/lib/adminNotifications"
+import { validateSuitPurchase } from "@/lib/suitPurchasePolicy"
 
 export async function POST(req: Request) {
   try {
@@ -94,7 +95,18 @@ export async function POST(req: Request) {
     const variantIds = items.map((i: any) => i.variantId)
     const variants = await prisma.productVariant.findMany({
       where: { id: { in: variantIds } },
-      include: { product: { select: { price: true, isActive: true } } },
+      include: {
+        product: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            price: true,
+            isActive: true,
+            category: { select: { slug: true } },
+          },
+        },
+      },
     })
 
     const variantMap = Object.fromEntries(variants.map((v) => [v.id, v]))
@@ -111,10 +123,23 @@ export async function POST(req: Request) {
       }
     }
 
+    const suitPolicyError = validateSuitPurchase(items.map((item: any) => {
+      const variant = variantMap[item.variantId]
+      return {
+        categorySlug: variant?.product.category?.slug,
+        productSlug: variant?.product.slug,
+        quantity: Number(item.quantity),
+        setGroupId: item.setGroupId || null,
+      }
+    }))
+    if (suitPolicyError) {
+      return NextResponse.json({ error: suitPolicyError }, { status: 400 })
+    }
+
     // Compute server-side totals from DB prices + fetch tax settings
     const serverSubtotal = items.reduce((sum: number, item: any) => {
       const variant = variantMap[item.variantId]
-      return sum + Number(variant.product.price) * item.quantity
+      return sum + Number(variant.price ?? variant.product.price) * item.quantity
     }, 0)
 
     const [taxEnabledSetting, taxRateSetting] = await Promise.all([
@@ -150,7 +175,7 @@ export async function POST(req: Request) {
           const units: number[] = []
           for (const item of items) {
             for (let i = 0; i < (item.quantity || 1); i++) {
-              units.push(Number(variantMap[item.variantId].product.price))
+              units.push(Number(variantMap[item.variantId].price ?? variantMap[item.variantId].product.price))
             }
           }
           units.sort((a: number, b: number) => a - b)
@@ -194,7 +219,7 @@ export async function POST(req: Request) {
       variantId: item.variantId,
       productId: item.productId,
       quantity: item.quantity,
-      price: Number(variantMap[item.variantId].product.price),
+      price: Number(variantMap[item.variantId].price ?? variantMap[item.variantId].product.price),
     }))
     const autoDiscount = await getBestAutoDiscount(cartItems, serverSubtotal).catch(() => null)
     const autoDiscountAmount = autoDiscount?.savingAmount || 0
@@ -309,13 +334,13 @@ export async function POST(req: Request) {
           shippingDivision: address.division,
           items: {
             create: items.map((item: any) => ({
-              productId: item.productId,
-              productName: item.name,
+              productId: variantMap[item.variantId].product.id,
+              productName: variantMap[item.variantId].product.name,
               variantId: item.variantId,
               quantity: item.quantity,
-              price: Number(variantMap[item.variantId].product.price),
-              size: item.size || "Default",
-              color: item.color || "Default",
+              price: Number(variantMap[item.variantId].price ?? variantMap[item.variantId].product.price),
+              size: variantMap[item.variantId].size || "Default",
+              color: variantMap[item.variantId].color || "Default",
             })),
           },
         },
@@ -429,7 +454,7 @@ export async function POST(req: Request) {
           size: item.size || "Default",
           color: item.color || "Default",
           quantity: item.quantity,
-          price: Number(variantMap[item.variantId].product.price),
+          price: Number(variantMap[item.variantId].price ?? variantMap[item.variantId].product.price),
         })),
         subtotal: serverSubtotal,
         shippingCharge: serverShippingCharge,
@@ -460,7 +485,7 @@ export async function POST(req: Request) {
         size: item.size || "Default",
         color: item.color || "Default",
         quantity: item.quantity,
-        price: Number(variantMap[item.variantId].product.price),
+        price: Number(variantMap[item.variantId].price ?? variantMap[item.variantId].product.price),
       })),
       subtotal: serverSubtotal,
       shippingCharge: serverShippingCharge,
@@ -481,7 +506,7 @@ export async function POST(req: Request) {
         items: items.map((item: any) => ({
           productName: item.name,
           quantity: item.quantity,
-          price: Number(variantMap[item.variantId].product.price),
+          price: Number(variantMap[item.variantId].price ?? variantMap[item.variantId].product.price),
         })),
       }).catch(() => {})
       if (!isGuest) {

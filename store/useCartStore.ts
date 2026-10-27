@@ -19,8 +19,8 @@ export interface CartItem {
 interface CartState {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (variantId: string) => void;
-  updateQuantity: (variantId: string, quantity: number) => void;
+  removeItem: (variantId: string, setGroupId?: string) => void;
+  updateQuantity: (variantId: string, quantity: number, setGroupId?: string) => void;
   clearCart: () => void;
 }
 
@@ -36,11 +36,15 @@ export const useCartStore = create<CartState>()(
         }).catch(() => {})
         trackAddToCart({ id: item.productId, name: item.name, price: item.price, quantity: item.quantity })
         return set((state) => {
-          const existing = state.items.find((i) => i.variantId === item.variantId)
+          // A variant in a suit set is a different cart line from the same
+          // variant bought as a standalone blazer or in another set.
+          const existing = state.items.find(
+            (i) => i.variantId === item.variantId && i.setGroupId === item.setGroupId
+          )
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.variantId === item.variantId
+                i.variantId === item.variantId && i.setGroupId === item.setGroupId
                   ? { ...i, quantity: i.quantity + item.quantity }
                   : i
               ),
@@ -49,14 +53,20 @@ export const useCartStore = create<CartState>()(
           return { items: [...state.items, item] }
         })
       },
-      removeItem: (variantId) =>
+      removeItem: (variantId, setGroupId) =>
         set((state) => ({
-          items: state.items.filter((i) => i.variantId !== variantId),
+          // Suit packages are atomic: removing one component removes the
+          // complete package so trousers/waistcoats can never become singles.
+          items: setGroupId
+            ? state.items.filter((i) => i.setGroupId !== setGroupId)
+            : state.items.filter((i) => !(i.variantId === variantId && !i.setGroupId)),
         })),
-      updateQuantity: (variantId, quantity) =>
+      updateQuantity: (variantId, quantity, setGroupId) =>
         set((state) => ({
           items: state.items.map((i) =>
-            i.variantId === variantId ? { ...i, quantity } : i
+            setGroupId
+              ? (i.setGroupId === setGroupId ? { ...i, quantity } : i)
+              : (i.variantId === variantId && !i.setGroupId ? { ...i, quantity } : i)
           ),
         })),
       clearCart: () => set({ items: [] }),

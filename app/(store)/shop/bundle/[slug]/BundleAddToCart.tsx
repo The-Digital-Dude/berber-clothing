@@ -14,7 +14,7 @@ type BundleItem = {
     slug: string
     price: number
     images: { url: string; thumbnailUrl?: string | null }[]
-    variants: { id: string; size: string; color: string; stock: number }[]
+    variants: { id: string; size: string; color: string; stock: number; price?: number | null }[]
   }
 }
 
@@ -44,6 +44,7 @@ export default function BundleAddToCart({ bundle }: { bundle: Bundle }) {
       return
     }
 
+    const setGroupId = crypto.randomUUID()
     bundle.items.forEach(item => {
       const variantId = selectedVariants[item.product.id]
       const variant = item.product.variants.find(v => v.id === variantId)
@@ -55,11 +56,12 @@ export default function BundleAddToCart({ bundle }: { bundle: Bundle }) {
         productId: item.product.id,
         productSlug: item.product.slug,
         name: item.product.name,
-        price: Number(item.product.price),
+        price: Number(variant.price ?? item.product.price),
         size: variant.size,
         color: variant.color,
         image: item.product.images[0]?.thumbnailUrl || item.product.images[0]?.url || "",
         quantity: item.quantity,
+        setGroupId,
       })
     })
 

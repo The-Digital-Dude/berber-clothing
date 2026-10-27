@@ -3,9 +3,11 @@ import { serialize } from "@/lib/utils"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
 import BundleDetail from "./BundleDetail"
+import { isValidFixedSuitBundle } from "@/lib/suitPurchasePolicy"
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const bundle = await prisma.bundle.findUnique({ where: { slug: params.slug } })
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const bundle = await prisma.bundle.findUnique({ where: { slug } })
   if (!bundle) return {}
   return {
     title: `${bundle.name} — Berber`,
@@ -13,9 +15,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default async function BundleDetailPage({ params }: { params: { slug: string } }) {
+export default async function BundleDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
   const bundle = await prisma.bundle.findUnique({
-    where: { slug: params.slug, isActive: true },
+    where: { slug, isActive: true },
     include: {
       items: {
         orderBy: { sortOrder: "asc" },
@@ -24,6 +27,7 @@ export default async function BundleDetailPage({ params }: { params: { slug: str
             include: {
               images: { orderBy: { sortOrder: "asc" } },
               variants: true,
+              category: true,
             },
           },
         },
@@ -31,7 +35,7 @@ export default async function BundleDetailPage({ params }: { params: { slug: str
     },
   })
 
-  if (!bundle) notFound()
+  if (!bundle || bundle.type !== "FIXED" || !isValidFixedSuitBundle(bundle.items)) notFound()
 
   return <BundleDetail bundle={JSON.parse(JSON.stringify(bundle))} />
 }

@@ -1,8 +1,8 @@
 import prisma from "@/lib/prisma"
-import { serialize } from "@/lib/utils"
 import Link from "next/link"
 import Image from "next/image"
 import type { Metadata } from "next"
+import { isValidFixedSuitBundle } from "@/lib/suitPurchasePolicy"
 
 export const metadata: Metadata = {
   title: "Bundles — Berber",
@@ -16,10 +16,13 @@ export default async function BundlesPage() {
     include: {
       items: {
         orderBy: { sortOrder: "asc" },
-        include: { product: { include: { images: { take: 1 } } } },
+        include: { product: { include: { images: { take: 1 }, category: true } } },
       },
     },
   })
+  const validBundles = bundles.filter(
+    (bundle) => bundle.type === "FIXED" && isValidFixedSuitBundle(bundle.items)
+  )
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-16">
@@ -28,14 +31,20 @@ export default async function BundlesPage() {
         <p className="text-gray-500 max-w-md mx-auto">Curated sets at a better price. Mix, match, and save.</p>
       </div>
 
-      {bundles.length === 0 ? (
+      {validBundles.length === 0 ? (
         <p className="text-center text-gray-400 py-20">No bundles available right now.</p>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {bundles.map((bundle) => {
-            const savings = bundle.comparePrice
-              ? Number(bundle.comparePrice) - Number(bundle.price)
-              : null
+          {validBundles.map((bundle) => {
+            const currentTotal = bundle.items.reduce(
+              (sum, item) => sum + Number(item.product.price) * item.quantity,
+              0
+            )
+            const compareTotal = bundle.items.reduce(
+              (sum, item) => sum + Math.max(Number(item.product.comparePrice || 0), Number(item.product.price)) * item.quantity,
+              0
+            )
+            const savings = compareTotal - currentTotal
             return (
               <Link key={bundle.id} href={`/bundles/${bundle.slug}`} className="group block border rounded-2xl overflow-hidden hover:shadow-lg transition-shadow">
                 {/* Bundle image or product collage */}
@@ -65,9 +74,9 @@ export default async function BundlesPage() {
                   {bundle.description && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{bundle.description}</p>}
                   <p className="text-xs text-gray-400 mt-2">{bundle.items.length} items included</p>
                   <div className="flex items-center gap-3 mt-3">
-                    <span className="text-lg font-bold">৳{Number(bundle.price).toLocaleString()}</span>
-                    {bundle.comparePrice && (
-                      <span className="text-sm text-gray-400 line-through">৳{Number(bundle.comparePrice).toLocaleString()}</span>
+                    <span className="text-lg font-bold">৳{currentTotal.toLocaleString()}</span>
+                    {compareTotal > currentTotal && (
+                      <span className="text-sm text-gray-400 line-through">৳{compareTotal.toLocaleString()}</span>
                     )}
                   </div>
                 </div>
