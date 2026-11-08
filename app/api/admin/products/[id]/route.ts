@@ -56,47 +56,147 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
 
     // Sync variants if provided
+    let warningMessage: string | null = null
     if (Array.isArray(variants)) {
-      // Fetch current stock to detect 0→positive transitions
-      const variantIds = variants.filter((v: any) => v.id).map((v: any) => v.id)
-      const currentVariants = variantIds.length > 0
-        ? await prisma.productVariant.findMany({ where: { id: { in: variantIds } }, select: { id: true, stock: true } })
-        : []
-      const currentStockMap = Object.fromEntries(currentVariants.map((v) => [v.id, v.stock]))
+      const existingVariants = await prisma.productVariant.findMany({
+        where: { productId: id },
+        include: {
+          orderItems: { select: { id: true }, take: 1 },
+          purchaseOrderItems: { select: { id: true }, take: 1 },
+        },
+      })
 
-      for (const v of variants) {
-        if (v.id) {
+      const existingMap = new Map<string, (typeof existingVariants)[number]>(
+        existingVariants.map((v) => [v.id, v])
+      )
+      const incomingIds = new Set(
+        variants
+          .filter((v: any) => v.id && String(v.id).trim() !== "")
+          .map((v: any) => String(v.id).trim())
+      )
+
+      // 1. Deleted variants (in DB but omitted in incoming form payload)
+      const preservedVariants: string[] = []
+      for (const existing of existingVariants) {
+        if (!incomingIds.has(existing.id)) {
+          const hasOrders =
+            existing.orderItems.length > 0 || existing.purchaseOrderItems.length > 0
+          if (hasOrders) {
+            // Retain variant with 0 stock to protect historical order records
+            await prisma.productVariant.update({
+              where: { id: existing.id },
+              data: { stock: 0 },
+            })
+            preservedVariants.push(`${existing.size}/${existing.color}`)
+          } else {
+            // Safe to permanently delete: clean up carts first
+            await prisma.cartItem.deleteMany({ where: { variantId: existing.id } })
+            await prisma.productVariant.delete({ where: { id: existing.id } })
+          }
+        }
+      }
+
+      if (preservedVariants.length > 0) {
+        warningMessage = `Variant(s) ${preservedVariants.join(", ")} have past order history, so stock was set to 0 instead of being deleted.`
+      }
+
+      // 2. Updated and newly added variants
+      const slugBase =
+        product.slug ||
+        product.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+      const ts = Date.now()
+
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i]
+        const vId = v.id && String(v.id).trim() !== "" ? String(v.id).trim() : null
+
+        if (vId && existingMap.has(vId)) {
+          const existing = existingMap.get(vId)!
+          const newStock = Number(v.stock) || 0
+          const prevStock = existing.stock
+
           await prisma.productVariant.update({
-            where: { id: v.id },
-            data: { size: v.size, color: v.color, colorHex: v.colorHex || null, sku: v.sku, stock: v.stock, price: v.price || null, comparePrice: v.comparePrice || null },
-          }).catch(() => {})
+            where: { id: vId },
+            data: {
+              size: v.size,
+              color: v.color,
+              colorHex: v.colorHex || null,
+              sku: v.sku?.trim() || existing.sku,
+              stock: newStock,
+              price:
+                v.price !== null && v.price !== undefined && v.price !== ""
+                  ? Number(v.price)
+                  : null,
+              comparePrice:
+                v.comparePrice !== null &&
+                v.comparePrice !== undefined &&
+                v.comparePrice !== ""
+                  ? Number(v.comparePrice)
+                  : null,
+            },
+          })
 
           // Notify back-in-stock subscribers
-          if (v.stock > 0 && (currentStockMap[v.id] ?? 0) === 0) {
-            notifyStockAlerts(v.id).catch(() => {})
+          if (newStock > 0 && prevStock === 0) {
+            notifyStockAlerts(vId).catch(() => {})
           }
 
           // Alert admin when stock drops to low threshold (1–5)
-          const prevStock = currentStockMap[v.id] ?? 0
-          if (v.stock > 0 && v.stock <= 5 && prevStock > 5) {
+          if (newStock > 0 && newStock <= 5 && prevStock > 5) {
             sendAdminLowStockAlert({
               productName: product.name,
-              sku: v.sku || v.id,
+              sku: v.sku || vId,
               size: v.size,
               color: v.color,
-              stock: v.stock,
+              stock: newStock,
               productId: id,
             }).catch(() => {})
           }
+        } else {
+          // New variant added in edit mode
+          const generatedSku =
+            v.sku?.trim() ||
+            `${slugBase}-${v.size || "OS"}-${v.color || "DEF"}-${ts}-${i}`
+              .toUpperCase()
+              .replace(/\s+/g, "-")
+          await prisma.productVariant.create({
+            data: {
+              productId: id,
+              size: v.size,
+              color: v.color,
+              colorHex: v.colorHex || null,
+              sku: generatedSku,
+              stock: Number(v.stock) || 0,
+              price:
+                v.price !== null && v.price !== undefined && v.price !== ""
+                  ? Number(v.price)
+                  : null,
+              comparePrice:
+                v.comparePrice !== null &&
+                v.comparePrice !== undefined &&
+                v.comparePrice !== ""
+                  ? Number(v.comparePrice)
+                  : null,
+            },
+          })
         }
       }
     }
 
+    revalidatePath("/admin/products")
+    revalidatePath(`/admin/products/${id}`)
     revalidatePath("/")
     revalidatePath("/shop")
     revalidatePath(`/shop/${product.slug}`)
-    return NextResponse.json(product)
+    return NextResponse.json({ ...product, warning: warningMessage })
   } catch (error: any) {
+    if (error.code === "P2002") {
+      const field = error.meta?.target?.join(", ") || "field"
+      return NextResponse.json(
+        { error: `Duplicate value on ${field}. Check that the SKU or slug is unique.` },
+        { status: 409 }
+      )
+    }
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

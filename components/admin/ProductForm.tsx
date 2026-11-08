@@ -32,6 +32,7 @@ const productSchema = z.object({
   videoUrl: z.string().nullish(),
   sizeChartImage: z.string().nullish(),
   variants: z.array(z.object({
+    id: z.string().nullish(),
     size: z.string().min(1),
     color: z.string().min(1),
     colorHex: z.string().nullish(),
@@ -309,8 +310,12 @@ export default function ProductForm({ initialData, categories }: { initialData?:
       const payload = { ...data, tags: data.tags || null, images }
       const url = initialData ? `/api/admin/products/${initialData.id}` : "/api/admin/products"
       const res = await fetch(url, { method: initialData ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || "Failed to save") }
+      const resData = await res.json().catch(() => ({}))
+      if (!res.ok) { throw new Error(resData.error || "Failed to save") }
       toast.success(initialData ? "Product updated" : "Product created")
+      if (resData.warning) {
+        toast.info(resData.warning, { duration: 6000 })
+      }
       router.push("/admin/products"); router.refresh()
     } catch (error: any) { toast.error(error.message || "Something went wrong") }
     finally { setLoading(false) }
@@ -417,6 +422,7 @@ export default function ProductForm({ initialData, categories }: { initialData?:
                     {variantFields.map((field, index) => (
                       <div key={field.id}
                         className="grid grid-cols-[1fr_1fr_36px_1fr_80px_80px_80px_36px] gap-0 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-colors">
+                        <input type="hidden" {...register(`variants.${index}.id`)} />
                         <div className="p-1.5">
                           <input {...register(`variants.${index}.size`)} placeholder="M"
                             className="w-full h-8 rounded-md border border-gray-200 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
