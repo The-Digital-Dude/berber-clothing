@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { getCustomerRisk } from "@/lib/customerRisk"
+import { isBkashConfigured } from "@/lib/bkash"
 
 // Lets the checkout UI warn the customer about a COD deposit requirement
 // before they place the order, rather than surprising them afterward.
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
 
     const globallyEnabled = depositSetting?.value === "true"
     const isHighRisk = risk.riskLevel === "HIGH"
-    const required = globallyEnabled || isHighRisk
+    const required = (globallyEnabled || isHighRisk) && (await isBkashConfigured())
     const amount = required ? Math.min(Number(amountSetting?.value || 100), Number(total) || Infinity) : 0
 
     return NextResponse.json({ required, amount })

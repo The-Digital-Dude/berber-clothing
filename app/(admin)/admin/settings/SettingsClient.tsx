@@ -62,6 +62,12 @@ export function SettingsClient({
     !initialSettings["enabled_payment_methods"] || initialSettings["enabled_payment_methods"].includes("NAGAD")
   )
   const [bkashNumber, setBkashNumber] = useState(initialSettings["bkash_merchant_number"] || "")
+  const [bkashAppKey, setBkashAppKey] = useState(initialSettings["bkash_app_key"] || "")
+  const [bkashAppSecret, setBkashAppSecret] = useState(initialSettings["bkash_app_secret"] || "")
+  const [bkashUsername, setBkashUsername] = useState(initialSettings["bkash_username"] || "")
+  const [bkashPassword, setBkashPassword] = useState(initialSettings["bkash_password"] || "")
+  const [bkashBaseUrl, setBkashBaseUrl] = useState(initialSettings["bkash_base_url"] || "https://tokenized.pay.bka.sh/v1.2.0-beta")
+  const [showBkashSecrets, setShowBkashSecrets] = useState(false)
   const [nagadNumber, setNagadNumber] = useState(initialSettings["nagad_merchant_number"] || "")
   const [codDepositEnabled, setCodDepositEnabled] = useState(initialSettings["cod_deposit_enabled"] === "true")
   const [codDepositAmount, setCodDepositAmount] = useState(initialSettings["cod_deposit_amount"] || "100")
@@ -153,6 +159,11 @@ export function SettingsClient({
       const ok = await patch({
         enabled_payment_methods: [enabledCOD && "COD", enabledBkash && "BKASH", enabledNagad && "NAGAD"].filter(Boolean).join(","),
         bkash_merchant_number: bkashNumber,
+        bkash_app_key: bkashAppKey.trim(),
+        bkash_app_secret: bkashAppSecret.trim(),
+        bkash_username: bkashUsername.trim(),
+        bkash_password: bkashPassword.trim(),
+        bkash_base_url: bkashBaseUrl.trim(),
         nagad_merchant_number: nagadNumber,
         cod_deposit_enabled: codDepositEnabled,
         cod_deposit_amount: codDepositAmount,
@@ -447,6 +458,27 @@ export function SettingsClient({
                   <Field label="bKash Merchant Number" indent>
                     <Input value={bkashNumber} onChange={(e) => setBkashNumber(e.target.value)} placeholder="01XXXXXXXXX" />
                   </Field>
+                )}
+                {enabledBkash && (
+                  <div className="ml-4 space-y-3 rounded-lg border border-dashed p-4">
+                    <p className="text-sm font-medium">bKash Online Payment API (optional)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Leave blank to keep online payments off. Until all four credentials are saved, the checkout will not
+                      offer bKash online payment or ask for a COD deposit.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Field label="App Key"><Input type={showBkashSecrets ? "text" : "password"} value={bkashAppKey} onChange={(e) => setBkashAppKey(e.target.value)} autoComplete="off" /></Field>
+                      <Field label="App Secret"><Input type={showBkashSecrets ? "text" : "password"} value={bkashAppSecret} onChange={(e) => setBkashAppSecret(e.target.value)} autoComplete="off" /></Field>
+                      <Field label="Username"><Input type={showBkashSecrets ? "text" : "password"} value={bkashUsername} onChange={(e) => setBkashUsername(e.target.value)} autoComplete="off" /></Field>
+                      <Field label="Password"><Input type={showBkashSecrets ? "text" : "password"} value={bkashPassword} onChange={(e) => setBkashPassword(e.target.value)} autoComplete="off" /></Field>
+                    </div>
+                    <Field label="API Base URL" hint="Sandbox: https://tokenized.sandbox.bka.sh/v1.2.0-beta">
+                      <Input value={bkashBaseUrl} onChange={(e) => setBkashBaseUrl(e.target.value)} />
+                    </Field>
+                    <button type="button" onClick={() => setShowBkashSecrets((v) => !v)} className="text-xs underline text-muted-foreground">
+                      {showBkashSecrets ? "Hide" : "Show"} credentials
+                    </button>
+                  </div>
                 )}
                 <ToggleRow
                   label="Nagad"
