@@ -382,6 +382,11 @@ export default function CheckoutForm({
         })
       }
 
+      // From here on the order already exists in the DB (stock reserved,
+      // emails sent). If the payment gateway can't be initialised we must NOT
+      // show "Failed to place order" and leave the cart intact -- customers
+      // retry and create duplicate orders. Send them to the order page instead.
+      try {
       if (isManualPayment) {
         // Manual payment — order placed, awaiting admin verification
         clearCart()
@@ -429,6 +434,12 @@ export default function CheckoutForm({
       } else {
         clearCart()
         router.push(`/order/${orderData.orderId}?placed=1`)
+      }
+      } catch (paymentError: any) {
+        console.error("Payment initialisation failed after order creation:", paymentError)
+        clearCart()
+        toast.error("Your order was received, but online payment couldn't start. Our team will contact you to complete payment.")
+        router.push(`/order/${orderData.orderId}?payment=failed`)
       }
     } catch (error: any) {
       toast.error("Failed to place order: " + error.message)

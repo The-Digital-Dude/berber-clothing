@@ -12,6 +12,7 @@ import { sendPurchaseEvent } from "@/lib/metaConversionsApi"
 import { createAdminClient } from "@/lib/supabase"
 import { linkReferralIfPresent } from "@/lib/referral"
 import { createAdminNotification } from "@/lib/adminNotifications"
+import { isBkashConfigured } from "@/lib/bkash"
 
 export async function POST(req: Request) {
   try {
@@ -85,7 +86,9 @@ export async function POST(req: Request) {
       ])
       const globallyEnabled = depositSetting?.value === "true"
       const isHighRisk = risk.riskLevel === "HIGH"
-      if (globallyEnabled || isHighRisk) {
+      // A deposit is collected online via bKash -- never demand one unless
+      // bKash credentials are configured (Admin > Settings > Payments).
+      if ((globallyEnabled || isHighRisk) && (await isBkashConfigured())) {
         depositAmount = Math.min(Number(amountSetting?.value || 100), total)
       }
     }

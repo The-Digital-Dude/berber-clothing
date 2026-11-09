@@ -3,6 +3,7 @@ import TrackCheckoutStart from "@/components/store/TrackCheckoutStart"
 import { ShieldCheck } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import { isBkashConfigured } from "@/lib/bkash"
 
 export default async function CheckoutPage({
   searchParams,
@@ -44,7 +45,7 @@ export default async function CheckoutPage({
   const nagadMerchantNumber = map.nagad_merchant_number || ""
 
   // Allow BKASH/NAGAD if either the API gateway creds OR a manual merchant number is set
-  const hasBkashGateway = !!(process.env.BKASH_APP_KEY && !process.env.BKASH_APP_KEY.includes("your_bkash"))
+  const hasBkashGateway = await isBkashConfigured().catch(() => false)
   const hasNagadGateway = !!(process.env.NAGAD_MERCHANT_ID && !process.env.NAGAD_MERCHANT_ID.includes("your_nagad"))
   if (!hasBkashGateway && !bkashMerchantNumber) enabledMethods = enabledMethods.filter(m => m !== "BKASH")
   if (!hasNagadGateway && !nagadMerchantNumber) enabledMethods = enabledMethods.filter(m => m !== "NAGAD")
