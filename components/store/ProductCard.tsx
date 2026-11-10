@@ -104,11 +104,7 @@ export default function ProductCard({
     toast.success(wishlisted ? "Removed from wishlist" : "Added to wishlist")
   }
 
-  const productHref = isTrouser
-    ? `/shop/${product.slug.replace("trousers", "blazer").replace("trouser", "blazer")}?package=2-piece`
-    : isWaistcoat
-    ? `/shop/${product.slug.replace("waistcoats", "blazer").replace("waistcoat", "blazer")}?package=3-piece`
-    : `/shop/${product.slug}`
+  const productHref = `/shop/${product.slug}`
 
   return (
     <FadeIn className="group relative flex flex-col gap-3">

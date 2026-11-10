@@ -26,25 +26,156 @@ import { getSuitGarment } from "@/lib/suitPurchasePolicy"
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.berber.clothing"
 
+function extractColorPart(name: string): string {
+  const dashParts = name.split(/[–—-]/)
+  if (dashParts.length > 1) {
+    return dashParts[dashParts.length - 1].trim()
+  }
+  const commonColors = [
+    "Light Grey", "Dark Grey", "Slate Grey", "Charcoal", "Grey", "Gray",
+    "Navy Blue", "Navy", "Royal Blue", "Midnight Blue", "Blue",
+    "Jet Black", "Black",
+    "Olive Green", "Sage Green", "Forest Green", "Green",
+    "Beige", "Tan", "Camel", "Cream", "Brown", "Burgundy", "Maroon"
+  ]
+  const found = commonColors.find((c) => name.toLowerCase().includes(c.toLowerCase()))
+  return found || ""
+}
+
+function isTrouserOrWaistcoat(product: any): { isTrouser: boolean; isWaistcoat: boolean } {
+  const catSlug = product.category?.slug?.toLowerCase() || ""
+  const pSlug = product.slug?.toLowerCase() || ""
+  const pName = product.name?.toLowerCase() || ""
+
+  const isTrouser =
+    catSlug.includes("trouser") ||
+    catSlug.includes("pant") ||
+    pSlug.includes("trouser") ||
+    pName.includes("trouser") ||
+    pName.includes("pant")
+
+  const isWaistcoat =
+    catSlug.includes("waistcoat") ||
+    catSlug.includes("vest") ||
+    pSlug.includes("waistcoat") ||
+    pName.includes("waistcoat") ||
+    pName.includes("vest")
+
+  return { isTrouser, isWaistcoat }
+}
+
+async function findMatchingBlazer(product: any): Promise<string | null> {
+  // 1. Direct bundle relation: if this trouser/waistcoat is in a set bundle, return the primary blazer
+  const directBlazer = product.bundleItems?.find(
+    (b: any) => b.bundle?.primaryProduct?.isActive && b.bundle?.primaryProduct?.slug
+  )?.bundle?.primaryProduct
+  if (directBlazer?.slug) return directBlazer.slug
+
+  // 2. Match by color and tier
+  const colorPart = extractColorPart(product.name)
+  const isStudent = product.name.toLowerCase().includes("student")
+  const isSignature = product.name.toLowerCase().includes("signature")
+
+  const matchingBlazer = await prisma.product.findFirst({
+    where: {
+      isActive: true,
+      OR: [
+        { category: { slug: { in: ["blazer", "blazers"] } } },
+        { category: { name: { contains: "blazer", mode: "insensitive" } } },
+        { name: { contains: "blazer", mode: "insensitive" } },
+      ],
+      AND: [
+        ...(colorPart ? [{ name: { contains: colorPart, mode: "insensitive" } }] : []),
+        ...(isStudent ? [{ name: { contains: "Student", mode: "insensitive" } }] : []),
+        ...(isSignature ? [{ name: { contains: "Signature", mode: "insensitive" } }] : []),
+      ],
+    },
+    select: { slug: true },
+  }).catch(() => null)
+
+  if (matchingBlazer?.slug) return matchingBlazer.slug
+
+  // 3. Fallback: match by color alone
+  if (colorPart) {
+    const colorBlazer = await prisma.product.findFirst({
+      where: {
+        isActive: true,
+        OR: [
+          { category: { slug: { in: ["blazer", "blazers"] } } },
+          { category: { name: { contains: "blazer", mode: "insensitive" } } },
+          { name: { contains: "blazer", mode: "insensitive" } },
+        ],
+        name: { contains: colorPart, mode: "insensitive" },
+      },
+      select: { slug: true },
+    }).catch(() => null)
+    if (colorBlazer?.slug) return colorBlazer.slug
+  }
+
+  // 4. Fallback: any active blazer
+  const anyBlazer = await prisma.product.findFirst({
+    where: {
+      isActive: true,
+      OR: [
+        { category: { slug: { in: ["blazer", "blazers"] } } },
+        { category: { name: { contains: "blazer", mode: "insensitive" } } },
+        { name: { contains: "blazer", mode: "insensitive" } },
+      ],
+    },
+    select: { slug: true },
+  }).catch(() => null)
+
+  return anyBlazer?.slug || null
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
 
-  // Instant redirect for standalone garment URLs
-  const isTrouserSlug = slug.includes("trouser") || slug.includes("trousers")
-  const isWaistcoatSlug = slug.includes("waistcoat") || slug.includes("waistcoats")
-  if (isTrouserSlug || isWaistcoatSlug) {
-    const targetSlug = slug
-      .replace("trousers", "blazer")
-      .replace("trouser", "blazer")
-      .replace("waistcoats", "blazer")
-      .replace("waistcoat", "blazer")
-    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "2-piece" : "3-piece"}`)
+  let product = await prisma.product.findUnique({
+    where: { slug, isActive: true },
+    include: {
+      images: { take: 1, orderBy: { sortOrder: "asc" } },
+      category: true,
+      bundleItems: {
+        include: {
+          bundle: {
+            include: {
+              primaryProduct: { select: { slug: true, isActive: true } },
+            },
+          },
+        },
+      },
+    },
+  }).catch(() => null)
+
+  if (!product) {
+    product = await prisma.product.findFirst({
+      where: { slug: { equals: slug, mode: "insensitive" }, isActive: true },
+      include: {
+        images: { take: 1, orderBy: { sortOrder: "asc" } },
+        category: true,
+        bundleItems: {
+          include: {
+            bundle: {
+              include: {
+                primaryProduct: { select: { slug: true, isActive: true } },
+              },
+            },
+          },
+        },
+      },
+    }).catch(() => null)
   }
 
-  const product = await prisma.product.findUnique({
-    where: { slug, isActive: true },
-    include: { images: { take: 1, orderBy: { sortOrder: "asc" } }, category: true },
-  }).catch(() => null)
+  if (product) {
+    const { isTrouser, isWaistcoat } = isTrouserOrWaistcoat(product)
+    if (isTrouser || isWaistcoat) {
+      const blazerSlug = await findMatchingBlazer(product)
+      if (blazerSlug) {
+        redirect(`/shop/${blazerSlug}?package=${isTrouser ? "2-piece" : "3-piece"}`)
+      }
+    }
+  }
 
   if (!product) return { title: "Product Not Found | Berber Clothing" }
 
@@ -95,20 +226,8 @@ export default async function ProductDetailPage({
 }) {
   const { slug } = await params;
   const { package: initialPackageParam } = (await searchParams) || {};
-
-  // Instant zero-DB redirect for standalone garment URLs
-  const isTrouserSlug = slug.includes("trouser") || slug.includes("trousers")
-  const isWaistcoatSlug = slug.includes("waistcoat") || slug.includes("waistcoats")
-  if (isTrouserSlug || isWaistcoatSlug) {
-    const targetSlug = slug
-      .replace("trousers", "blazer")
-      .replace("trouser", "blazer")
-      .replace("waistcoats", "blazer")
-      .replace("waistcoat", "blazer")
-    redirect(`/shop/${targetSlug}?package=${isTrouserSlug ? "2-piece" : "3-piece"}`)
-  }
   
-  const product = await prisma.product.findUnique({
+  let product = await prisma.product.findUnique({
     where: { slug, isActive: true },
     include: {
       category: true,
@@ -116,40 +235,143 @@ export default async function ProductDetailPage({
       variants: true,
       brand: true,
       addons: { orderBy: { sortOrder: 'asc' } },
+      bundleItems: {
+        include: {
+          bundle: {
+            include: {
+              primaryProduct: { select: { slug: true, isActive: true } },
+            },
+          },
+        },
+      },
+      setBundle: {
+        include: {
+          items: {
+            include: {
+              product: {
+                include: {
+                  category: true,
+                  variants: { orderBy: { size: 'asc' } },
+                  images: true,
+                },
+              },
+            },
+          },
+        },
+      },
     }
   }).catch(() => null)
 
   if (!product) {
+    product = await prisma.product.findFirst({
+      where: { slug: { equals: slug, mode: "insensitive" }, isActive: true },
+      include: {
+        category: true,
+        images: { orderBy: { sortOrder: 'asc' } },
+        variants: true,
+        brand: true,
+        addons: { orderBy: { sortOrder: 'asc' } },
+        bundleItems: {
+          include: {
+            bundle: {
+              include: {
+                primaryProduct: { select: { slug: true, isActive: true } },
+              },
+            },
+          },
+        },
+        setBundle: {
+          include: {
+            items: {
+              include: {
+                product: {
+                  include: {
+                    category: true,
+                    variants: { orderBy: { size: 'asc' } },
+                    images: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    }).catch(() => null)
+  }
+
+  // Recovery: If product not found directly and the requested slug contained blazer/colors
+  // (e.g. from an old or broken redirect), try finding the intended blazer
+  if (!product) {
+    const colorWords = [
+      "light-grey", "dark-grey", "slate-grey", "charcoal", "grey", "gray",
+      "navy-blue", "royal-blue", "midnight-blue", "navy", "blue",
+      "jet-black", "black",
+      "olive-green", "sage-green", "forest-green", "green",
+      "beige", "tan", "cream", "brown", "burgundy", "maroon"
+    ]
+    const matched = colorWords.find((c) => slug.toLowerCase().includes(c))
+    if (matched) {
+      const cleanColor = matched.replace(/-/g, " ")
+      const candidateBlazer = await prisma.product.findFirst({
+        where: {
+          isActive: true,
+          OR: [
+            { category: { slug: { in: ["blazer", "blazers"] } } },
+            { category: { name: { contains: "blazer", mode: "insensitive" } } },
+            { name: { contains: "blazer", mode: "insensitive" } },
+          ],
+          name: { contains: cleanColor, mode: "insensitive" },
+        },
+        select: { slug: true },
+      }).catch(() => null)
+      if (candidateBlazer) {
+        redirect(`/shop/${candidateBlazer.slug}`)
+      }
+    }
+
     notFound()
   }
 
-  const colorPart = product.name.split(/[–—-]/)[1]?.trim() || ""
-  const isStudent = product.name.toLowerCase().includes("student")
-
   // Trousers and waistcoats are catalog components, not standalone offers.
-  // Route them to the matching blazer configurator even when their slug does
-  // not contain the garment name.
-  const garment = getSuitGarment(product.category?.slug, product.slug)
-  if (garment === "trouser" || garment === "waistcoat") {
-    const matchingBlazer = await prisma.product.findFirst({
-      where: {
-        category: { slug: { in: ["blazer", "blazers"] } },
-        isActive: true,
-        ...(colorPart ? { name: { contains: colorPart, mode: "insensitive" } } : {}),
-      },
-      select: { slug: true },
-    }).catch(() => null)
-    redirect(matchingBlazer ? `/shop/${matchingBlazer.slug}?package=${garment === "trouser" ? "2-piece" : "3-piece"}` : "/shop")
+  // Route them to the matching blazer configurator with the correct suit package pre-selected.
+  const { isTrouser, isWaistcoat } = isTrouserOrWaistcoat(product)
+  if (isTrouser || isWaistcoat) {
+    const blazerSlug = await findMatchingBlazer(product)
+    if (blazerSlug) {
+      redirect(`/shop/${blazerSlug}?package=${isTrouser ? "2-piece" : "3-piece"}`)
+    } else {
+      redirect("/shop")
+    }
   }
 
   // For Blazer products: discover matching Waistcoat and Trouser sibling products
+  let waistcoatFromBundle: any = null
+  let trouserFromBundle: any = null
+  if (product.setBundle?.items) {
+    for (const item of product.setBundle.items) {
+      const p = item.product
+      const { isTrouser: itemTrouser, isWaistcoat: itemWaistcoat } = isTrouserOrWaistcoat(p)
+      if (itemWaistcoat && !waistcoatFromBundle) {
+        waistcoatFromBundle = p
+      } else if (itemTrouser && !trouserFromBundle) {
+        trouserFromBundle = p
+      }
+    }
+  }
+
+  const colorPart = extractColorPart(product.name)
+  const isStudent = product.name.toLowerCase().includes("student")
 
   const [matchingWaistcoat, matchingTrouser, reviewAgg, flashSale, attrConfig, reviews, qas] = await Promise.all([
-    colorPart
+    !waistcoatFromBundle && colorPart
       ? prisma.product.findFirst({
           where: {
-            category: { slug: "waistcoat" },
             isActive: true,
+            OR: [
+              { category: { slug: { in: ["waistcoat", "waistcoats"] } } },
+              { category: { name: { contains: "waistcoat", mode: "insensitive" } } },
+              { name: { contains: "waistcoat", mode: "insensitive" } },
+            ],
             AND: [
               { name: { contains: colorPart, mode: "insensitive" } },
               { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" } },
@@ -158,11 +380,15 @@ export default async function ProductDetailPage({
           include: { variants: { orderBy: { size: "asc" } }, images: true },
         }).catch(() => null)
       : Promise.resolve(null),
-    colorPart
+    !trouserFromBundle && colorPart
       ? prisma.product.findFirst({
           where: {
-            category: { slug: "trousers" },
             isActive: true,
+            OR: [
+              { category: { slug: { in: ["trouser", "trousers", "pants", "pant"] } } },
+              { category: { name: { contains: "trouser", mode: "insensitive" } } },
+              { name: { contains: "trouser", mode: "insensitive" } },
+            ],
             AND: [
               { name: { contains: colorPart, mode: "insensitive" } },
               { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" } },
@@ -360,8 +586,8 @@ export default async function ProductDetailPage({
               categoryId={product.categoryId}
               sizeChartImage={product.sizeChartImage || null}
               matchingSet={{
-                waistcoat: matchingWaistcoat ? serialize(matchingWaistcoat) : null,
-                trouser: matchingTrouser ? serialize(matchingTrouser) : null,
+                waistcoat: (waistcoatFromBundle || matchingWaistcoat) ? serialize(waistcoatFromBundle || matchingWaistcoat) : null,
+                trouser: (trouserFromBundle || matchingTrouser) ? serialize(trouserFromBundle || matchingTrouser) : null,
               }}
               initialPackage={initialPackageParam}
             />
