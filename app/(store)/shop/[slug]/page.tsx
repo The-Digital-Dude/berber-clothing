@@ -76,19 +76,20 @@ async function findMatchingBlazer(product: any): Promise<string | null> {
   const isStudent = product.name.toLowerCase().includes("student")
   const isSignature = product.name.toLowerCase().includes("signature")
 
+  const andConditions: any[] = []
+  if (colorPart) andConditions.push({ name: { contains: colorPart, mode: "insensitive" as const } })
+  if (isStudent) andConditions.push({ name: { contains: "Student", mode: "insensitive" as const } })
+  if (isSignature) andConditions.push({ name: { contains: "Signature", mode: "insensitive" as const } })
+
   const matchingBlazer = await prisma.product.findFirst({
     where: {
       isActive: true,
       OR: [
         { category: { slug: { in: ["blazer", "blazers"] } } },
-        { category: { name: { contains: "blazer", mode: "insensitive" } } },
-        { name: { contains: "blazer", mode: "insensitive" } },
+        { category: { name: { contains: "blazer", mode: "insensitive" as const } } },
+        { name: { contains: "blazer", mode: "insensitive" as const } },
       ],
-      AND: [
-        ...(colorPart ? [{ name: { contains: colorPart, mode: "insensitive" } }] : []),
-        ...(isStudent ? [{ name: { contains: "Student", mode: "insensitive" } }] : []),
-        ...(isSignature ? [{ name: { contains: "Signature", mode: "insensitive" } }] : []),
-      ],
+      ...(andConditions.length > 0 ? { AND: andConditions } : {}),
     },
     select: { slug: true },
   }).catch(() => null)
@@ -102,10 +103,10 @@ async function findMatchingBlazer(product: any): Promise<string | null> {
         isActive: true,
         OR: [
           { category: { slug: { in: ["blazer", "blazers"] } } },
-          { category: { name: { contains: "blazer", mode: "insensitive" } } },
-          { name: { contains: "blazer", mode: "insensitive" } },
+          { category: { name: { contains: "blazer", mode: "insensitive" as const } } },
+          { name: { contains: "blazer", mode: "insensitive" as const } },
         ],
-        name: { contains: colorPart, mode: "insensitive" },
+        name: { contains: colorPart, mode: "insensitive" as const },
       },
       select: { slug: true },
     }).catch(() => null)
@@ -118,8 +119,8 @@ async function findMatchingBlazer(product: any): Promise<string | null> {
       isActive: true,
       OR: [
         { category: { slug: { in: ["blazer", "blazers"] } } },
-        { category: { name: { contains: "blazer", mode: "insensitive" } } },
-        { name: { contains: "blazer", mode: "insensitive" } },
+        { category: { name: { contains: "blazer", mode: "insensitive" as const } } },
+        { name: { contains: "blazer", mode: "insensitive" as const } },
       ],
     },
     select: { slug: true },
@@ -150,7 +151,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!product) {
     product = await prisma.product.findFirst({
-      where: { slug: { equals: slug, mode: "insensitive" }, isActive: true },
+      where: { slug: { equals: slug, mode: "insensitive" as const }, isActive: true },
       include: {
         images: { take: 1, orderBy: { sortOrder: "asc" } },
         category: true,
@@ -264,7 +265,7 @@ export default async function ProductDetailPage({
 
   if (!product) {
     product = await prisma.product.findFirst({
-      where: { slug: { equals: slug, mode: "insensitive" }, isActive: true },
+      where: { slug: { equals: slug, mode: "insensitive" as const }, isActive: true },
       include: {
         category: true,
         images: { orderBy: { sortOrder: 'asc' } },
@@ -317,10 +318,10 @@ export default async function ProductDetailPage({
           isActive: true,
           OR: [
             { category: { slug: { in: ["blazer", "blazers"] } } },
-            { category: { name: { contains: "blazer", mode: "insensitive" } } },
-            { name: { contains: "blazer", mode: "insensitive" } },
+            { category: { name: { contains: "blazer", mode: "insensitive" as const } } },
+            { name: { contains: "blazer", mode: "insensitive" as const } },
           ],
-          name: { contains: cleanColor, mode: "insensitive" },
+          name: { contains: cleanColor, mode: "insensitive" as const },
         },
         select: { slug: true },
       }).catch(() => null)
@@ -369,12 +370,12 @@ export default async function ProductDetailPage({
             isActive: true,
             OR: [
               { category: { slug: { in: ["waistcoat", "waistcoats"] } } },
-              { category: { name: { contains: "waistcoat", mode: "insensitive" } } },
-              { name: { contains: "waistcoat", mode: "insensitive" } },
+              { category: { name: { contains: "waistcoat", mode: "insensitive" as const } } },
+              { name: { contains: "waistcoat", mode: "insensitive" as const } },
             ],
             AND: [
-              { name: { contains: colorPart, mode: "insensitive" } },
-              { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" } },
+              { name: { contains: colorPart, mode: "insensitive" as const } },
+              { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" as const } },
             ],
           },
           include: { variants: { orderBy: { size: "asc" } }, images: true },
@@ -386,12 +387,12 @@ export default async function ProductDetailPage({
             isActive: true,
             OR: [
               { category: { slug: { in: ["trouser", "trousers", "pants", "pant"] } } },
-              { category: { name: { contains: "trouser", mode: "insensitive" } } },
-              { name: { contains: "trouser", mode: "insensitive" } },
+              { category: { name: { contains: "trouser", mode: "insensitive" as const } } },
+              { name: { contains: "trouser", mode: "insensitive" as const } },
             ],
             AND: [
-              { name: { contains: colorPart, mode: "insensitive" } },
-              { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" } },
+              { name: { contains: colorPart, mode: "insensitive" as const } },
+              { name: { contains: isStudent ? "Student" : "Signature", mode: "insensitive" as const } },
             ],
           },
           include: { variants: { orderBy: { size: "asc" } }, images: true },
