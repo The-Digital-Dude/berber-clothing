@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
-import { createPayment } from "@/lib/bkash"
+import { createPayment, isBkashConfigured } from "@/lib/bkash"
 
 export async function POST(req: Request) {
   try {
@@ -8,6 +8,15 @@ export async function POST(req: Request) {
 
     if (!orderId) {
       return NextResponse.json({ error: "orderId is required" }, { status: 400 })
+    }
+
+    const configured = await isBkashConfigured()
+    if (!configured) {
+      console.warn("[bKash Create]: bKash credentials are not configured in Admin > Settings > Payments.")
+      return NextResponse.json(
+        { error: "bKash payment gateway is not configured. Please choose another payment method or contact support." },
+        { status: 503 }
+      )
     }
 
     const order = await prisma.order.findUnique({
@@ -56,6 +65,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ bkashURL })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("[bKash Create Payment Error]:", error)
+    return NextResponse.json({ error: error?.message || "Failed to initiate bKash payment" }, { status: 500 })
   }
 }

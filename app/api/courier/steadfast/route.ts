@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
       codAmount,
     })
   } catch (err: any) {
+    console.error("[Steadfast Courier Dispatch Error]:", err)
     return NextResponse.json(
       { error: err.message || "Failed to dispatch order to Steadfast" },
       { status: 500 }
@@ -194,6 +195,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ status: result.status, internalStatus })
   } catch (err: any) {
+    console.error("[Steadfast Status Check Error]:", err)
     return NextResponse.json(
       { error: err.message || "Failed to fetch Steadfast status" },
       { status: 500 }

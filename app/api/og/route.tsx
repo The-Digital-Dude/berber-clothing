@@ -38,13 +38,13 @@ export async function GET(req: NextRequest) {
             justifyContent: "space-between",
             height: "100%",
             maxWidth: image ? "640px" : "100%",
-            zIndex: 10,
           }}
         >
           {/* Top Brand Header */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div
               style={{
+                display: "flex",
                 backgroundColor: "#c9a84c",
                 color: "#0d0c0a",
                 fontWeight: 900,
@@ -59,6 +59,7 @@ export async function GET(req: NextRequest) {
             </div>
             <div
               style={{
+                display: "flex",
                 color: "#c9a84c",
                 fontSize: "14px",
                 letterSpacing: "2px",
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
                 fontWeight: 600,
               }}
             >
-              • {category}
+              {`• ${category}`}
             </div>
           </div>
 
@@ -74,6 +75,7 @@ export async function GET(req: NextRequest) {
           <div style={{ display: "flex", flexDirection: "column", gap: "16px", margin: "auto 0" }}>
             <div
               style={{
+                display: "flex",
                 fontSize: title.length > 35 ? "44px" : "56px",
                 fontWeight: 800,
                 lineHeight: 1.15,
@@ -89,23 +91,25 @@ export async function GET(req: NextRequest) {
               <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
                 <div
                   style={{
+                    display: "flex",
                     fontSize: "42px",
                     fontWeight: 900,
                     color: "#f5c358",
                     letterSpacing: "0.5px",
                   }}
                 >
-                  ৳{price}
+                  {`BDT ${price}`}
                 </div>
                 <div
                   style={{
+                    display: "flex",
                     fontSize: "16px",
                     color: "#a1a1aa",
                     textTransform: "uppercase",
                     letterSpacing: "1px",
                   }}
                 >
-                  BDT • Inclusive of VAT
+                  Inclusive of VAT
                 </div>
               </div>
             )}
@@ -126,7 +130,7 @@ export async function GET(req: NextRequest) {
                 fontWeight: 600,
               }}
             >
-              ✓ Cash on Delivery Across BD
+              Cash on Delivery Across BD
             </div>
             <div
               style={{
@@ -141,13 +145,13 @@ export async function GET(req: NextRequest) {
                 fontWeight: 600,
               }}
             >
-              ⚡ Fast Home Delivery
+              Fast Home Delivery
             </div>
           </div>
         </div>
 
         {/* Right Product Image Side */}
-        {image && (
+        {image ? (
           <div
             style={{
               display: "flex",
@@ -171,7 +175,7 @@ export async function GET(req: NextRequest) {
               }}
             />
           </div>
-        )}
+        ) : null}
       </div>
     ),
     { width: 1200, height: 630 }
